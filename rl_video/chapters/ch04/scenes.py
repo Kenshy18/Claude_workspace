@@ -108,6 +108,12 @@ def dashed_arrow(start, end, color=GREY_B, width=4, dash_length=0.12):
     return VGroup(line, tip)
 
 
+def pulse(card, color=WHITE, scale=1.15):
+    """画像入りのカードを強調する（Indicate だと画像が単色に塗られてしまうため）。"""
+    return AnimationGroup(card.animate(rate_func=there_and_back).scale(scale),
+                          Circumscribe(card, color=color, buff=0.04, fade_out=True))
+
+
 def run_game(scene, tk, dt):
     """ゲームのトラッカーを dt 秒ぶん進める。"""
     scene.play(tk.animate(rate_func=linear).set_value(tk.get_value() + GAME_RATE * dt), run_time=dt)
@@ -865,7 +871,7 @@ class Replay(VoiceScene):
             br = SurroundingRectangle(four, color=style.REWARD, buff=0.1, stroke_width=5)
             mb_lab = jt("ミニバッチ", size=46, color=style.REWARD).next_to(br, DOWN, buff=0.2)
             self.play(Create(br), FadeIn(mb_lab), run_time=0.7)
-            self.play(LaggedStart(*[Indicate(f, scale_factor=1.12, color=WHITE) for f in four], lag_ratio=0.25), run_time=1.4)
+            self.play(LaggedStart(*[pulse(f, WHITE, 1.12) for f in four], lag_ratio=0.25), run_time=1.4)
             c = film_bg.get_center()
             self.play(Group(film_all, br, mb_lab).animate.scale(1 / BIG, about_point=c).shift(UP * (2.55 - c[1])),
                       run_time=0.9)
@@ -967,7 +973,7 @@ class Replay(VoiceScene):
             copies = [live[i].copy() for i in pick]
             self.play(Create(mb_frame), FadeIn(mb_lab2), *[c.animate.move_to(p) for c, p in zip(copies, mb_pos)], run_time=1.1)
             self.wait_to(v, "C")
-            er = jt("経験リプレイ", size=40, color=WHITE, weight="MEDIUM").move_to(UP * 0.55 + RIGHT * 0.3)
+            er = jt("経験リプレイ", size=40, color=WHITE, weight="MEDIUM").move_to(UP * 0.5 + LEFT * 1.6)
             self.play(Write(er), run_time=0.8)
 
         with self.voice("これで、ミニバッチの中の相関が断ち切られ、{A}しかも、同じ経験を何度も使い回せるので、"
@@ -987,7 +993,7 @@ class Replay(VoiceScene):
             cnt = VGroup(mt(r"\times 2", size=32, color=style.REWARD)).next_to(live[j], DOWN, buff=0.05)
             for k, lab in enumerate([r"\times 2", r"\times 3"]):
                 c = live[j].copy()
-                self.play(Indicate(live[j], color=style.REWARD, scale_factor=1.25), run_time=0.5)
+                self.play(pulse(live[j], style.REWARD, 1.25), run_time=0.5)
                 self.play(c.animate.move_to(mb_pos[(k + 3) % 8]).set_opacity(1), FadeOut(copies[(k + 3) % 8]), run_time=0.6)
                 copies[(k + 3) % 8] = c
             self.wait_to(v, "B")
@@ -997,7 +1003,7 @@ class Replay(VoiceScene):
             old_lab = jt("古い方策のデータ", size=30, color=style.POLICY).next_to(buf_frame, DOWN, buff=0.12).align_to(buf_frame, LEFT)
             self.play(FadeIn(tint), FadeIn(old_lab), run_time=0.8)
             c = old[4].copy()
-            self.play(Indicate(old[4], color=style.POLICY, scale_factor=1.25), run_time=0.6)
+            self.play(pulse(old[4], style.POLICY, 1.25), run_time=0.6)
             self.play(c.animate.move_to(mb_pos[6]), FadeOut(copies[6]), run_time=0.8)
             copies[6] = c
         self.play(FadeOut(Group(*live, *copies, glows, tint, old_lab, buf_frame, buf_lab, mb_frame, mb_lab2, ax, xl, yl,
@@ -1325,7 +1331,7 @@ class Algorithm(VoiceScene):
             self.play(hl.animate.become(frame_for(buf_frame, mb_frame, mb_lab)), run_time=0.5)
             pk = [1, 4, 8, 10]
             outs = [buf_cards[i].copy() for i in pk]
-            self.play(*[Indicate(buf_cards[i], color=style.REWARD) for i in pk], run_time=0.6)
+            self.play(*[pulse(buf_cards[i], style.REWARD, 1.2) for i in pk], run_time=0.6)
             self.play(*[c.animate.scale(0.8).move_to(mb_c + RIGHT * (j % 2 - 0.5) * 0.5 + DOWN * (j // 2 - 0.5) * 0.5)
                         for j, c in enumerate(outs)], run_time=0.9)
             self.wait_to(v, "D")
@@ -1367,7 +1373,8 @@ class Algorithm(VoiceScene):
         with self.voice("2015年に発表された[DQN|ディーキューエヌ]は、この仕組みで、{A}49種類のゲームを、"
                         "同じネットワーク構造、同じ設定のまま、画面の画素だけから学習し、"
                         "{B}その多くで、人間のプロのテスターに匹敵するスコアを出しました。") as v:
-            diagram = Group(*self.mobjects)
+            on_screen = [m for m in [*parts, *buf_cards, *outs] if m in self.mobjects]
+            diagram = Group(*dict.fromkeys(on_screen))
             self.play(diagram.animate.scale(0.45).move_to(LEFT * 3.75 + UP * 0.2), run_time=1.2)
             dqn_lab = jt("DQN", size=44, color=WHITE, weight="BOLD").next_to(diagram, DOWN, buff=0.3)
             same = jt("同じネットワーク・同じ設定", size=30, color=GREY_B).next_to(diagram, UP, buff=0.35)
@@ -1384,8 +1391,8 @@ class Algorithm(VoiceScene):
             pro = jt("人間のプロ", size=30, color=GREY_A)
             row = VGroup(vs, pro).arrange(RIGHT, buff=0.2).next_to(tiles, DOWN, buff=0.18)
             self.play(FadeIn(row), run_time=0.8)
-            self.play(LaggedStart(*[Indicate(t, color=style.REWARD, scale_factor=1.12) for t in tiles], lag_ratio=0.02),
-                      run_time=2.0)
+            self.play(LaggedStart(*[t.animate(rate_func=there_and_back).scale(1.18) for t in tiles], lag_ratio=0.02),
+                      Circumscribe(tiles, color=style.REWARD, buff=0.1), run_time=2.0)
         self.play(FadeOut(Group(diagram, dqn_lab, same, tiles, n49, arr, row)), run_time=0.9)
 
 

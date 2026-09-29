@@ -354,7 +354,7 @@ class Supervised(VoiceScene):
 # ---------------------------------------------------------------------------
 # 4. 三つの違い
 # ---------------------------------------------------------------------------
-def make_card(content, label, sub=None, width=2.3, height=1.55):
+def make_card(content, label, sub=None, width=2.0, height=1.45):
     """図をそのまま縮めて入れる、まとめ用のカード。"""
     box = RoundedRectangle(width=width, height=height, corner_radius=0.14, stroke_color=GREY_C,
                            stroke_width=2, fill_color="#141418", fill_opacity=1)
@@ -363,19 +363,24 @@ def make_card(content, label, sub=None, width=2.3, height=1.55):
     if c.width > width - 0.3:
         c.scale_to_fit_width(width - 0.3)
     c.move_to(box)
-    texts = VGroup(jt(label, size=32, color=WHITE))
+    texts = VGroup(jt(label, size=28, color=WHITE))
     if sub:
-        texts.add(jt(sub, size=24, color=GREY_C))
+        texts.add(jt(sub, size=22, color=GREY_C))
     texts.arrange(DOWN, aligned_edge=LEFT, buff=0.1)
     card = VGroup(box, c)
-    row = VGroup(card, texts).arrange(RIGHT, buff=0.3)
+    row = VGroup(card, texts).arrange(RIGHT, buff=0.25)
     return row
+
+
+def place_card(card, y):
+    """右の列（仕切り線の右）に左詰めで置く。"""
+    return card.next_to(RIGHT * 1.95 + UP * y, RIGHT, buff=0)
 
 
 class Differences(VoiceScene):
     def construct(self):
         divider = Line(UP * 3.5, DOWN * 3.5, stroke_color=GREY_E, stroke_width=2).move_to(RIGHT * 1.75)
-        slots = [RIGHT * 4.4 + UP * 2.3, RIGHT * 4.4, RIGHT * 4.4 + DOWN * 2.3]
+        slots = [2.3, 0.0, -2.3]
 
         g = GridView(WORLD, cell=1.12).move_to(LEFT * 2.9 + 0.8 * UP)
         s0 = (2, 1)
@@ -402,11 +407,12 @@ class Differences(VoiceScene):
             self.play(FadeIn(qm, scale=0.8))
             self.play(robot.change("worried"))
 
-        card1 = make_card(VGroup(g, robot, rew), "評価しかもらえない", "正解は教えてもらえない").move_to(slots[0])
+        card1 = place_card(make_card(VGroup(g, robot, rew), "評価しかもらえない", "正解は教えてもらえない"), slots[0])
         with self.voice("一つ目の違いはこれです。もらえるのは、{A}正解ではなく、{B}評価だけ。") as v:
             self.play(FadeOut(VGroup(ghost, up_arrow, qm)), robot.change("normal"), run_time=0.6)
             self.wait_to(v, "A")
-            self.play(TransformFromCopy(VGroup(g, robot, rew), card1[0][1]), FadeIn(card1[0][0]), run_time=1.2)
+            self.play(FadeIn(card1[0][0]), run_time=0.3)
+            self.play(TransformFromCopy(VGroup(g, robot, rew), card1[0][1]), run_time=1.1)
             self.wait_to(v, "B")
             self.sfx("hit")
             self.play(FadeIn(card1[1], shift=0.1 * RIGHT), run_time=0.6)
@@ -450,11 +456,12 @@ class Differences(VoiceScene):
 
         credit_arrow = CurvedArrow(steps[-1].get_bottom() + 0.1 * DOWN, steps[0].get_bottom() + 0.1 * DOWN,
                                    angle=-0.45, color=style.REWARD, stroke_width=4)
-        card2 = make_card(VGroup(steps, qms, credit_arrow), "報酬が遅れて届く", "信用割り当て問題").move_to(slots[1])
+        card2 = place_card(make_card(VGroup(steps, qms, credit_arrow), "報酬が遅れて届く", "信用割り当て問題"), slots[1])
         with self.voice("結果から、原因となった行動をさかのぼって、手柄を割り振らなければならない。これは{A}信用割り当て問題と呼ばれています。") as v:
             self.play(Create(credit_arrow), run_time=1.5)
             self.wait_to(v, "A")
-            self.play(TransformFromCopy(VGroup(steps, qms, credit_arrow), card2[0][1]), FadeIn(card2[0][0]), run_time=1.2)
+            self.play(FadeIn(card2[0][0]), run_time=0.3)
+            self.play(TransformFromCopy(VGroup(steps, qms, credit_arrow), card2[0][1]), run_time=1.1)
             self.sfx("hit")
             self.play(FadeIn(card2[1], shift=0.1 * RIGHT), run_time=0.6)
         self.play(FadeOut(VGroup(steps, qms, credit_arrow, trail, robot, g)), run_time=0.8)
@@ -500,12 +507,13 @@ class Differences(VoiceScene):
             self.wait_to(v, "A")
             self.play(FadeIn(fog), LaggedStart(*[FadeIn(q) for q in qs], lag_ratio=0.1), robot.animate.look(DR), run_time=1.2)
 
-        card3 = make_card(VGroup(g, robot, glow, fog, qs), "データを自分で集める", "探索と活用").move_to(slots[2])
+        card3 = place_card(make_card(VGroup(g, robot, glow, fog, qs), "データを自分で集める", "探索と活用"), slots[2])
         with self.voice("今知っている一番良い行動を取るべきか、それとも、まだ試していない行動を探ってみるべきか。"
                         "このジレンマは、{A}探索と活用のトレードオフと呼ばれ、第3章で詳しく扱います。") as v:
             self.play(robot.change("worried"), Indicate(qs, color=WHITE), run_time=1.2)
             self.wait_to(v, "A")
-            self.play(TransformFromCopy(VGroup(g, robot, glow, fog, qs), card3[0][1]), FadeIn(card3[0][0]), run_time=1.2)
+            self.play(FadeIn(card3[0][0]), run_time=0.3)
+            self.play(TransformFromCopy(VGroup(g, robot, glow, fog, qs), card3[0][1]), run_time=1.1)
             self.sfx("hit")
             self.play(FadeIn(card3[1], shift=0.1 * RIGHT), run_time=0.6)
 
@@ -519,7 +527,8 @@ class Differences(VoiceScene):
                 t[1].arrange(DOWN, buff=0.12)
                 VGroup(t[0], t[1]).arrange(DOWN, buff=0.3)
                 final.add(t)
-            final.scale(1.25).arrange(RIGHT, buff=0.7).move_to(0.2 * DOWN)
+            final.arrange(RIGHT, buff=0.6)
+            final.scale_to_fit_width(min(12.8, final.width * 1.3)).move_to(0.2 * DOWN)
             self.play(*[Transform(c, f) for c, f in zip(cards, final)], run_time=1.4)
             for c in cards:
                 self.play(Indicate(c[1][0], color=style.REWARD, scale_factor=1.08), run_time=0.8)
@@ -553,7 +562,7 @@ class Beyond(VoiceScene):
     def construct(self):
         ax = Axes(x_range=[0, 10, 1], y_range=[0, 1.2, 0.2], x_length=7.2, y_length=4.4,
                   axis_config=dict(color=GREY_C, include_ticks=False, stroke_width=2),
-                  tips=True).move_to(LEFT * 2.6 + 0.2 * DOWN)
+                  tips=True).move_to(0.2 * DOWN)
         xl = jt("学習の進み", size=28, color=GREY_B).next_to(ax.x_axis, DOWN, buff=0.25).align_to(ax.x_axis, RIGHT)
         yl = jt("うまさ", size=28, color=GREY_B).next_to(ax.y_axis, UP, buff=0.15).align_to(ax.y_axis, LEFT)
         teacher_y = 0.75
@@ -562,8 +571,13 @@ class Beyond(VoiceScene):
         sl = ax.plot(lambda x: teacher_y * 0.96 * (1 - np.exp(-0.7 * x)), x_range=[0, 10], color=BLUE_B, stroke_width=5)
         rl = ax.plot(lambda x: 1.1 / (1 + np.exp(-(x - 5.0) * 0.9)) - 1.1 / (1 + np.exp(4.5)),
                      x_range=[0, 10], color=style.REWARD, stroke_width=5)
-        sll = jt("教師あり学習（真似る）", size=28, color=BLUE_B).next_to(ax.c2p(10, 0.72), DOWN, buff=0.25).shift(1.4 * LEFT)
-        rll = jt("強化学習（評価で鍛える）", size=28, color=style.REWARD).next_to(ax.c2p(10, 1.08), UP, buff=0.1).shift(1.6 * LEFT)
+        def legend_row(color, text):
+            return VGroup(Line(ORIGIN, RIGHT * 0.5, stroke_color=color, stroke_width=5),
+                          jt(text, size=28, color=color)).arrange(RIGHT, buff=0.2)
+        sll = legend_row(BLUE_B, "教師あり学習（真似る）")
+        rll = legend_row(style.REWARD, "強化学習（評価で鍛える）")
+        VGroup(rll, sll).arrange(DOWN, aligned_edge=LEFT, buff=0.18).next_to(ax.c2p(0.4, 1.2), DR, buff=0)
+        rll.align_to(sll, LEFT)
         note = jt("イメージ", size=22, color=GREY_C).to_corner(DL, buff=0.4)
 
         with self.voice("こう並べると、強化学習は、ずいぶん不便な設定に見えるかもしれません。"
