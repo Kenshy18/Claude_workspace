@@ -4,8 +4,10 @@
 
 | | 作品 | 尺 | 形式 |
 |---|---|---|---|
-| **OP** | [`dist/neon_genesis_gradient_descent_opening.mp4`](dist/neon_genesis_gradient_descent_opening.mp4) | 1:26 | TVオープニングのオマージュ。128 BPM のオリジナル曲に合わせたカット割り |
-| **本編** | [`dist/neon_genesis_gradient_descent_episodes.mp4`](dist/neon_genesis_gradient_descent_episodes.mp4) | 2:33 | 各話形式。タイトルカード、NERV 風の HUD、台詞で ML の概念を1話ずつ扱う |
+| **OP** | `dist/neon_genesis_gradient_descent_opening.mp4` | 1:26 | TVオープニングのオマージュ。128 BPM のオリジナル曲に合わせたカット割り |
+| **本編** | `dist/neon_genesis_gradient_descent_episodes.mp4` | 2:33 | 各話形式。タイトルカード、NERV 風の HUD、台詞で ML の概念を1話ずつ扱う |
+
+MP4（約44 MB / 77 MB）は容量が大きいので git には入れていません。下の「ビルド方法」で再生成できます。
 
 映像も音も**全部コードから生成**しています。素材の取り込みはしていません。Canvas 2D と WebGL のポストエフェクトで描画し、
 数式は MathJax で組版、音楽と効果音は NumPy/SciPy でオシレーターから合成しています。

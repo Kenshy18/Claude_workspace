@@ -325,7 +325,7 @@
   }
   function vizLoss(ctx, lt, col) {
     const v = landscape(ctx, lt, 1380, 600, 125, 0.6 + lt * 0.25, 0.6, seg(lt, 0.2, BAR * 1.9), { col, persp: 7 });
-    text(ctx, `θ* = argmin ℒ(θ)     ℒ = ${v.toFixed(3)}`, 1000, 820, { size: 28, family: F.mono, color: col });
+    text(ctx, `θ* = argmin ℒ(θ)     ℒ = ${v.toFixed(3)}`, 1000, 180, { size: 28, family: F.mono, color: col });
   }
 
   const CHARS = [
