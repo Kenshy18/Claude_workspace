@@ -1,0 +1,16 @@
+# p1_tv1995 — 「TV版 完全再現」 shot-for-shot remake of the 1995 TV opening
+- 4:3, 1440×1080. It must feel like a 1995 TV broadcast master: flat cel colours with 2-tone hard shadows, painted skies (cel-painted cumulus, dusk gradients painted in bands rather than smooth digital gradients), soft video softness, grain, ±1 px gate weave, occasional 1-frame flashes. Every one of the 45 shots in `op_timing.json` gets a 1:1 counterpart **at the same time range with the same composition, camera move, colour palette and credit placement**. Study the reference frames for each shot before designing its counterpart; use compare.sh constantly. The side-by-side must read as "the same OP, re-cast".
+- You can't draw anime characters procedurally, so re-cast every character shot with an iconic ML "character" painted in cel style, keeping the silhouette and composition. Seeds (use, improve or replace):
+  - the protagonist's face over blue sky (24–38 s) → a giant Transformer block (the 2017 paper figure) as a cel-shaded "being" that turns from front to profile, with silhouettes of older architectures (LSTM cell, CNN stack, perceptron) sliding in as black cut-outs, like the OP's silhouettes;
+  - the sunset hand + green Tree of Life → a hand silhouette reaching over a green line-art "SYSTEMA TRANSFORMATORVM" (the Kabbalah tree re-drawn as the computation graph, with Latin labels ATTENTIO, RESIDVVM, SOFTMAX, NORMA, EMBEDDING);
+  - the red iris close-up → an attention heatmap as the iris;
+  - the white armour stencil "EVANGELION 2014 / 01 / TEST TYPE" → an accelerator card in Unit-01 livery (purple/green) stencilled "TRANSFORMER 2017 / 01 / TEST TYPE";
+  - the pilot's neural clips → an "A10" connector (NVIDIA A10 pun on the A10 nerve);
+  - the 4:59:56 timer (活動限界まで) → the remaining compute/context budget;
+  - the Unit-01 wings (64–66.8) → 12 attention heads radiating as light wings;
+  - the chorus cards: "TEST TYPE"→"PRE-TRAINED", "EVA-01"→"LAYER-01" (or better), "ABSOLUTE TERROR FIELD"→**"ATTENTION TENSOR FIELD"** (keep the oversized A/T/F), "ANGELS"→"OUTLIERS"/"ADVERSARIAL", "TOKYO-3"→a cluster name, "PROTOTYPE EVA-00"→"PROTOTYPE PERCEPTRON (1958)", "PRODUCTION MODEL EVA-02"→a production model, "SECOND IMPACT"→**"SECOND IMPACT" with the satellite shot showing A.D. 2012 (AlexNet, ImageNet top-5 error 15.3%)**, "ADAM"→**"ADAM"** (Kingma & Ba, 2014 — keep it identical);
+  - 「極秘 人類補完計画 第17次中間報告」 → a parody document;
+  - the 「監督」 card at 82.6 → 監督 + a concept name, huge, same layout;
+  - the final red 製作 card → your producers.
+- Parody logo (15.9–22.9): an original mark in the same construction — a wide white Roman serif wordmark (GRADIENT or TRANSFORMER) + jagged orange-red katakana underneath (e.g. グラディエント) + small 新世紀, with the blue lens flare at 19.0 and a ring at 21.0. Draw the jagged katakana yourself as polygons; no font can do it.
+- Credits: re-cast every credit block of the original (roles in the same positions, same size relationships) with ML entities.

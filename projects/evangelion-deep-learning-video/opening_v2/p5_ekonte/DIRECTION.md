@@ -1,0 +1,22 @@
+# p5_ekonte — 「絵コンテ／研究ノート」 the opening as a hand-drawn storyboard that is also a research notebook
+- The real OP contains pencil sketches (79.25, 80.5, 82.37), and Anno's storyboards are legendary. Your film is the **storyboard (絵コンテ) of the opening, animated**: paper texture, graphite lines revealed stroke by stroke with slight hand jitter (multi-pass wobbly strokes, variable pressure), red and blue pencil annotations, and marker spot colour used sparingly (LCL orange, Unit-01 purple/green, sky blue). Choose your format: a 1920×1080 sheet with a 4:3 panel plus margin columns (カット番号 / 画面 / 内容 / 秒数), or full-frame panels with notes. Justify the choice in NOTES.md.
+- Each cut of the real OP (op_timing.json shots + op_cuts_detected.txt) is a storyboard cut, with:
+  - a cut number (C-001 …);
+  - camera notes (PAN↑, T.B., F.I., 透過光, BG only …);
+  - a seconds+frames duration written like "3+12", equal to the true duration of that cut in the real OP.
+- The drawings follow the real OP's compositions, re-cast as ML:
+  - the Tree of Life → a hand-drawn transformer computation graph with Latin labels;
+  - the logo → roughed in pencil, then inked;
+  - the character close-ups → sketches of architectures, a GPU, or an attention-map eye;
+  - the 4:59:56 timer;
+  - the text cards: "ATTENTION TENSOR FIELD" with oversized A/T/F, "ADAM" = the optimizer, "SECOND IMPACT" = A.D. 2012 AlexNet in red pencil;
+  - the 監督 card at 82.6 and the 製作 card at 88.2.
+- **The notebook half:** in the margins, and sometimes taking over the panel, **handwritten derivations** an ML engineer will love, all mathematically correct:
+  - backprop through softmax + cross-entropy (∂L/∂z = p − y);
+  - scaled dot-product attention with the √d reasoning (variance of q·k);
+  - the residual stream Jacobian (I + ∂F/∂x);
+  - Adam's bias correction;
+  - the Chinchilla optimum.
+  They are written in real time, in sync with the music, with crossings-out, "?!" and arrows like real notes. Use handwriting fonts "Klee One" (pencil-like textbook script) and "Zen Kurenaido" (rougher hand); typeset math via MathJax, then drawn with pencil texture/jitter so it looks handwritten.
+- Credits appear as the storyboard's handwritten title block or cover sheet and cut notes, following the original credit timing (small role / big name).
+- The chorus becomes a rapid flip through storyboard panels at 2–6 frames per cut.

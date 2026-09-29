@@ -1,0 +1,13 @@
+# p4_rebuild — 「新劇場版」 cinematic 3DCG opening in the Rebuild-era house style
+- 16:9, 1920×1080. Real-time 3D with three.js (installed in this folder) rendered into the canvas pipeline, plus 2D overlays for credits and text cards. Performance on SwiftShader must be ≤0.6 s/frame (lean geometry, instancing, no heavy post chains).
+- Art direction: **cel-shaded 3DCG like the Rebuild films**: toon ramps with 2–3 bands, ink outlines (inverted hull or edge detection), flat painted skies, strong silhouettes, a restrained palette. No glossy PBR, no "AI 3D" look, no floating particles, no neon everywhere. Light is used as the OP uses it: cross-shaped explosions, the wings of light, the lens flare at 19.0.
+- World: **Tokyo-3 as a GPU city.** Armoured buildings rise from the ground as server racks; the Geofront beneath is a datacenter. A giant crystalline octahedron (an original shape inspired by Angel silhouettes) hovers over a **3D loss landscape** the city sits on. Optimizer trajectories (SGD+momentum vs Adam) race down its valleys as light trails. An all-reduce ring lights up across the buildings. Attention heads are beams between tower tops, driven by a real softmax you compute. Gradient clipping is the Lance. All of this is real math you compute.
+- Follow the **original cut timing and section structure** exactly, with camera cuts and moves on the beats:
+  - intro a cappella: a slow pre-dawn push over the dark landscape; band slam at 14.2;
+  - logo 15.9–22.9: an original parody mark in the classic construction (wide serif wordmark, jagged orange-red katakana polygons, small 新世紀, blue flare 19.0, ring 21.0);
+  - verse: blue sky over the city by day; B-section: orange sunset;
+  - pre-chorus: descent into the Geofront datacenter, the 活動限界 timer, and the cage reveal of an original purple/green mech-like GPU tower "Unit-01";
+  - chorus: fast cutting at the original rhythm with 2D text-card inserts ("ATTENTION TENSOR FIELD" with oversized A/T/F, "ADAM" black-on-white = the optimizer, "SECOND IMPACT" in red with A.D. 2012 AlexNet);
+  - the 監督 card at 82.6 and the red 製作 card at 88.2.
+- Credits throughout in Rebuild-style Matisse-like mincho (white, large, placed like the original's credit blocks).
+- The final message must include a per-frame render time measurement.

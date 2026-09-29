@@ -1,0 +1,12 @@
+# p2_mincho — 「明朝体」 all-typography opening (a title designer's version)
+- 4:3, 1440×1080. The whole OP is told through **Evangelion's typographic language**: heavy Matisse-like mincho title cards, the episode 25/26 intertitle barrages, white-on-black / black-on-white / red fields. Aside from type, use only minimal flat graphic elements (bars, rules, a circle, a cross, a flat colour field, a hairline Kabbalah diagram). No HUDs, no 3D, no glow.
+- **Follow the original cut timing exactly.** Where the real OP shows a character, show that shot's "idea" as type: a name card, a question, a formula set in display type, a single kanji filling the frame. Where the real OP shows credits, show your credits **in the same placement and size relationships** (small role + big name, the two-column theme-song block at 44.9–48.4, the vertical 監督 card at 82.6).
+- Build a narrative in words that an ML engineer finds thrilling and funny, in the ep 25/26 manner of self-interrogation, e.g. 「なぜ、勾配は消えるのか」「あなたは何を最小化しているの？」「逃げちゃダメだ（局所解から）」. Let it evolve with the lyrics (op_timing.json `lyrics`):
+  - 'motomeru koto ni muchuu de' (obsessed with seeking) → the optimizer;
+  - 'unmei sae mada shiranai itaike na hitomi' (innocent eyes that don't yet know their fate) → an untrained/initialized model;
+  - 'sono senaka ni wa haruka mirai mezasu tame no hane ga aru koto' (on your back are wings to reach the far future) → the residual stream / scaling;
+  - 'zankoku na tenshi no teeze' → the chorus thesis.
+  Typeset real math as display typography, with correct formulas (attention, softmax, cross-entropy, the chain rule, Adam's update). Mix Japanese and English the way Eva does.
+- Chorus 66.8–86.1: an **intertitle barrage at the original cut rhythm** (2–6 frames per card; use op_cuts_detected.txt). Every card is deliberate: word choice, extreme sx/sy stretches (like Eva's squashed or stretched cards), inversions, red cards ("SECOND IMPACT" is red in the original), and "ADAM" black-on-white (the optimizer — keep it). Consider "ABSOLUTE TERROR FIELD" → "ATTENTION TENSOR FIELD".
+- Logo 15.9–22.9: an original typographic parody mark in the same construction (wide serif wordmark, jagged or stretched katakana you shape yourself, small 新世紀), plus the white flash at 22.9. Include a parody 「極秘 …計画 第17次中間報告」 document card at 74.6.
+- Typographic quality is everything: optical sizing, kana kerning, line breaks, vertical text (縦書き) where apt, generous negative space, exact alignment grids. Study the reference cards pixel by pixel.

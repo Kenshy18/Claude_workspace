@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+const ROOT = '/home/user/Claude_workspace/projects/evangelion-deep-learning-video';
+const srv = http.createServer((req, rsp) => { const p = path.join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { rsp.writeHead(404); rsp.end(); return; } rsp.writeHead(200); fs.createReadStream(p).pipe(rsp); });
+await new Promise(r => srv.listen(0, r));
+const b = await chromium.launch(); const pg = await b.newPage();
+pg.on('console', m => console.log('[page]', m.text()));
+await pg.goto(`http://127.0.0.1:${srv.address().port}/opening_v2/p2_mincho/index.html`);
+await pg.evaluate(() => window.READY);
+console.log(await pg.evaluate(() => { const orig = CanvasRenderingContext2D.prototype.fillText; const log = []; CanvasRenderingContext2D.prototype.fillText = function (s, x, y) { if (s === 'OUTLIERS' || s === 'ADAM') log.push([s, this.font]); return orig.call(this, s, x, y); }; window.renderFrame(Math.round(71.3 * 30)); window.renderFrame(Math.round(81.0 * 30)); return log; }));
+console.log(await pg.evaluate(() => { const c = document.createElement('canvas').getContext('2d'); const out = []; for (const f of ['700 358px "Roboto Condensed"', '700 358px serif', '700 358px "Noto Serif CJK JP"', '700 358px "Liberation Sans"', '700 358px "NoSuchFont"']) { c.font = f; out.push([f, c.font, c.measureText('OUTLIERS').width]); } return out; }));
+console.log(await pg.evaluate(() => { const r = {}; for (const f of ['700 40px "Roboto Condensed"', '700 40px "Liberation Sans"', '700 40px "Cinzel"', '900 40px "Noto Serif CJK JP"', '500 40px "EB Garamond"', 'italic 500 40px "EB Garamond"', '900 40px "Zen Old Mincho"']) r[f] = document.fonts.check(f); const st=[]; document.fonts.forEach(ff => st.push(ff.family + ' ' + ff.weight + ' ' + ff.status)); r.list = st; return r; }));
+await b.close(); srv.close();

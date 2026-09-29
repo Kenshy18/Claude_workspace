@@ -1,0 +1,21 @@
+# p3_magi — 「MAGI監視記録」 the opening as NERV monitor footage of ONE real training run
+- 4:3, 1440×1080. The entire OP is shown on NERV/MAGI screens: CRT monitors, the control room's displays, printouts. It tells the true story of the **real grokking run** in `opening_v2/shared/data/grokking.json`. Key facts:
+  - step 1000: train acc 1.000 while val acc is 0.000 (val loss 19.1, worse than chance, i.e. pure memorization); ‖W‖ peaks at 92.5 around step 2000;
+  - val acc rises 0.049 (9k) → 0.164 (10k) → 0.423 (11k) → 0.775 (12k) → 0.962 (13k) → 0.998 (14k); ‖W‖ decays 85 → 70, then settles at 61.1;
+  - Fourier power concentrates on 5 key frequencies k={1,12,20,34,38}: their share of energy is 0.12 at init, 0.29 at 10k, 0.51 at 14k, 0.70 at 30k. The emb2d radius CV goes 0.47 → 0.08 (10k) → 0.015 (30k), i.e. a near-perfect circle.
+- **Map run-time to film-time non-linearly** so the story rides the lyrics:
+  - intro (0–14.2): MAGI boot + the task definition, (a+b) mod 97, 30% train split;
+  - verse A (23–37.9): training starts and train accuracy climbs;
+  - verse B (37.9–51.9) is memorization: train 100%, val ≈ chance, landing on 'unmei sae mada shiranai itaike na hitomi' (innocent eyes that don't yet know their fate);
+  - pre-chorus (51.9–66.8): the plateau, ‖W‖ decaying under weight decay, and the 活動限界 4:59:56 timer counting down to generalization;
+  - **the grokking jump (steepest at steps ≈10k–13k) lands exactly at 66.8** ('zankoku na tenshi no teeze'): val accuracy shoots up and the 97 embedding points snap into a circle;
+  - chorus montage: the Fourier spectrum spikes (the key frequencies are "the Angels") with rapid cuts between real plots;
+  - outro 'shounen yo shinwa ni nare': the converged model.
+  Everything shown comes from the data or is derived from it correctly. Interpolate between logged points.
+- Visual language: copy the **real OP/series monitor graphics**, not generic sci-fi HUDs: the yellow 7-segment 4:59:56 with 活動限界まで / 内部 INTERNAL / 主電源供給システム, the neon-green angled bar display (B17, D23), the green data grids at 81.4, and orange/red warnings. CRT phosphor colours with real CRT character (slight curvature, bloom only on phosphor, occasional roll bars). Cut to the screens in a dark control room with operator silhouettes as flat black shapes, like the real OP's double exposures and silhouettes.
+- Keep the OP's structure:
+  - credits: small role / big name in white heavy mincho, overlaid on the screens;
+  - a parody logo at 15.9–22.9: an original mark with a wide serif wordmark, jagged katakana polygons, small 新世紀, and the blue flare at 19.0;
+  - chorus text cards: "ATTENTION TENSOR FIELD" with oversized A/T/F, "ADAM" black-on-white (the optimizer used), "SECOND IMPACT" in red;
+  - the 監督 card at 82.6 and the red 製作 card at 88.2.
+- ML-engineer delight: exact hyperparameters on screen (p=97, frac=0.3, AdamW lr=1e-3, wd=1.0, betas 0.9/0.98, MLP 256×256), "GROKKING" at the right moment, and citations to Power et al., 2022 and Nanda et al., 2023.

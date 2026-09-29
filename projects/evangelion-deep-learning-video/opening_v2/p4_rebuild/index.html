@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>EVALUATION 新劇場版 — p4_rebuild</title>
+<link rel="stylesheet" href="../shared/fonts/fonts_v2.css">
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#scene{display:none}</style>
+</head>
+<body>
+<canvas id="out" width="1920" height="1080"></canvas>
+<canvas id="scene" width="1920" height="1080"></canvas>
+<script>
+  // READY resolves once the module has built the world (render.mjs awaits it after page load)
+  window.READY = new Promise((res) => { window.__readyResolve = res; });
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>明朝体 — p2_mincho opening</title>
+<style>
+  /* inline @font-face: tools/render.mjs serves .css as application/octet-stream, which a
+     standards-mode page refuses as a stylesheet, so the shared fonts_v2.css never applies there */
+  @font-face { font-family: 'Roboto Condensed'; src: url(../shared/fonts/RobotoCondensed-700.ttf); font-weight: 700; font-style: normal; }
+  @font-face { font-family: 'Cinzel'; src: url(../shared/fonts/Cinzel-400.ttf); font-weight: 400; font-style: normal; }
+  @font-face { font-family: 'Cinzel'; src: url(../shared/fonts/Cinzel-700.ttf); font-weight: 700; font-style: normal; }
+  @font-face { font-family: 'EB Garamond'; src: url(../shared/fonts/EBGaramond-500i.ttf); font-weight: 500; font-style: italic; }
+  @font-face { font-family: 'EB Garamond'; src: url(../shared/fonts/EBGaramond-500.ttf); font-weight: 500; font-style: normal; }
+  @font-face { font-family: 'Zen Old Mincho'; src: url(../shared/fonts/ZenOldMincho-900.ttf); font-weight: 900; font-style: normal; }
+  @font-face { font-family: 'Shippori Mincho B1'; src: url(../shared/fonts/ShipporiMinchoB1-800.ttf); font-weight: 800; font-style: normal; }
+  @font-face { font-family: 'Share Tech Mono'; src: url(../../fonts/ShareTechMono.ttf); font-weight: 400; }
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #scene { display: none; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1440" height="1080"></canvas>
+<canvas id="scene" width="1440" height="1080"></canvas>
+<script>window.CANVAS_W = 1440; window.CANVAS_H = 1080;</script>
+<script src="formulas.js"></script>
+<script src="core.js"></script>
+<script src="fx_p2.js"></script>
+<script>const SCENES = [];</script>
+<script src="p2_lib.js"></script>
+<script src="p2_film.js"></script>
+<script src="main_p2.js"></script>
+</body>
+</html>
