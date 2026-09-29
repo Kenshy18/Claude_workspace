@@ -584,3 +584,27 @@ class Bars(VGroup):
             b.move_to(self.x_of(i) + UP * np.sign(v) * h / 2 if v != 0 else self.x_of(i))
         self.values = list(values)
         return self
+
+
+# ---------------------------------------------------------------------------
+# Overestimation の前置き: サイコロ4個の最大値
+# ---------------------------------------------------------------------------
+@functools.lru_cache(maxsize=1)
+def dice_samples(n=2000, k=4, seed=10):
+    """返り値: (出目 (n,k), 各回の最大値 (n,))"""
+    rng = np.random.default_rng(seed)
+    rolls = rng.integers(1, 7, size=(n, k))
+    return rolls, rolls.max(1)
+
+
+def dice_face(value, size=0.9, color=WHITE, pip_color=None):
+    """サイコロの目（角の丸い正方形と点）。"""
+    body = RoundedRectangle(width=size, height=size, corner_radius=0.16 * size, stroke_color=GREY_B,
+                            stroke_width=2.5, fill_color="#1C1C22", fill_opacity=1)
+    pc = pip_color or color
+    off = {1: [(0, 0)], 2: [(-1, 1), (1, -1)], 3: [(-1, 1), (0, 0), (1, -1)],
+           4: [(-1, 1), (1, 1), (-1, -1), (1, -1)], 5: [(-1, 1), (1, 1), (0, 0), (-1, -1), (1, -1)],
+           6: [(-1, 1), (1, 1), (-1, 0), (1, 0), (-1, -1), (1, -1)]}[int(value)]
+    pips = VGroup(*[Dot(body.get_center() + np.array([x * 0.27 * size, y * 0.27 * size, 0]), radius=0.085 * size,
+                        color=pc) for x, y in off])
+    return VGroup(body, pips)

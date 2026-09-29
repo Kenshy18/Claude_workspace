@@ -407,7 +407,8 @@ class StepSize(VoiceScene):
         ppo_sub = jt("Proximal Policy Optimization", size=28, color=GREY_B).next_to(ppo, DOWN, buff=0.25)
         with self.voice("安全な範囲で、{B}同じデータを、何度も使う。{A}これを両立させるのが、PPOです。") as v:
             self.play(FadeOut(lm), VGroup(data, loop).animate.scale(0.8).move_to(RIGHT * 4.3 + DOWN * 0.1),
-                      reuse.animate.move_to(RIGHT * 4.3 + UP * 1.55), FadeIn(safe), run_time=1.0)
+                      reuse.animate.move_to(RIGHT * 4.3 + UP * 1.55), run_time=0.7)
+            self.play(FadeIn(safe), run_time=0.6)
             self.wait_to(v, "B")
             reuse2 = jt("同じデータを、何度も", size=32, color=style.REWARD).move_to(reuse)
             self.play(Rotate(loop, -2 * PI, about_point=data.get_center()), Transform(reuse, reuse2), run_time=1.2)
@@ -779,7 +780,7 @@ class Clip(VoiceScene):
                         "{B}一回のデータで、確率を大きく変えすぎないように、自然とブレーキがかかるわけです。") as v:
             # カメラを「平らになる点」に寄せ、ボールが坂を登って平らな所で止まるのを見せる
             self.sfx("whoosh")
-            self.play(self.focus_on(axL.c2p(1.15, 0.95), height=4.3), ball.animate.move_to(axL.c2p(0.3, 0.3)),
+            self.play(self.focus_on(axL.c2p(1.15, 0.75), height=4.7), ball.animate.move_to(axL.c2p(0.3, 0.3)),
                       run_time=1.0)
             self.play(GrowArrow(gL), run_time=0.5)
             self.wait_to(v, "A")
@@ -1092,10 +1093,9 @@ def stage_box(num, title, sub, icon, color, w=2.75, h=2.6):
 
 
 def light(stage):
-    return AnimationGroup(stage.box.animate.set_stroke(stage.hue, 4),
-                          stage.badge[0].animate.set_fill(stage.hue, 1),
-                          stage.badge[1].animate.set_color(BLACK),
-                          stage.veil.animate.set_fill(opacity=0))
+    # AnimationGroup で包むと、グループ全体が最前面に足されて中身が隠れるので、リストで返す
+    return [stage.box.animate.set_stroke(stage.hue, 4), stage.badge[0].animate.set_fill(stage.hue, 1),
+            stage.badge[1].animate.set_color(BLACK), stage.veil.animate.set_fill(opacity=0)]
 
 
 def sft_icon():
@@ -1152,10 +1152,10 @@ class RLHF_Pipeline(VoiceScene):
                         "ここまでは、おなじみの世界です。") as v:
             self.wait_to(v, "A")
             self.sfx("pop")
-            self.play(light(stages[0]), run_time=0.8)
+            self.play(*light(stages[0]), run_time=0.8)
             self.wait_to(v, "B")
             self.sfx("pop")
-            self.play(light(stages[1]), arrows[0].animate.set_color(WHITE), run_time=0.8)
+            self.play(*light(stages[1]), arrows[0].animate.set_color(WHITE), run_time=0.8)
             self.play(GrowFromCenter(br), FadeIn(br_t), run_time=0.8)
 
         # 「良い回答」は一つに決まらない → 二つを比べるなら判断できる
@@ -1192,13 +1192,13 @@ class RLHF_Pipeline(VoiceScene):
         with self.voice("そこで、{A}人の好みを学んだ、報酬モデルを作り、{B}それを報酬にして、強化学習をします。") as v:
             self.wait_to(v, "A")
             self.sfx("whoosh")
-            self.play(light(stages[2]), arrows[1].animate.set_color(WHITE),
+            self.play(*light(stages[2]), arrows[1].animate.set_color(WHITE),
                       comp.animate.scale(0.35).move_to(stages[2].icon).set_opacity(0), FadeOut(VGroup(user, qb)),
                       run_time=1.0)
             self.remove(comp)
             self.wait_to(v, "B")
             self.sfx("pop")
-            self.play(light(stages[3]), arrows[2].animate.set_color(WHITE), Create(reward_arc), FadeIn(r_lab),
+            self.play(*light(stages[3]), arrows[2].animate.set_color(WHITE), Create(reward_arc), FadeIn(r_lab),
                       run_time=1.0)
             self.play(Rotate(stages[3].icon[0], -2 * PI, about_point=stages[3].icon[1].get_center()), FadeIn(cite),
                       run_time=1.2)
@@ -1225,9 +1225,11 @@ class RewardModel(VoiceScene):
         with self.voice("報酬モデルの学習は、{A}比較のデータから行います。{B}同じ質問への二つの回答と、{C}人が選んだ方。") as v:
             self.play(FadeIn(q, shift=0.1 * DOWN), run_time=0.7)
             self.wait_to(v, "B")
+            self.sfx("pop")
             self.play(FadeIn(A, shift=0.1 * RIGHT), FadeIn(B, shift=0.1 * RIGHT), run_time=0.8)
             self.wait_to(v, "C")
             self.play(FadeIn(judge), run_time=0.4)
+            self.sfx("hit")
             self.play(Create(ck), A.box.animate.set_stroke(POS, 3), FadeIn(yw), FadeIn(yl), run_time=0.7)
 
         # 報酬モデル → スコア → 差 → シグモイド
@@ -1278,6 +1280,7 @@ class RewardModel(VoiceScene):
                         "{D}ブラッドリー・テリー・モデルと呼ばれる、スポーツのレーティングなどでも使われる考え方です。") as v:
             self.play(FadeIn(RM), GrowArrow(ina), GrowArrow(inb), run_time=0.9)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(Indicate(rm_net, color=style.REWARD), GrowArrow(outa), GrowArrow(outb), FadeIn(numA),
                       FadeIn(numB), run_time=1.0)
             self.wait_to(v, "B")
@@ -1286,6 +1289,7 @@ class RewardModel(VoiceScene):
             p = pt()
             self.play(Create(p[0]), FadeIn(p[2]), run_time=0.6)
             self.wait_to(v, "C")
+            self.sfx("hit")
             self.play(Create(p[1]), FadeOut(s_name), FadeIn(p_lab), run_time=0.8)
             self.play(Write(bt), run_time=1.2)
             self.wait_to(v, "D")
@@ -1298,7 +1302,7 @@ class RewardModel(VoiceScene):
         ce = jt("交差エントロピー", size=32, color=WHITE).move_to(bt_name)
         self.add(p)
         with self.voice("あとは、人が選んだ方の確率が高くなるように、{A}交差エントロピーで学習するだけ。"
-                        "{B}スコアの絶対値ではなく、差だけが意味を持つ、というのがポイントです。") as v:
+                        "{B}スコアの絶対値ではなく、《差だけ》が意味を持つ、というのがポイントです。") as v:
             self.play(TransformMatchingTex(bt, loss), FadeOut(bt_name), run_time=1.2)
             self.wait_to(v, "A")
             self.play(FadeIn(ce), run_time=0.5)
@@ -1309,7 +1313,8 @@ class RewardModel(VoiceScene):
                       run_time=1.3)
             self.wait_to(v, "B")
             self.play(ChangeDecimalToValue(numA, 5.3), ChangeDecimalToValue(numB, 2.0), run_time=1.4)
-            self.play(Indicate(d_lab, color=WHITE), run_time=0.8)
+            self.sfx("sparkle")
+            self.play(Indicate(d_lab, color=WHITE), Indicate(p_lab, color=POS), run_time=0.8)
         for m in (p, d_lab[1], p_lab[2]):
             m.clear_updaters()
         fade_all(self)
@@ -1328,7 +1333,7 @@ class TokenMDP(VoiceScene):
     def construct(self):
         slot, x0 = 1.7, -3.9
         xs = [x0 + slot * (i + 0.5) for i in range(len(TOK6))]
-        y_tok, y_rew, y_v0, y_v1, y_adv = 1.4, 0.15, -1.75, -0.8, -2.65
+        y_tok, y_rew, y_v0, y_v1, y_adv = 1.4, 0.15, -1.45, -0.62, -2.8
         prompt = token_chip("おすすめの勉強法は？", size=34, stroke=GREY_B).move_to(UP * 2.9)
         prompt.align_to(LEFT * 6.4, LEFT)
         toks = VGroup(*[token_chip(t, size=40, stroke=GREY_C).move_to([x, y_tok, 0]) for t, x in zip(TOK6, xs)])
@@ -1339,6 +1344,7 @@ class TokenMDP(VoiceScene):
             self.play(FadeIn(prompt, shift=0.1 * DOWN), run_time=0.7)
             per = max(0.3, (v.until("A") - 0.9) / len(toks))
             for c in toks:
+                self.sfx("tick")
                 self.play(FadeIn(c, shift=0.15 * RIGHT), run_time=per)
             self.wait_to(v, "A")
 
@@ -1380,6 +1386,7 @@ class TokenMDP(VoiceScene):
             score = last.copy().move_to(rm.get_bottom() + DOWN * 0.35 + RIGHT * 0.6)
             self.play(FadeIn(score), run_time=0.3)
             self.play(score.animate.move_to(last), cells[-1].animate.set_stroke(style.REWARD, 3), run_time=0.8)
+            self.sfx("hit")
             self.remove(score)
             self.add(last)
 
@@ -1397,7 +1404,7 @@ class TokenMDP(VoiceScene):
         adv_axis = Line([xs[0] - slot / 2, y_adv, 0], [xs[-1] + slot / 2, y_adv, 0], stroke_color=GREY_C, stroke_width=2)
         a_row = mt(r"\hat{A}_t", size=44, color=WHITE).move_to([lab_x, y_adv, 0])
         a_sub = jt("GAE", size=26, color=GREY_B).next_to(a_row, DOWN, buff=0.08)
-        ASC = 2.0
+        ASC = 1.5
 
         def adv_bars(adv):
             grp = VGroup()
@@ -1413,7 +1420,7 @@ class TokenMDP(VoiceScene):
         actor = jt("アクター", size=28, color=style.POLICY).move_to([lab_x, y_tok + 0.2, 0])
         actor_s = mt(r"\pi_\theta", size=36, color=style.POLICY).next_to(actor, DOWN, buff=0.06)
         critic = jt("クリティック", size=26, color=style.VALUE).next_to(v_row, UP, buff=0.12)
-        with self.voice("報酬が、{A}何百トークンも後に、一度だけ届く。第1章で見た、信用割り当て問題そのものです。"
+        with self.voice("報酬が、{A}何百トークンも後に、《一度だけ》届く。第1章で見た、信用割り当て問題そのものです。"
                         "{B}そこで、各トークンの時点での価値を見積もるクリティックを用意し、{C}GAEで、トークンごとのアドバンテージを計算します。"
                         "{D}第5章の、アクター・クリティックです。") as v:
             self.wait_to(v, "A")
@@ -1421,9 +1428,11 @@ class TokenMDP(VoiceScene):
             self.play(LaggedStart(*[FadeIn(q, shift=0.1 * DOWN) for q in reversed(qms)], lag_ratio=0.15), run_time=1.2)
             self.wait_to(v, "B")
             self.play(FadeOut(credit), FadeOut(qms), FadeIn(v_row), run_time=0.6)
+            self.sfx("pop")
             self.play(Create(v_line), LaggedStart(*[FadeIn(d) for d in v_dots], lag_ratio=0.1), run_time=1.2)
             self.wait_to(v, "C")
             self.play(Create(adv_axis), FadeIn(a_row), FadeIn(a_sub), run_time=0.5)
+            self.sfx("hit")
             self.play(LaggedStart(*[GrowFromEdge(b[0], DOWN if a >= 0 else UP) for b, a in zip(bars, adv0)],
                                   lag_ratio=0.1), LaggedStart(*[FadeIn(b[1]) for b in bars], lag_ratio=0.1), run_time=1.3)
             self.wait_to(v, "D")
@@ -1455,10 +1464,14 @@ class TokenMDP(VoiceScene):
             self.play(Write(R[4:]), run_time=1.0)
             self.play(GrowFromCenter(kl_br), FadeIn(kl_t), run_time=0.6)
             self.wait_to(v, "B")
+            self.sfx("pop")
             self.play(*[ReplacementTransform(a, b) for a, b in zip(vals, kl_vals)], ReplacementTransform(last, last2),
                       *[c.animate.set_stroke(KL, 2) for c in cells[:-1]], run_time=1.0)
             self.play(Transform(bars, adv_bars(adv1)), run_time=0.8)
-        fade_all(self)
+        # 式だけを残して次の場面（報酬ハッキング）へつなぐ
+        fam = set(R.get_family())
+        others = [m for m in self.mobjects if not any(sm in fam for sm in m.get_family())]
+        self.play(*[FadeOut(m) for m in others], run_time=0.9)
 
 
 # ---------------------------------------------------------------------------
@@ -1484,6 +1497,35 @@ def ruler(width=8.4, height=1.0, n=28, color=style.REWARD):
     return VGroup(body, ticks)
 
 
+def boat_course(scale=0.6, center=ORIGIN):
+    """第1章のボートレースのコース（同じ形を縮小したもの）。"""
+    water = "#1B2A38"
+    k = scale
+    c0 = np.array(center, dtype=float)
+    outer = RoundedRectangle(width=8.0 * k, height=4.4 * k, corner_radius=2.1 * k, stroke_color=GREY_C,
+                             stroke_width=3, fill_color=water, fill_opacity=1).move_to(c0)
+    inner = RoundedRectangle(width=4.8 * k, height=1.3 * k, corner_radius=0.65 * k, stroke_color=GREY_C,
+                             stroke_width=3, fill_color=style.BG, fill_opacity=1).move_to(c0)
+    lag_c = c0 + np.array([6.0, -1.1, 0]) * k
+    lagoon = Circle(radius=1.15 * k, stroke_color=GREY_C, stroke_width=3, fill_color=water,
+                    fill_opacity=1).move_to(lag_c)
+    channel = Rectangle(width=1.6 * k, height=0.9 * k, stroke_width=0, fill_color=water,
+                        fill_opacity=1).move_to(c0 + np.array([4.35, -1.1, 0]) * k)
+    sq = 0.16 * k
+    flag = VGroup(*[Square(sq, stroke_width=0, fill_color=WHITE if (i + j) % 2 else "#111111", fill_opacity=1)
+                    for i in range(2) for j in range(9)])
+    flag.arrange_in_grid(9, 2, buff=0).move_to(c0 + np.array([-0.2, 1.47, 0]) * k)
+    lag_r = 0.6 * k
+    coins = VGroup()
+    for a in [PI / 2, PI / 2 + 2 * PI / 3, PI / 2 + 4 * PI / 3]:
+        pnt = lag_c + lag_r * np.array([np.cos(a), np.sin(a), 0])
+        coins.add(VGroup(Circle(radius=0.14 * k * 1.3, stroke_color=style.REWARD, stroke_width=2.5,
+                                fill_color=style.REWARD, fill_opacity=0.35),
+                         Dot(radius=0.05, color=style.REWARD)).move_to(pnt))
+    course = VGroup(outer, channel, lagoon, inner, flag)
+    return course, lag_c, lag_r, coins
+
+
 HACK_LINES = [
     "毎日少しずつ復習しよう。",
     "とても大切なことですが、とても大切なのは、",
@@ -1494,12 +1536,42 @@ HACK_LINES = [
 
 class RewardHacking(VoiceScene):
     def construct(self):
-        R = r_formula(52).move_to(UP * 0.4)
-        kl_box = SurroundingRectangle(R[4:], color=KL, buff=0.12, corner_radius=0.1)
+        R = r_formula(44).move_to(LEFT * 1.3 + UP * 3.05)  # 前の場面の最後と同じ位置から始める
+        self.add(R)
+        R_big = r_formula(52).move_to(UP * 0.6)
+        kl_box = SurroundingRectangle(R_big[4:], color=KL, buff=0.12, corner_radius=0.1)
         qm = jt("？", size=64, color=KL).next_to(kl_box, RIGHT, buff=0.25)
         with self.voice("なぜ、KLのペナルティが必要なのでしょうか。") as v:
-            self.play(FadeIn(R), run_time=0.8)
-            self.play(Create(kl_box), FadeIn(qm, scale=0.6), run_time=0.8)
+            self.play(Transform(R, R_big), run_time=0.9)
+            self.sfx("pop")
+            self.play(Create(kl_box), FadeIn(qm, scale=0.6), run_time=0.7)
+
+        # 第1章のボートレースを小さく再登場させる（同じ形のコースを縮小）
+        course, lagoon_c, lag_r, coins = boat_course(scale=0.62, center=LEFT * 1.9 + DOWN * 1.2)
+        tag = jt("第1章", size=28, color=GREY_B).next_to(course, UP, buff=0.12).align_to(course, LEFT)
+        boat = glow_dot(lagoon_c + LEFT * lag_r, color=ORANGE, radius=0.1, spread=2.6)
+        watcher = Robot(height=0.75).move_to(RIGHT * 5.3 + DOWN * 2.4).look(LEFT)
+        with self.voice("第1章で、ボートがゴールを目指さず、入り江を回り続けた話をしました。"
+                        "{A}言語モデルでも、同じことが起きます。") as v:
+            self.play(FadeOut(VGroup(kl_box, qm)), R.animate.scale(0.6).to_edge(UP, buff=0.25),
+                      FadeIn(course, lag_ratio=0.05), FadeIn(tag), FadeIn(watcher), run_time=1.0)
+            self.play(FadeIn(boat, scale=0.5), FadeIn(coins), run_time=0.4)
+            laps = max(1, int((v.until("A") - 0.2) // 1.5))
+            for lap in range(laps):
+                for j in range(3):
+                    part = Arc(radius=lag_r, start_angle=PI - j * 2 * PI / 3, angle=-2 * PI / 3, arc_center=lagoon_c)
+                    self.play(MoveAlongPath(boat, part), run_time=0.45, rate_func=linear)
+                    self.sfx("pop", gain=-20)
+                    c = coins[(j + 1) % 3]
+                    self.play(c.animate.scale(0.01).set_opacity(0), run_time=0.05)
+                    c.scale(100).set_opacity(1)
+                    self.add(c)
+            self.play(watcher.change("worried"), run_time=0.4)
+            self.wait_to(v, "A")
+            self.sfx("whoosh")
+            self.play(FadeOut(VGroup(course, coins, boat, tag), shift=0.3 * LEFT), watcher.change("normal"),
+                      run_time=0.8)
+        self.play(FadeOut(watcher), run_time=0.4)
 
         # 不完全なものさし
         rl = ruler().move_to(UP * 0.9 + RIGHT * 0.9)
@@ -1517,27 +1589,32 @@ class RewardHacking(VoiceScene):
         robot = Robot(height=0.85).next_to(rl, DOWN, buff=0.6).align_to(rl, LEFT)
         hole = Ellipse(width=1.1, height=0.7, fill_color=BLACK, fill_opacity=1, stroke_color=RED, stroke_width=4)
         hole.move_to(rl[0].get_center() + RIGHT * 2.8)
-        hole_lab = jt("ものさしの穴", size=32, color=RED).next_to(hole, UP, buff=0.45).shift(RIGHT * 1.0)
+        hole_lab = jt("ものさしの穴", size=32, color=RED).move_to([hole.get_x() + 1.75, rl.get_bottom()[1] - 0.45, 0])
         with self.voice("報酬モデルは、{A}人の好みを、限られたデータから真似しただけの、不完全なものさしです。"
                         "{D}強化学習は、そのものさしの点数を、とにかく上げようとします。"
-                        "{B}すると、ものさしの穴を突く方法を、見つけてしまうんです。"
+                        "{B}すると、ものさしの《穴》を突く方法を、見つけてしまうんです。"
                         "{E}例えば、長い回答ほど点数が高くなる癖があれば、{C}中身のない長文を書くようになる。"
                         "{F}報酬ハッキングと呼ばれる現象です。") as v:
-            self.play(FadeOut(VGroup(kl_box, qm)), R.animate.scale(0.6).to_edge(UP, buff=0.25), run_time=0.8)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(FadeIn(rl), FadeIn(rl_lab, shift=0.1 * DOWN), run_time=0.8)
             self.play(LaggedStart(*[FadeIn(c, shift=0.2 * RIGHT) for c in cards], lag_ratio=0.2), FadeIn(data_lab),
                       run_time=1.0)
             self.wait_to(v, "D")
             self.add(marker)
+            robot.set_mood("determined")
             self.play(FadeIn(robot), run_time=0.4)
+            for k in range(3):
+                self.sfx("tick", offset=0.6 * k)
             self.play(mk_x.animate.set_value(rl.get_center()[0] + 0.6), robot.animate.shift(RIGHT * 3.6).look(RIGHT),
                       run_time=2.0)
             self.wait_to(v, "B")
+            self.sfx("thud")
             self.play(FadeIn(hole, scale=0.5), run_time=0.6)
             self.play(mk_x.animate.set_value(hole.get_center()[0]), robot.animate.move_to(hole.get_bottom() + DOWN * 0.8),
                       run_time=1.0)
-            self.play(Wiggle(hole), FadeIn(hole_lab), run_time=0.9)
+            self.play(Wiggle(hole), FadeIn(hole_lab), robot.change("happy"), run_time=0.9)
+            self.play(robot.hop(), run_time=0.45)
 
             self.wait_to(v, "E")
             marker.clear_updaters()
@@ -1567,6 +1644,7 @@ class RewardHacking(VoiceScene):
                           ChangeDecimalToValue(n_chars, total), run_time=0.7)
             self.wait_to(v, "F")
             hack = jt("報酬ハッキング", size=48, color=RED, weight="BOLD").move_to(DOWN * 3.0 + LEFT * 2.0)
+            self.sfx("hit")
             self.play(FadeIn(hack, scale=0.8), Indicate(gauge_bg, color=RED), run_time=0.9)
         fill.clear_updaters()
         self.play(FadeOut(VGroup(rl, hole, rl_lab, bub, gauge_bg, fill, g_lab, len_lab, hack, R)), run_time=0.8)
@@ -1593,6 +1671,7 @@ class RewardHacking(VoiceScene):
             self.play(Create(ax), FadeIn(xl), FadeIn(yl), FadeIn(schem), run_time=0.8)
             self.play(Create(rm_c), FadeIn(rm_t), run_time=1.8)
             self.wait_to(v, "B")
+            self.sfx("fall", offset=1.0)
             self.play(Create(q_c), FadeIn(q_t), run_time=2.0)
             self.play(FadeIn(peak, scale=0.5), Indicate(q_t, color=POS), run_time=0.8)
 
@@ -1625,6 +1704,7 @@ class RewardHacking(VoiceScene):
             self.wait_to(v, "A")
             self.add(rope_m)
             self.play(FadeIn(rope_lab), run_time=0.3)
+            self.sfx("whoosh")
             self.play(pos.animate.set_value(3.2), run_time=1.4, rate_func=rate_functions.ease_out_back)
             self.wait_to(v, "C")
             self.play(FadeIn(ref_note), Indicate(ref, color=WHITE, scale_factor=1.5), run_time=0.9)
@@ -1665,6 +1745,7 @@ class RewardHacking(VoiceScene):
             self.play(LaggedStart(*[FadeIn(m) for m in [chain[0], c_ar[0], chain[1], c_ar[1], chain[2], c_ar[2], chain[3]]],
                                   lag_ratio=0.2), run_time=1.6)
             self.wait_to(v, "A")
+            self.sfx("sparkle")
             self.play(Create(bypass), VGroup(chain[1], chain[2], c_ar).animate.set_opacity(0.3), run_time=1.0)
             self.play(FadeIn(dpo, shift=0.1 * UP), FadeIn(cite), run_time=0.7)
         fade_all(self)
@@ -1759,10 +1840,13 @@ class GRPO(VoiceScene):
             self.play(Write(title), FadeIn(sub), FadeIn(robot), run_time=1.0)
             self.play(robot.animate.look(UR), run_time=0.4)
             self.wait_to(v, "B")
+            self.sfx("whoosh")
             self.play(LaggedStart(*[TransformFromCopy(robot.copy().scale(0.5).set_opacity(0), c) for c in cards],
                                   lag_ratio=0.12), robot.animate.look(RIGHT), run_time=1.8)
             self.play(robot.blink(), run_time=0.3)
             self.wait_to(v, "C")
+            for i, r in enumerate(GRPO_R):
+                self.sfx("chime" if r else "thud", gain=-16, offset=0.1 * i + 0.05)
             self.play(FadeOut(robot), LaggedStart(*[Create(m) for m in marks], lag_ratio=0.1), run_time=1.0)
             self.play(Create(r_axis), FadeIn(r_row), LaggedStart(*[GrowFromEdge(b, DOWN) for b in rbars], lag_ratio=0.08),
                       LaggedStart(*[FadeIn(n) for n in rnums], lag_ratio=0.08), run_time=1.2)
@@ -1796,6 +1880,7 @@ class GRPO(VoiceScene):
             self.play(Create(mean_line), FadeIn(stats[:2]), run_time=0.9)
             self.wait_to(v, "D")
             self.play(FadeIn(stats[2:]), FadeOut(head), FadeIn(F), run_time=0.8)
+            self.sfx("hit")
             self.play(Create(a_axis), FadeIn(a_row), LaggedStart(*[GrowFromEdge(b, DOWN if a > 0 else UP)
                                                                   for b, a in zip(abars, adv)], lag_ratio=0.06),
                       LaggedStart(*[FadeIn(n) for n in anums], lag_ratio=0.06), run_time=1.3)
@@ -1837,10 +1922,12 @@ class GRPO(VoiceScene):
             self.play(FadeOut(grp), FadeOut(F), FadeIn(rows[0]), run_time=0.9)
             self.wait_to(v, "A")
             self.play(FadeIn(rows[1]), run_time=0.7)
+            self.sfx("sparkle")
             self.play(Create(b5), Create(bg), GrowFromCenter(link), FadeIn(base_t), run_time=1.0)
             self.play(LaggedStart(*[FadeIn(m, shift=0.1 * UP) for m in models], lag_ratio=0.15), FadeIn(same),
                       run_time=1.4)
             self.wait_to(v, "B")
+            self.sfx("thud")
             self.play(Create(xx), models[3].animate.set_opacity(0.35), FadeOut(same), run_time=0.9)
             self.play(FadeIn(nocritic, shift=0.1 * DOWN), run_time=0.6)
         self.play(FadeOut(VGroup(rows, b5, bg, link, base_t, models, xx, nocritic)), run_time=0.8)
@@ -1860,135 +1947,219 @@ class GRPO(VoiceScene):
                       jt("だけ", size=30, color=GREY_B)).arrange(RIGHT, buff=0.2).move_to(DOWN * 3.0 + LEFT * 1.5)
         with self.voice("正しいかどうかだけを報酬にして、こうした強化学習を続けると、{A}モデルが、自分で検算したり、途中で考え直したりする、"
                         "長い推論を身につけていった、という報告もあります。"
-                        "{B}誰も、考え方そのものを、教えていないのに、です。") as v:
-            self.play(FadeIn(q2), FadeIn(bot), FadeIn(frame), run_time=0.8)
+                        "{B}誰も、考え方そのものを、《教えていない》のに、です。") as v:
+            self.play(FadeIn(q2), FadeIn(bot), FadeIn(frame), bot.animate.look(RIGHT), run_time=0.8)
             self.play(FadeIn(lines[0]), run_time=0.6)
             self.wait_to(v, "A")
-            for ln in lines[1:]:
-                self.play(FadeIn(ln, shift=0.1 * DOWN), run_time=0.6)
+            for i, ln in enumerate(lines[1:], start=1):
+                anims = [FadeIn(ln, shift=0.1 * DOWN)]
+                if i == 2:      # 「待って、検算しよう」
+                    self.sfx("pop")
+                    anims.append(bot.change("surprised"))
+                if i == 4:      # 答え
+                    self.sfx("chime")
+                    anims.append(bot.change("happy"))
+                self.play(*anims, run_time=0.6)
                 self.wait(0.35)
             self.play(Indicate(lines[2], color=style.REWARD), FadeIn(cite), run_time=0.9)
             self.wait_to(v, "B")
-            self.play(FadeIn(only, shift=0.1 * UP), run_time=0.8)
+            self.sfx("hit")
+            self.play(FadeIn(only, shift=0.1 * UP), bot.change("normal"), run_time=0.8)
             self.play(Indicate(only[2], color=style.REWARD, scale_factor=1.3), run_time=0.8)
         fade_all(self)
 
 
 # ---------------------------------------------------------------------------
-# 12. シリーズ全体の地図
+# 12. シリーズ全体の地図（各章の代表的な絵をカードにしてつなぐ）
 # ---------------------------------------------------------------------------
-MAP_NODES = {
-    # key: (表示, 章, 位置)   左の列＝価値の道、右の列＝方策の道
-    "mdp": ("MDP", 1, (-0.75, 3.1)),
-    "value": ("価値", 2, (-3.9, 2.0)),
-    "bellman": ("ベルマン方程式", 2, (-3.9, 0.8)),
-    "vi": ("価値反復", 2, (-0.45, 0.8)),
-    "td": ("TD学習", 3, (-3.9, -0.4)),
-    "q": ("Q学習", 3, (-3.9, -1.6)),
-    "dqn": ("DQN", 4, (-3.9, -2.8)),
-    "policy": ("方策", 1, (2.4, 2.0)),
-    "pg": ("方策勾配", 5, (2.4, 0.8)),
-    "base": ("ベースライン", 5, (2.4, -0.4)),
-    "ac": ("Actor-Critic", 5, (2.4, -1.6)),
-    "gae": ("GAE", 6, (-0.75, -2.35)),
-    "ppo": ("PPO", 6, (2.4, -2.8)),
-    "llm": ("RLHF・GRPO", 6, (5.15, -2.8)),
-}
-MAP_EDGES = [("mdp", "value"), ("value", "bellman"), ("bellman", "vi"), ("bellman", "td"), ("td", "q"), ("q", "dqn"),
-             ("mdp", "policy"), ("policy", "pg"), ("pg", "base"), ("base", "ac"), ("ac", "ppo"), ("ppo", "llm"),
-             ("td", "ac"), ("td", "gae"), ("gae", "ppo")]
-CH_COLOR = {1: GREY_A, 2: style.VALUE, 3: style.VALUE, 4: style.VALUE, 5: style.POLICY, 6: style.REWARD}
+OUT_CELL = 1.4                      # Outro のグリッド（第1章の冒頭と同じ大きさ）
+OUT_SHIFT = 0.15 * DOWN
+MAP_CELL = 0.3                      # 第1章カードの中のグリッド
+
+
+def pic_grid():
+    g = GridView(WORLD, cell=MAP_CELL, show_terminal_labels=False)
+    r = Robot(height=0.5 * MAP_CELL).move_to(g.center_of(WORLD.start))
+    return VGroup(g, r)
+
+
+def pic_backup():
+    root = Circle(radius=0.13, stroke_width=0, fill_color=style.VALUE, fill_opacity=1).move_to(UP * 0.5)
+    acts = VGroup(*[Dot(radius=0.08, color=style.ACTION).move_to([x, 0.0, 0]) for x in (-0.5, 0.5)])
+    leaves = VGroup(*[Circle(radius=0.1, stroke_width=0, fill_color=style.STATE, fill_opacity=1).move_to([x, -0.5, 0])
+                      for x in (-0.8, -0.25, 0.25, 0.8)])
+    lines = VGroup(*[Line(root.get_center(), a.get_center(), stroke_color=GREY_B, stroke_width=2) for a in acts],
+                   *[Line(acts[i // 2].get_center(), l.get_center(), stroke_color=GREY_B, stroke_width=2)
+                     for i, l in enumerate(leaves)])
+    return VGroup(lines, root, acts, leaves)
+
+
+def pic_qtri():
+    """実際の Q*（いつもの世界）で色を塗った、マスごとの4つの三角形。"""
+    Q = WORLD.q_from_v(V_STAR)
+    grp = VGroup()
+    for k, st in enumerate([(2, 0), (4, 1)]):
+        c = np.array([(k - 0.5) * 0.95, 0, 0])
+        h = 0.42
+        corners = {"ul": c + np.array([-h, h, 0]), "ur": c + np.array([h, h, 0]),
+                   "dr": c + np.array([h, -h, 0]), "dl": c + np.array([-h, -h, 0])}
+        tris = {A_UP: ("ul", "ur"), A_RIGHT: ("ur", "dr"), A_DOWN: ("dr", "dl"), A_LEFT: ("dl", "ul")}
+        for a, (p1, p2) in tris.items():
+            grp.add(Polygon(c, corners[p1], corners[p2], stroke_color=GREY_D, stroke_width=1.5,
+                            fill_color=value_color(Q[st, a]), fill_opacity=1))
+    return grp
+
+
+def pic_net():
+    net = mini_net((3, 4, 4, 3), width=1.8, height=1.0, r=0.07)
+    for c in net[1][-1]:
+        c.set_fill(style.VALUE, 1)
+    return net
+
+
+def pic_gauss():
+    ax = Axes(x_range=[-3, 3, 1], y_range=[0, 1.1, 1], x_length=2.2, y_length=1.0,
+              axis_config=dict(color=GREY_C, stroke_width=1.5, include_tip=False, include_ticks=False), tips=False)
+    f = lambda x: float(np.exp(-(x + 0.6) ** 2 / 0.8))
+    area = ax.get_area(ax.plot(f, x_range=[-3, 3, 0.05]), x_range=[-3, 3], color=style.POLICY, opacity=0.5)
+    curve = ax.plot(f, x_range=[-3, 3, 0.05], color=style.POLICY, stroke_width=3)
+    arr = Arrow(ax.c2p(-0.6, 1.05), ax.c2p(0.9, 1.05), buff=0, color=WHITE, stroke_width=3,
+                max_tip_length_to_length_ratio=0.3)
+    return VGroup(ax, area, curve, arr)
+
+
+def pic_clip():
+    ax = Axes(x_range=[0, 2, 1], y_range=[0, 2, 1], x_length=2.0, y_length=1.1,
+              axis_config=dict(color=GREY_C, stroke_width=1.5, include_tip=False, include_ticks=False), tips=False)
+    band = Polygon(ax.c2p(0.8, 0), ax.c2p(1.2, 0), ax.c2p(1.2, 2), ax.c2p(0.8, 2), stroke_width=0,
+                   fill_color=GREY_B, fill_opacity=0.15)
+    dash = DashedLine(ax.c2p(1.2, 1.2), ax.c2p(2, 2), color=GREY_B, stroke_width=2, dash_length=0.06)
+    line = polyline([ax.c2p(0, 0), ax.c2p(1.2, 1.2), ax.c2p(2, 1.2)], color=style.POLICY, width=4)
+    return VGroup(band, ax, dash, line)
+
+
+def chapter_card(num, labels, pic, color, w=2.9, h=2.7):
+    box = RoundedRectangle(width=w, height=h, corner_radius=0.18, stroke_color=GREY_D, stroke_width=2.5,
+                           fill_color=PANEL_FILL, fill_opacity=1)
+    tag = jt(f"第{num}章", size=26, color=color).move_to(box.get_corner(UL) + np.array([0.5, -0.28, 0]))
+    labs = VGroup(*[jt(t, size=28 if len(labels) < 3 else 26, color=WHITE) for t in labels]).arrange(DOWN, buff=0.07)
+    labs.move_to(box.get_bottom() + UP * (labs.height / 2 + 0.18))
+    room_top = tag.get_bottom()[1] - 0.08
+    room_bot = labs.get_top()[1] + 0.12
+    ph = room_top - room_bot
+    pic.scale_to_fit_height(min(ph, 1.25))
+    if pic.width > w - 0.4:
+        pic.scale_to_fit_width(w - 0.4)
+    pic.move_to([box.get_x(), (room_top + room_bot) / 2, 0])
+    g = VGroup(box, tag, pic, labs)
+    g.box, g.tag, g.pic, g.labs, g.hue = box, tag, pic, labs, color
+    return g
 
 
 class Map(VoiceScene):
     def construct(self):
-        nodes = {}
-        for k, (t, ch, (x, y)) in MAP_NODES.items():
-            n = node_box(t, color=GREY_D, size=32, h=0.74)
-            g = VGroup(n)
-            g.move_to([x, y, 0])
-            g.n, g.ch = n, ch
-            nodes[k] = g
-        edges = {}
-        for a, b in MAP_EDGES:
-            A, B = nodes[a], nodes[b]
-            e = Arrow(A.n.box.get_center(), B.n.box.get_center(), buff=0, color=GREY_D, stroke_width=3,
-                      max_tip_length_to_length_ratio=0.12, max_stroke_width_to_length_ratio=10)
-            # 箱の縁から縁へ
-            start = A.n.box.get_boundary_point(e.get_unit_vector())
-            end = B.n.box.get_boundary_point(-e.get_unit_vector())
-            e.put_start_and_end_on(start + e.get_unit_vector() * 0.05, end - e.get_unit_vector() * 0.05)
-            edges[(a, b)] = e
-        td_lab = jt("TD誤差", size=28, color=style.VALUE).move_to((nodes["td"].get_center() + nodes["ac"].get_center()) / 2
-                                                                + UP * 0.35 + LEFT * 0.3)
-        all_nodes = VGroup(*nodes.values())
-        all_edges = VGroup(*edges.values())
+        c1 = chapter_card(1, ["MDP"], pic_grid(), GREY_A).move_to(LEFT * 5.3)
+        c2 = chapter_card(2, ["価値", "ベルマン方程式"], pic_backup(), style.VALUE).move_to(LEFT * 1.75 + UP * 1.75)
+        c3 = chapter_card(3, ["TD学習・Q学習"], pic_qtri(), style.VALUE).move_to(RIGHT * 1.6 + UP * 1.75)
+        c4 = chapter_card(4, ["DQN"], pic_net(), style.VALUE).move_to(RIGHT * 5.0 + UP * 1.75)
+        c5 = chapter_card(5, ["方策勾配", "ベースライン", "Actor-Critic"], pic_gauss(), style.POLICY).move_to(DOWN * 1.75)
+        c6 = chapter_card(6, ["PPO・GAE", "RLHF・GRPO"], pic_clip(), style.REWARD).move_to(RIGHT * 4.3 + DOWN * 1.75)
+        cards = [c1, c2, c3, c4, c5, c6]
 
-        def lit(*keys, edge_keys=()):
-            anims = []
-            for k in keys:
-                g = nodes[k]
-                c = CH_COLOR[g.ch]
-                anims += [g.n.box.animate.set_stroke(c, 4).set_fill("#1A1A20", 1), g.n.label.animate.set_color(WHITE)]
-            for ek in edge_keys:
-                e = edges[ek]
-                c = CH_COLOR[nodes[ek[1]].ch]
-                anims.append(e.animate.set_color(c))
-            return anims
+        def link(a, b, color=GREY_B, sa=None, sb=None):
+            p1 = a.box.get_critical_point(sa) if sa is not None else a.box.get_right()
+            p2 = b.box.get_critical_point(sb) if sb is not None else b.box.get_left()
+            return Arrow(p1, p2, buff=0.08, color=color, stroke_width=4, max_tip_length_to_length_ratio=0.2)
+        e12 = link(c1, c2, style.VALUE, sa=UP, sb=LEFT)
+        e15 = link(c1, c5, style.POLICY, sa=DOWN, sb=LEFT)
+        e23 = link(c2, c3, style.VALUE)
+        e34 = link(c3, c4, style.VALUE)
+        e56 = link(c5, c6, style.POLICY)
+        e35 = Arrow(c3.box.get_bottom() + LEFT * 0.4, c5.box.get_top() + RIGHT * 0.9, buff=0.06, color=style.VALUE,
+                    stroke_width=4, max_tip_length_to_length_ratio=0.2)
+        e36 = Arrow(c3.box.get_bottom() + RIGHT * 0.5, c6.box.get_top() + LEFT * 0.4, buff=0.06, color=style.REWARD,
+                    stroke_width=4, max_tip_length_to_length_ratio=0.2)
+        td_lab = jt("TD誤差", size=26, color=style.VALUE).next_to(e35, LEFT, buff=0.08)
+        gae_lab = jt("GAE", size=26, color=style.REWARD).next_to(e36, RIGHT, buff=0.08)
 
-        for g in nodes.values():
-            g.n.label.set_color(GREY_D)
+        def lit(card, run_time=0.8):
+            self.sfx("pop")
+            return card.box.animate(run_time=run_time).set_stroke(card.hue, 4)
+
+        # 第1章のカードに寄ったところから始めて、地図を広げていく
+        self.frame.set(height=4.2).move_to(c1)
         with self.voice("最後に、ここまでの道のりを、振り返ってみましょう。") as v:
-            self.play(LaggedStart(*[FadeIn(g, scale=0.9) for g in nodes.values()], lag_ratio=0.05), Create(all_edges),
-                      run_time=2.2)
+            self.play(FadeIn(c1, scale=0.9), run_time=1.0)
+            self.play(c1.pic[1].animate.look(UR), run_time=0.5)
+            self.play(c1.pic[1].blink(), run_time=0.3)
 
         with self.voice("正解のない世界で、報酬だけを頼りに学ぶ、という問題を、{A}マルコフ決定過程として書きました。"
                         "{B}リターンの再帰的な関係から、ベルマン方程式が生まれ、"
                         "{C}経験からの学習、TDとQ学習へ。{D}表をニューラルネットに置き換えて、[DQN|ディーキューエヌ]へ。") as v:
             self.wait_to(v, "A")
-            self.play(*lit("mdp"), run_time=0.8)
+            self.play(lit(c1), Circumscribe(c1.labs, color=WHITE), run_time=0.9)
             self.wait_to(v, "B")
-            self.play(*lit("value", "bellman", "vi", edge_keys=[("mdp", "value"), ("value", "bellman"), ("bellman", "vi")]),
-                      run_time=1.0)
+            self.sfx("whoosh")
+            self.play(self.reset_frame(), GrowArrow(e12), FadeIn(c2, shift=0.2 * RIGHT), run_time=1.3)
+            self.play(lit(c2), run_time=0.5)
             self.wait_to(v, "C")
-            self.play(*lit("td", "q", edge_keys=[("bellman", "td"), ("td", "q")]), run_time=1.0)
+            self.play(GrowArrow(e23), FadeIn(c3, shift=0.2 * RIGHT), run_time=0.9)
+            self.play(lit(c3), run_time=0.5)
             self.wait_to(v, "D")
-            self.play(*lit("dqn", edge_keys=[("q", "dqn")]), run_time=0.8)
+            self.play(GrowArrow(e34), FadeIn(c4, shift=0.2 * RIGHT), run_time=0.9)
+            self.play(lit(c4), run_time=0.5)
 
         with self.voice("もう一方の道では、{A}途切れた勾配を、対数微分のトリックで迂回し、{B}ベースラインと価値を組み合わせて、アクター・クリティックへ。"
                         "{C}更新にブレーキをかけたPPO、そして、{D}言語モデルを鍛えるRLHFやGRPOへと、たどり着きました。") as v:
             self.wait_to(v, "A")
-            self.play(*lit("policy", "pg", edge_keys=[("mdp", "policy"), ("policy", "pg")]), run_time=1.0)
+            self.play(GrowArrow(e15), FadeIn(c5, shift=0.2 * RIGHT), run_time=1.0)
+            self.play(lit(c5), run_time=0.5)
             self.wait_to(v, "B")
-            self.play(*lit("base", "ac", edge_keys=[("pg", "base"), ("base", "ac"), ("td", "ac")]), FadeIn(td_lab),
-                      run_time=1.0)
+            self.sfx("sparkle")
+            self.play(GrowArrow(e35), FadeIn(td_lab), Indicate(c5.labs[2], color=style.POLICY), run_time=1.0)
             self.wait_to(v, "C")
-            self.play(*lit("gae", "ppo", edge_keys=[("td", "gae"), ("gae", "ppo"), ("ac", "ppo")]), run_time=1.0)
+            self.play(GrowArrow(e56), FadeIn(c6, shift=0.2 * RIGHT), GrowArrow(e36), FadeIn(gae_lab), run_time=1.1)
+            self.play(lit(c6), run_time=0.5)
             self.wait_to(v, "D")
-            self.play(*lit("llm", edge_keys=[("ppo", "llm")]), run_time=0.8)
-            self.play(Flash(nodes["llm"].get_center(), color=style.REWARD, flash_radius=1.7, line_length=0.3), run_time=0.8)
+            self.sfx("chime")
+            self.play(Indicate(c6.labs[1], color=style.REWARD, scale_factor=1.15),
+                      Flash(c6.get_center(), color=style.REWARD, flash_radius=1.9, line_length=0.3), run_time=1.0)
 
-        keys4 = ["bellman", "td", "pg", "base"]
-        others = VGroup(*[g for k, g in nodes.items() if k not in keys4], all_edges, td_lab)
+        everything = VGroup(*cards, e12, e15, e23, e34, e56, e35, e36, td_lab, gae_lab)
+        parts = [c2.labs[1], td_lab, c5.labs[0], c5.labs[1]]
         with self.voice("最新の手法も、中身を開けてみれば、{A}ベルマン方程式、{B}TD誤差、{C}方策勾配、{D}ベースライン。"
-                        "{E}第1章から一つずつ積み上げてきた部品の、組み合わせでできています。") as v:
-            self.play(others.animate.set_opacity(0.25), run_time=0.8)
-            for mark, k in zip("ABCD", keys4):
+                        "{E}第1章から一つずつ積み上げてきた部品の、《組み合わせ》でできています。") as v:
+            veil = Rectangle(width=16, height=9, stroke_width=0, fill_color=style.BG, fill_opacity=0.7)
+            self.play(FadeIn(veil), run_time=0.8)
+            for mark, m in zip("ABCD", parts):
                 self.wait_to(v, mark)
-                self.play(Circumscribe(nodes[k], color=WHITE, buff=0.08), nodes[k].animate.scale(1.12), run_time=0.7)
+                self.sfx("pop")
+                self.bring_to_front(m)
+                self.play(m.animate.scale(1.15), Circumscribe(m, color=WHITE, buff=0.06), run_time=0.7)
             self.wait_to(v, "E")
-            self.play(others.animate.set_opacity(1), *[nodes[k].animate.scale(1 / 1.12) for k in keys4], run_time=1.0)
-            self.play(Circumscribe(nodes["llm"], color=style.REWARD, buff=0.1), run_time=1.0)
-        fade_all(self)
+            self.sfx("sparkle")
+            self.play(FadeOut(veil), *[m.animate.scale(1 / 1.15) for m in parts], run_time=1.2)
+            self.play(Circumscribe(c6, color=style.REWARD, buff=0.08), run_time=1.0)
+
+        # 第1章のグリッドを大きくして、次の場面（第1章の冒頭と同じ構図）へ
+        grid, robot = c1.pic
+        k = OUT_CELL / grid.cells[(0, 0)].width  # カードの中で縮めたぶんも含めた、実際のマスの大きさから
+        target = VGroup(grid.copy(), robot.copy()).scale(k)
+        target.shift(OUT_SHIFT - target[0].board.get_center())
+        others = VGroup(*[m for m in everything if m is not c1], c1.box, c1.tag, c1.labs)
+        self.sfx("whoosh")
+        self.play(FadeOut(others), grid.animate.scale(k).move_to(target[0]), robot.animate.scale(k).move_to(target[1]),
+                  run_time=1.4)
 
 
 # ---------------------------------------------------------------------------
-# 13. おわりに
+# 13. おわりに（第1章の冒頭と同じ、ロボットと星）
 # ---------------------------------------------------------------------------
 class Outro(VoiceScene):
     def construct(self):
-        g = GridView(WORLD, cell=1.35).move_to(0.35 * DOWN)
-        robot = Robot(height=0.66).move_to(g.center_of(WORLD.start))
+        g = GridView(WORLD, cell=OUT_CELL, show_terminal_labels=False).shift(OUT_SHIFT)
+        robot = Robot(height=0.5 * OUT_CELL).move_to(g.center_of(WORLD.start)).look(UR)
+        self.add(g, robot)  # 前の場面の最後と同じ位置
         tries = []
         for seed in range(200):
             t = WORLD.rollout(WORLD.uniform_policy(), np.random.default_rng(seed), max_steps=14)
@@ -1996,9 +2167,10 @@ class Outro(VoiceScene):
                 tries.append(t)
             if len(tries) == 3:
                 break
-        with self.voice("強化学習は、{A}正解を教えてもらえない問題で、試行錯誤から学ぶための、数学です。") as v:
-            self.play(FadeIn(g), FadeIn(robot), run_time=1.0)
+        with self.voice("強化学習は、{A}正解を教えてもらえない問題で、《試行錯誤》から学ぶための、数学です。") as v:
+            self.play(robot.animate.look(UR), run_time=0.5)
             self.wait_to(v, "A")
+            self.play(robot.change("worried"), run_time=0.3)
             for i, t in enumerate(tries):
                 states = [t[0][0]] + [x[3] for x in t]
                 rng = np.random.default_rng(i)
@@ -2006,7 +2178,8 @@ class Outro(VoiceScene):
                 pts[0] = g.center_of(states[0])
                 line = polyline(pts, color=GREY_B, width=4).set_stroke(opacity=0.8)
                 self.add(line, robot)
-                self.play(Create(line), MoveAlongPath(robot, line.copy()), run_time=1.1, rate_func=linear)
+                self.sfx("tick")
+                self.play(Create(line), MoveAlongPath(robot, line.copy()), run_time=1.0, rate_func=linear)
                 self.play(line.animate.set_stroke(opacity=0.25), robot.animate.move_to(g.center_of(WORLD.start)),
                           run_time=0.3)
                 tries[i] = line
@@ -2018,28 +2191,35 @@ class Outro(VoiceScene):
                 clean = t
                 break
         trail = VGroup()
+        star = g.icons[GOAL]
+        glow = VGroup(*[Circle(radius=0.3 + 0.18 * k, stroke_width=0, fill_color=style.REWARD,
+                               fill_opacity=0.12).move_to(g.center_of(GOAL)) for k in range(5)])
         with self.voice("小さなマス目の世界の、小さなロボットから始まった話が、言語モデルの学習にまでつながっている。"
                         "{A}その道筋が、少しでもクリアに見えるようになっていたら、うれしいです。") as v:
-            self.play(FadeOut(VGroup(*tries)), run_time=0.8)
+            self.play(FadeOut(VGroup(*tries)), robot.change("determined"), run_time=0.8)
             for s, a, r, n in clean:
                 seg = Line(g.center_of(s), g.center_of(n), stroke_color=style.REWARD, stroke_width=6)
                 trail.add(seg)
                 self.add(seg, robot)
                 self.play(robot.animate.move_to(g.center_of(n)).look(n_vec(s, n)), Create(seg), run_time=0.55)
-            star = g.icons[GOAL]
+            self.sfx("chime")
             self.play(Flash(g.center_of(GOAL), color=style.REWARD, line_length=0.4, num_lines=14, flash_radius=0.8),
-                      robot.animate(rate_func=there_and_back).shift(0.25 * UP), run_time=0.8)
-            self.play(robot.animate.scale(0.75).move_to(g.center_of(GOAL) + g.cell * (0.31 * LEFT + 0.31 * UP)).look(DR),
-                      run_time=0.6)
+                      robot.change("happy"), run_time=0.8)
+            self.play(robot.animate.scale(0.75).move_to(g.center_of(GOAL) + g.cell * (0.31 * LEFT + 0.31 * UP)),
+                      run_time=0.5)
+            self.play(robot.hop(), run_time=0.45)
+            self.play(robot.hop(), run_time=0.45)
             self.wait_to(v, "A")
-            glow = VGroup(*[Circle(radius=0.3 + 0.18 * k, stroke_width=0, fill_color=style.REWARD,
-                                   fill_opacity=0.12).move_to(g.center_of(GOAL)) for k in range(5)])
+            self.sfx("sparkle")
             self.play(FadeIn(glow, scale=0.5), star.animate.scale(1.4), trail.animate.set_stroke(width=9),
                       run_time=1.2)
             self.play(trail.animate.set_stroke(width=6), run_time=0.8)
 
+        # 第1章の冒頭（ロボットに寄った画面）と対になるように、ロボットと星に寄って終わる
         with self.voice("最後まで見てくださって、ありがとうございました。") as v:
-            self.play(FadeOut(VGroup(g.board, robot, trail, *[i for s, i in g.icons.items() if s != GOAL])),
-                      run_time=1.2)
-        self.play(FadeOut(VGroup(star, glow)), run_time=0.9)
+            self.play(self.focus_on(VGroup(robot, star), height=2.6),
+                      VGroup(g.board, trail, g.icons[PIT]).animate.set_opacity(0.15), run_time=1.6)
+            self.play(robot.blink(), run_time=0.3)
+        self.play(FadeOut(VGroup(g, robot, trail, glow)), run_time=1.0)
+        self.frame.set(height=config.frame_height).move_to(ORIGIN)
         play_end_card(self)

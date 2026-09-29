@@ -8,21 +8,22 @@ import numpy as np
 from manim import *
 
 from common import style
-from common.mobjects import ACTION_VEC, GridView, ProbBars, Robot, goal_icon, pit_icon, value_color
+from common.mobjects import ACTION_VEC, GridView, ProbBars, Robot, glow_dot, goal_icon, pit_icon, value_color
 from common.rl import ACTIONS, DOWN as A_DOWN, LEFT as A_LEFT, RIGHT as A_RIGHT, UP as A_UP
 from common.style import jt, mt
-from common.titles import play_title_card
+from common.titles import play_end_card, play_title_card
 from common.voice_scene import VoiceScene
 from chapters.ch03.helpers import (
-    BANDIT_P, GOAL, NONTERM, PI_STAR, PIT, Q_STAR, UNIFORM, V_STAR, V_UNI, WORLD, Cliff as CliffEnv,
+    BANDIT_P, DA_CUE, DA_REWARD, DA_T, GOAL, NONTERM, PI_STAR, PIT, Q_STAR, UNIFORM, V_STAR, V_UNI, WORLD, Cliff as CliffEnv,
     CliffView, QTriangles, SlotMachine, arrow_glyph, bandit_run, breakout_pixels,
-    cliff_experiment, dice, eps_greedy_rollout, find_seed, greedy_from_q, mc_samples, n_vec,
-    path_line, q_learning_es, ret, step_anims, td0, td_error_curve, td_target, uniform_rollout)
+    cliff_experiment, dice, dopamine_td, eps_greedy_rollout, find_seed, greedy_from_q, mc_samples, n_vec,
+    path_line, q_learning_es, ret, spike_raster, step_anims, td0, td_error_curve, td_target,
+    uniform_rollout)
 
 CHAPTER_TITLE = "第3章 経験から学ぶ"
 
 SCENES = [
-    "Hook", "Title", "MonteCarlo", "TD", "BiasVariance", "Control", "Exploration", "Cliff",
+    "Hook", "Title", "MonteCarlo", "TD", "Dopamine", "BiasVariance", "Control", "Exploration", "Cliff",
     "QLearningDemo", "Outro",
 ]
 
@@ -139,6 +140,7 @@ class Hook(VoiceScene):
         with self.voice("前回は、{A}遷移確率を全部知っている、という、ちょっとずるい前提で、{B}価値を計算しました。") as v:
             self.play(FadeIn(g), run_time=1.0)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(LaggedStart(*[GrowArrow(a) for a in fan], lag_ratio=0.2), FadeIn(probs),
                       FadeIn(P_lab), Write(P), run_time=1.2)
             self.play(FadeIn(known, shift=0.1 * UP), run_time=0.5)
@@ -152,17 +154,21 @@ class Hook(VoiceScene):
         cross = cross_mark(P)
         with self.voice("今回は、その前提を捨てます。ロボットは、{F}床がどれくらい滑るのかも、{P}どこに穴があるのかも、知りません。"
                         "{A}できるのは、実際に動いてみて、何が起きたかを、記録することだけです。") as v:
+            self.sfx("hit")
             self.play(Create(cross), run_time=0.6)
-            self.play(FadeOut(VGroup(P, P_lab, cross, known)),
+            # 遷移確率の式が消え、ヒートマップの色が抜けて、ロボットが現れる
+            self.sfx("pop", offset=0.4)
+            self.play(FadeOut(VGroup(P, P_lab, cross, known), shift=0.3 * RIGHT),
                       *[g.cells[s].animate.set_fill(style.BG, 1) for s in g.nonterminal_states()],
                       GrowFromCenter(robot), run_time=1.0)
             self.wait_to(v, "F")
             self.play(FadeOut(fan), FadeOut(probs), robot.animate.look(DOWN), run_time=0.8)
             self.wait_to(v, "P")
+            bubble = robot.think("？", direction=UR)
+            self.sfx("pop")
             self.play(ReplacementTransform(g.icons[GOAL], q_goal),
-                      ReplacementTransform(g.icons[PIT], q_pit), robot.animate.look(UR), run_time=0.9)
-            self.play(robot.animate.look(ORIGIN), run_time=0.3)
-
+                      ReplacementTransform(g.icons[PIT], q_pit), robot.animate.set_mood("worried").look(UR),
+                      FadeIn(bubble, scale=0.8), run_time=0.9)
             # 経験ノート
             self.wait_to(v, "A")
             cols = [1.45, 3.05, 4.3, 5.95]
@@ -172,7 +178,9 @@ class Hook(VoiceScene):
                 h.move_to(RIGHT * x + UP * 2.55)
             rule = Line(RIGHT * 0.75 + UP * 2.12, RIGHT * 6.7 + UP * 2.12, stroke_color=GREY_D,
                         stroke_width=2)
-            self.play(FadeIn(title, shift=0.1 * DOWN), FadeIn(head), Create(rule), run_time=0.7)
+            self.sfx("pop")
+            self.play(FadeOut(bubble), robot.animate.set_mood("determined").look(RIGHT),
+                      FadeIn(title, shift=0.1 * DOWN), FadeIn(head), Create(rule), run_time=0.7)
 
         _, traj = find_seed(lambda t: 6 <= len(t) <= 8 and t[-1][3] == PIT,
                             lambda sd: uniform_rollout(sd, start=(0, 0), max_steps=40))
@@ -195,8 +203,11 @@ class Hook(VoiceScene):
             if n == PIT:
                 self.play(FadeIn(rw[:2], shift=0.1 * LEFT), robot.animate.look(UP), run_time=0.4)
                 pit = pit_icon(0.62 * g.cell).move_to(g.center_of(PIT))
+                self.play(robot.change("surprised"), run_time=0.25)
+                self.sfx("fall")
                 self.play(robot.animate.move_to(g.center_of(PIT)).scale(0.05).set_opacity(0),
                           rate_func=rush_into, run_time=0.6)
+                self.sfx("thud")
                 self.play(ReplacementTransform(q_pit, pit), FadeIn(rw[2:], shift=0.1 * LEFT),
                           Flash(g.center_of(PIT), color=RED, flash_radius=0.5), run_time=0.6)
             else:
@@ -207,7 +218,7 @@ class Hook(VoiceScene):
         col_colors = [style.STATE, style.ACTION, style.REWARD, style.STATE]
         tup = mt("(", "s", ",", "a", ",", "r", ",", "s'", ")", size=72).move_to(RIGHT * 3.7 + DOWN * 3.1)
         mf = jt("モデルフリー", size=48, color=WHITE, weight="MEDIUM").move_to(LEFT * 3.5 + DOWN * 3.2)
-        with self.voice("{S}今の状態、{Ac}選んだ行動、{R}もらった報酬、そして{N}次の状態。この{A}四つ組が、ロボットの手に入る、唯一の情報です。"
+        with self.voice("{S}今の状態、{Ac}選んだ行動、{R}もらった報酬、そして{N}次の状態。この{A}四つ組が、ロボットの手に入る、《唯一の》情報です。"
                         "こういう設定を、{B}モデルフリーと呼びます。") as v:
             boxes = [SurroundingRectangle(ci, color=cc, buff=0.12, corner_radius=0.08, stroke_width=3)
                      for ci, cc in zip(col_items, col_colors)]
@@ -220,16 +231,22 @@ class Hook(VoiceScene):
                 self.play(*anims, run_time=0.45)
                 prev = boxes[k]
             self.wait_to(v, "A")
+            self.sfx("hit")
             self.play(FadeOut(prev), *[TransformFromCopy(head[k], tup[2 * k + 1]) for k in range(4)],
                       FadeIn(VGroup(tup[0], tup[2], tup[4], tup[6], tup[8])), run_time=1.0)
             self.wait_to(v, "B")
+            self.sfx("hit")
             self.play(FadeIn(mf, shift=0.15 * UP), run_time=0.8)
 
         qs = VGroup(*[jt("?", size=44, color=style.VALUE).move_to(g.center_of(s))
-                      for s in g.nonterminal_states()])
+                      for s in g.nonterminal_states() if s != WORLD.start])
+        robot = Robot(height=0.62).move_to(g.center_of(WORLD.start)).set_mood("determined")
         with self.voice("経験だけから、価値を学ぶことは、できるのでしょうか。") as v:
-            self.play(LaggedStart(*[FadeIn(q, scale=0.6) for q in qs], lag_ratio=0.06), run_time=1.6)
-        self.play(FadeOut(VGroup(g, q_goal, pit, qs, title, head, rule, rows, tup, mf)), run_time=0.9)
+            self.sfx("pop")
+            self.play(GrowFromCenter(robot), run_time=0.5)
+            self.play(LaggedStart(*[FadeIn(q, scale=0.6) for q in qs], lag_ratio=0.06),
+                      robot.animate.look(UR), run_time=1.6)
+        self.play(FadeOut(VGroup(g, q_goal, pit, qs, title, head, rule, rows, tup, mf, robot)), run_time=0.9)
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +260,11 @@ class Title(VoiceScene):
 # ---------------------------------------------------------------------------
 # 3. モンテカルロ法 ＝ リターンへの回帰
 # ---------------------------------------------------------------------------
+def mc_top_eq():
+    """MonteCarlo の最後と TD の最初に、同じ位置・大きさで置く式（シーンの継ぎ目）。"""
+    return eq(MC_EQ, size=44).move_to(UP * 3.2)
+
+
 class MonteCarlo(VoiceScene):
     def construct(self):
         g = GridView(WORLD, cell=0.95).move_to(LEFT * 4.3 + UP * 1.55)
@@ -291,6 +313,7 @@ class MonteCarlo(VoiceScene):
         with self.voice("一番素直なのは、前回の最初にやった方法です。{A}エピソードを最後まで走らせて、{B}実際のリターンを測り、{C}平均を取る。"
                         "これを、{D}モンテカルロ法と呼びます。") as v:
             self.play(FadeIn(g), run_time=0.8)
+            self.sfx("pop")
             self.play(Create(focus), GrowFromCenter(robot), run_time=0.7)
             self.wait_to(v, "A")
             trail = VGroup()
@@ -304,7 +327,9 @@ class MonteCarlo(VoiceScene):
             seg = Line(g.center_of(s), g.center_of(n), stroke_color=style.STATE, stroke_width=4)
             trail.add(seg)
             self.add(seg, robot)
+            self.sfx("chime")
             reach_goal(self, robot, g, run_time=0.3)
+            self.play(robot.change("happy"), run_time=0.3)
             k = len(first) - 1
             G1 = Gs[0]
             gtxt = mt("G", "=", r"\gamma^{%d}" % k, r"\times", "1", r"\approx", f"{G1:.2f}", size=54)
@@ -313,60 +338,75 @@ class MonteCarlo(VoiceScene):
             gtxt[4].set_color(style.REWARD)
             gtxt.move_to(RIGHT * 2.5 + UP * 1.6)
             self.wait_to(v, "B")
+            self.sfx("hit")
             self.play(Write(gtxt), run_time=0.9)
             self.play(Create(axis), FadeIn(ticks), FadeIn(axis_lab), run_time=0.6)
             d = sample_dot(G1)
             dots.add(d)
+            self.sfx("pop")
             self.play(TransformFromCopy(gtxt[-1], d), run_time=0.6)
             marker.set_x(nx(G1))
             state.update(n=1, V=G1)
             self.wait_to(v, "C")
             self.play(FadeIn(marker, shift=0.2 * DOWN), run_time=0.5)
-            # もう何回か走らせて平均
-            for i in range(1, 4):
-                t, G = samples[i]
-                states = [t[0][0]] + [x[3] for x in t]
-                ln = path_line(g, states[:40], color=GREY_B, jitter=0.12, seed=i, width=2.5, opacity=0.7)
-                d = sample_dot(G)
-                dots.add(d)
-                self.play(Create(ln), run_time=0.45)
-                self.play(FadeOut(ln), FadeIn(d, shift=0.3 * DOWN), update_to(i + 1), run_time=0.4)
             self.wait_to(v, "D")
             mc_lab = jt("モンテカルロ法", size=46, color=WHITE, weight="MEDIUM").move_to(RIGHT * 2.5 + UP * 3.0)
-            self.play(FadeIn(mc_lab, shift=0.1 * DOWN), FadeOut(trail), FadeOut(robot), run_time=0.7)
+            self.sfx("hit")
+            # ロボットは「見物役」として右上の隅へ
+            self.play(FadeIn(mc_lab, shift=0.1 * DOWN), FadeOut(trail),
+                      robot.animate.set_mood("normal").scale(1.3).move_to([6.05, 3.0, 0]).look(LEFT), run_time=0.9)
 
-        # --- N2: 逐次更新 ---
+        # --- N2: 逐次更新（数直線に寄って、推定値が引っ張られるところを見る） ---
         upd = eq(MC_EQ, size=54).move_to(RIGHT * 2.3 + UP * 1.6)
-        err_box = SurroundingRectangle(VGroup(*upd[12:18]), color=RED, buff=0.08, corner_radius=0.06)
         with self.voice("平均は、全部のデータを取っておかなくても、{A}一つずつ更新できます。"
                         "新しいリターンが届くたびに、{B}今の推定値を、その方向へ、少しだけ動かすんです。") as v:
-            self.play(Indicate(dots, color=WHITE, scale_factor=1.3), run_time=1.0)
+            self.play(Indicate(dots, color=WHITE, scale_factor=1.6), run_time=1.0)
             self.wait_to(v, "A")
-            self.play(FadeOut(gtxt, shift=0.2 * UP), FadeIn(upd, shift=0.2 * UP), run_time=0.9)
+            self.play(ReplacementTransform(gtxt[0], upd[12]), FadeOut(gtxt[1:], shift=0.2 * UP),
+                      FadeIn(VGroup(*[upd[i] for i in range(len(upd)) if i != 12]), shift=0.2 * UP), run_time=0.9)
+            self.remove(*upd.get_family())
+            self.add(upd)
             self.wait_to(v, "B")
-            for i in (4, 5):
-                t, G = samples[i]
-                d = sample_dot(G)
-                self.play(TransformFromCopy(upd[12], d), run_time=0.5)
-                dots.add(d)
-                gap = Arrow([nx(state["V"]), NY + 0.45, 0], [nx(G), NY + 0.45, 0], buff=0,
-                            color=RED, stroke_width=5, max_tip_length_to_length_ratio=0.15)
-                self.play(GrowArrow(gap), Create(err_box), run_time=0.5)
-                self.play(update_to(i + 1), FadeOut(gap), run_time=0.7)
-                self.play(FadeOut(err_box), run_time=0.2)
+            G2, V_old, V_new = Gs[1], state["V"], float(np.mean(Gs[:2]))
+            cx = (nx(V_old) + nx(G2)) / 2
+            cam = Dot([cx, NY + 0.5, 0], radius=0.01).set_opacity(0)
+            self.sfx("whoosh")
+            self.play(self.focus_on(cam, height=3.9), run_time=1.1)
+            d = sample_dot(G2)
+            dots.add(d)
+            self.sfx("pop")
+            self.play(FadeIn(d, shift=0.5 * DOWN), run_time=0.5)
+            yA = NY + 1.45
+            red = Arrow([nx(V_old), yA, 0], [nx(G2), yA, 0], buff=0, color=RED, stroke_width=6,
+                        max_tip_length_to_length_ratio=0.1)
+            lab_r = mt("G", "-", *v_parts(), size=34).next_to(red, UP, buff=0.1)
+            lab_r[0].set_color(style.REWARD)
+            self.play(GrowArrow(red), FadeIn(lab_r), run_time=0.7)
+            teal = Arrow([nx(V_old), yA, 0], [nx(V_new), yA, 0], buff=0, color=style.VALUE, stroke_width=10,
+                         max_tip_length_to_length_ratio=0.2)
+            lab_t = mt(r"\alpha", r"\big(", "G", "-", *v_parts(), r"\big)", size=34).next_to(teal, DOWN, buff=0.1)
+            lab_t[2].set_color(style.REWARD)
+            self.play(GrowArrow(teal), marker.animate.set_x(nx(V_new)), FadeIn(lab_t), run_time=1.4)
+            state.update(n=2, V=V_new)
 
         # --- N3: 学習率・早回し ---
         true_line = DashedLine([nx(V_UNI[S21]), NY - 0.95, 0], [nx(V_UNI[S21]), NY + 0.35, 0],
                                color=WHITE, stroke_width=4, dash_length=0.08)
         true_lab = jt("真の値", size=30, color=GREY_A).move_to([nx(V_UNI[S21]), NY - 1.25, 0])
         cnt_lab = jt("エピソード", size=28, color=GREY_B)
-        cnt = Integer(6, font_size=38, color=WHITE)
+        cnt = Integer(2, font_size=38, color=WHITE)
         counter = VGroup(cnt_lab, cnt).arrange(RIGHT, buff=0.2).move_to([4.7, NY + 0.95, 0])
-        alpha_box = SurroundingRectangle(upd[10], color=WHITE, buff=0.08)
-        with self.voice("動かす割合の、アルファは、学習率です。{A}この式、どこかで見覚えがありませんか。") as v:
-            self.play(Create(alpha_box), FadeIn(counter), run_time=0.6)
+        a_note = mt(r"\alpha", "=", r"\tfrac{1}{2}", size=40).next_to(lab_t, RIGHT, buff=0.35)
+        mean_note = jt("平均なら α = 1/n", size=30, color=GREY_B).next_to(upd, DOWN, buff=0.3).align_to(upd, RIGHT)
+        with self.voice("動かす割合の、{AL}アルファは、学習率です。{A}この式、どこかで見覚えがありませんか。") as v:
+            self.wait_to(v, "AL")
+            self.sfx("hit")
+            self.play(Indicate(lab_t[0], color=WHITE, scale_factor=1.6), FadeIn(a_note, shift=0.1 * LEFT), run_time=0.9)
+            self.sfx("whoosh")
+            self.play(self.reset_frame(), FadeOut(VGroup(red, teal, lab_r, lab_t, a_note)), FadeIn(counter),
+                      FadeIn(mean_note), run_time=1.1)
             batch = 7
-            idx = list(range(6, 100))
+            idx = list(range(2, 100))
             groups = [idx[i:i + batch] for i in range(0, len(idx), batch)]
             per = max(0.18, (v.until("A") - 0.8) / len(groups))
             for grp in groups:
@@ -374,9 +414,11 @@ class MonteCarlo(VoiceScene):
                 dots.add(*new)
                 self.play(FadeIn(new, shift=0.25 * DOWN), update_to(grp[-1] + 1),
                           ChangeDecimalToValue(cnt, grp[-1] + 1), run_time=per)
-            self.play(Create(true_line), FadeIn(true_lab), FadeOut(alpha_box), run_time=0.6)
+            self.play(Create(true_line), FadeIn(true_lab), run_time=0.6)
             self.wait_to(v, "A")
-            self.play(Circumscribe(upd, color=WHITE, buff=0.15), run_time=1.2)
+            bubble = robot.think("？", direction=LEFT)
+            self.sfx("pop")
+            self.play(Circumscribe(upd, color=WHITE, buff=0.15), FadeIn(bubble, scale=0.8), run_time=1.2)
 
         # --- N4: 回帰と同じ ---
         loss = mt("L", "=", r"\tfrac{1}{2}", r"\big(", "G", "-", *v_parts(), r"\big)^2", size=48)
@@ -389,14 +431,19 @@ class MonteCarlo(VoiceScene):
         box2 = SurroundingRectangle(VGroup(*grad[2:8]), color=RED, buff=0.08, corner_radius=0.06)
         label_note = jt("正解ラベル", size=30, color=style.REWARD)
         with self.voice("そう。これは、{A}推定値と、観測したリターンとの二乗誤差を、{B}勾配降下で小さくする更新、そのものです。"
-                        "{C}リターンを正解ラベルとみなした、回帰なんです。") as v:
-            self.play(FadeOut(VGroup(g, focus, mc_lab)), upd.animate.move_to(UP * 2.55),
-                      run_time=0.9)
+                        "{C}リターンを正解ラベルとみなした、《回帰》なんです。") as v:
+            bang = robot.say("！", direction=LEFT)
+            self.play(FadeOut(VGroup(g, focus, mc_lab, mean_note)), upd.animate.move_to(UP * 2.55),
+                      ReplacementTransform(bubble, bang), robot.change("surprised"), run_time=0.9)
             self.wait_to(v, "A")
-            self.play(Write(loss), FadeIn(lab_loss), run_time=1.0)
+            # 更新式の (G − V(s)) から、損失の式を作る
+            self.play(*[TransformFromCopy(upd[12 + k], loss[4 + k]) for k in range(6)],
+                      FadeIn(VGroup(*loss[:4], loss[10])), FadeIn(lab_loss), run_time=1.1)
             self.wait_to(v, "B")
-            self.play(Write(grad), FadeIn(lab_grad), run_time=1.0)
+            self.play(*[TransformFromCopy(loss[4 + k], grad[2 + k]) for k in range(6)],
+                      FadeIn(VGroup(grad[0], grad[1])), FadeIn(lab_grad), run_time=1.1)
             box1 = SurroundingRectangle(VGroup(*upd[12:18]), color=RED, buff=0.08, corner_radius=0.06)
+            self.sfx("hit")
             self.play(Create(box1), Create(box2), run_time=0.6)
             self.play(Indicate(VGroup(*upd[12:18]), color=RED), Indicate(VGroup(*grad[2:8]), color=RED),
                       run_time=0.9)
@@ -404,8 +451,10 @@ class MonteCarlo(VoiceScene):
             label_note.next_to(loss[4], DOWN, buff=0.55)
             la = Arrow(label_note.get_top(), loss[4].get_bottom(), buff=0.08, color=style.REWARD,
                        stroke_width=4, max_tip_length_to_length_ratio=0.3)
+            self.sfx("sparkle")
             self.play(FadeIn(label_note, shift=0.1 * UP), GrowArrow(la), Indicate(dots, color=style.REWARD),
-                      run_time=1.0)
+                      FadeOut(bang), robot.change("happy"), run_time=1.0)
+            self.play(robot.hop(), run_time=0.5)
 
         # --- N5: 二つの弱点 ---
         _, long_ep = find_seed(lambda t: 26 <= len(t) <= 32,
@@ -416,15 +465,19 @@ class MonteCarlo(VoiceScene):
                         "{B}もう一つは、リターンのばらつきが大きいことです。途中で振られた、たくさんのサイコロの目が、{C}全部リターンに積み重なるからです。") as v:
             self.play(FadeOut(VGroup(loss, grad, lab_loss, lab_grad, box1, box2, label_note, la)),
                       upd.animate.scale(0.85).move_to(RIGHT * 2.5 + UP * 2.4), run_time=0.9)
-            robot = Robot(height=0.46).move_to(g.center_of(S21))
-            self.play(FadeIn(g), Create(focus), FadeIn(robot), run_time=0.8)
+            # 見物役のロボットがグリッドに戻って、長いエピソードを走る
+            self.play(FadeIn(g), Create(focus),
+                      robot.animate.set_mood("normal").scale(1 / 1.3).move_to(g.center_of(S21)).look(ORIGIN),
+                      run_time=0.9)
             self.wait_to(v, "A")
             self.play(tri.animate.set_fill(GREY_D), mlab.animate.set_color(GREY_C), FadeIn(hg), run_time=0.4)
             trail = VGroup()
-            step_t = max(0.08, (v.until("B") - 0.8) / len(long_ep))
-            for s, a, r, n in long_ep:
+            step_t = max(0.08, (v.until("B") - 1.2) / len(long_ep))
+            for k, (s, a, r, n) in enumerate(long_ep):
                 if WORLD.is_terminal(n):
                     break
+                if k == 10:
+                    self.play(robot.change("worried"), run_time=0.2)
                 if n != s:
                     seg = Line(g.center_of(s), g.center_of(n), stroke_color=style.STATE, stroke_width=3,
                                stroke_opacity=0.7)
@@ -432,9 +485,12 @@ class MonteCarlo(VoiceScene):
                     self.add(seg, robot)
                 self.play(*step_anims(robot, g, s, a, n, run_time=step_t))
             s, a, r, n = long_ep[-1]
-            end_c = g.center_of(n)
-            self.play(robot.animate.move_to(end_c).scale(0.3).set_opacity(0), run_time=0.3)
+            self.sfx("fall")
+            self.play(robot.change("surprised"), run_time=0.15)
+            self.play(robot.animate.move_to(g.center_of(n)).scale(0.05).set_opacity(0), rate_func=rush_into,
+                      run_time=0.4)
             d_long = sample_dot(G_long).set_color(WHITE)
+            self.sfx("pop")
             self.play(FadeIn(d_long, scale=2), FadeOut(hg), tri.animate.set_fill(style.VALUE),
                       mlab.animate.set_color(WHITE), run_time=0.5)
             self.wait_to(v, "B")
@@ -449,13 +505,15 @@ class MonteCarlo(VoiceScene):
             picks = path_states[::3][:10]
             ds = VGroup(*[dice(int(drng.integers(1, 7)), size=0.34).move_to(
                 g.center_of(p) + drng.uniform(-0.2, 0.2, 3) * np.array([1, 1, 0])) for p in picks])
+            self.sfx("pop")
             self.play(LaggedStart(*[FadeIn(x, scale=0.5) for x in ds], lag_ratio=0.12), run_time=1.4)
             self.wait_to(v, "C")
             self.play(LaggedStart(*[x.animate.move_to(d_long.get_center()).scale(0.1).set_opacity(0)
                                     for x in ds], lag_ratio=0.08), run_time=1.3)
             self.play(Flash(d_long, color=WHITE, flash_radius=0.3), run_time=0.5)
-        self.play(FadeOut(VGroup(g, focus, trail, upd, axis, ticks, dots, d_long, true_line,
-                                 true_lab, spread, sp_lab)), run_time=0.9)
+        # 更新式だけを残して、次のシーン（TD）の冒頭と同じ位置へ
+        self.play(FadeOut(VGroup(g, focus, trail, axis, ticks, dots, d_long, true_line, true_lab, spread, sp_lab)),
+                  Transform(upd, mc_top_eq()), run_time=1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -473,11 +531,18 @@ def timeline(n_steps=3, size=72):
     return toks.arrange(RIGHT, buff=0.42)
 
 
+def td_bottom_eq():
+    """TD の最後と Dopamine の最初に、同じ位置・大きさで置く式（シーンの継ぎ目）。"""
+    return eq(TD_EQ, size=66).scale(0.75).move_to(DOWN * 3.1)
+
+
 class TD(VoiceScene):
     def construct(self):
+        top = mc_top_eq()
+        self.add(top)
         # --- N1: MC は最後に、TD は一歩ごとに ---
-        mc_row = timeline().move_to(RIGHT * 1.3 + UP * 1.5)
-        td_row = timeline().move_to(RIGHT * 1.3 + DOWN * 1.6)
+        mc_row = timeline().move_to(RIGHT * 1.3 + UP * 1.15)
+        td_row = timeline().move_to(RIGHT * 1.3 + DOWN * 1.9)
         mc_lab = jt("モンテカルロ", size=34, color=GREY_B).next_to(mc_row, LEFT, buff=0.4)
         td_lab = jt("TD", size=40, color=GREY_B).next_to(td_row, LEFT, buff=0.4).align_to(mc_lab, RIGHT)
         states_mc = mc_row[::3]
@@ -504,13 +569,14 @@ class TD(VoiceScene):
                 hops.add(hop)
                 self.play(LaggedStart(*[FadeIn(t, shift=0.2 * RIGHT) for t in new], lag_ratio=0.3),
                           run_time=per * 0.55)
+                self.sfx("tick")
                 self.play(Create(hop), Flash(states_td[k], color=style.VALUE, flash_radius=0.45,
                                              line_length=0.2), run_time=per * 0.45)
 
         # --- N2: 一歩先の見積もり ---
         with self.voice("一歩進むと、{A}報酬と、次の状態が分かります。{U}そこから先のリターンは、まだ分かりません。"
                         "でも、その見積もりなら、手元にあります。{B}次の状態の、価値の推定値です。") as v:
-            self.play(FadeOut(VGroup(mc_row, mc_lab, fan, td_lab, hops)), td_row.animate.move_to(DOWN * 0.3),
+            self.play(FadeOut(VGroup(mc_row, mc_lab, fan, td_lab, hops)), td_row.animate.move_to(DOWN * 0.5),
                       run_time=0.9)
             self.play(td_row[2:].animate.set_opacity(0.15), run_time=0.5)
             self.wait_to(v, "A")
@@ -527,20 +593,30 @@ class TD(VoiceScene):
             vs[3].set_color(style.STATE)
             halo = SurroundingRectangle(td_row[3], color=style.VALUE, buff=0.12, corner_radius=0.08)
             self.play(Create(halo), run_time=0.5)
+            self.sfx("pop")
             self.play(ReplacementTransform(qm, vs), TransformFromCopy(td_row[3], vs[3]), run_time=1.0)
-            approx = VGroup(halo)
 
-        # --- N3: G を置き換える ---
-        mc_eq = eq(MC_EQ, size=66).move_to(DOWN * 0.1)
-        td_eq = eq(TD_EQ, size=66).move_to(DOWN * 0.1)
-        g_box = SurroundingRectangle(mc_eq[12], color=style.REWARD, buff=0.1)
+        # --- N3: G を置き換える（タイムラインの r₁ と V(s₁) がそのまま式に入る） ---
+        mc_eq = eq(MC_EQ, size=66).move_to(UP * 0.4)
+        td_eq = eq(TD_EQ, size=66).move_to(UP * 0.4)
+        strip = VGroup(td_row, br, br_lab, vs, halo)
         with self.voice("そこで、モンテカルロ法の[G|ジー]を、{A}報酬、足す、ガンマ倍の、次の状態の価値、で置き換えます。") as v:
-            self.play(FadeOut(VGroup(td_row, br, br_lab, vs, approx)), FadeIn(mc_eq, shift=0.2 * UP), run_time=0.9)
+            self.play(strip.animate.scale(0.62).move_to(DOWN * 2.6), Transform(top, mc_eq), run_time=1.1)
+            self.remove(*top.get_family())
+            self.add(mc_eq)
+            g_box = SurroundingRectangle(mc_eq[12], color=style.REWARD, buff=0.1)
             self.play(Create(g_box), run_time=0.5)
             self.wait_to(v, "A")
-            self.play(FadeOut(g_box), run_time=0.2)
-            morph(self, mc_eq, td_eq, MC_TO_TD, run_time=1.4)
-            self.play(Indicate(VGroup(*td_eq[12:19]), color=style.VALUE, scale_factor=1.08), run_time=0.9)
+            self.sfx("hit")
+            anims = [ReplacementTransform(mc_eq[i], td_eq[j]) for i, j in MC_TO_TD.items()]
+            anims += [FadeOut(mc_eq[12], shift=0.5 * UP), FadeOut(g_box, shift=0.5 * UP),
+                      TransformFromCopy(td_row[2], td_eq[12]), FadeIn(td_eq[13]), FadeIn(td_eq[14]),
+                      TransformFromCopy(VGroup(*vs[1:5]), VGroup(*td_eq[15:19]))]
+            self.play(*anims, run_time=1.5)
+            self.remove(*td_eq.get_family())
+            self.add(td_eq)
+            self.play(Indicate(VGroup(*td_eq[12:19]), color=style.VALUE, scale_factor=1.08),
+                      FadeOut(strip), run_time=0.9)
 
         # --- N4: TD 学習と TD 誤差 ---
         title = jt("TD学習", size=52, color=WHITE, weight="MEDIUM").move_to(UP * 3.1)
@@ -553,10 +629,11 @@ class TD(VoiceScene):
         l_now = jt("今の見積もり", size=30, color=GREY_B).next_to(b_now, DOWN, buff=0.12)
         l_now.shift(RIGHT * max(0, l_tgt.get_right()[0] + 0.3 - l_now.get_left()[0]))
         b_del = Brace(VGroup(*td_eq[12:24]), UP, color=RED)
-        l_del = VGroup(jt("TD誤差", size=36, color=RED), mt(r"\delta", size=52, color=RED)).arrange(RIGHT, buff=0.2)
+        l_del = VGroup(jt("TD誤差", size=36, color=RED), mt(r"\delta", size=60, color=RED)).arrange(RIGHT, buff=0.2)
         l_del.next_to(b_del, UP, buff=0.12)
         with self.voice("これが、[TD|ティーディー]学習です。[TD|ティーディー]は、テンポラル・ディファレンス、時間的な差分の略です。"
                         "{A}括弧の中身、{T}一歩先から見た見積もりと、{N}今の見積もりとの差を、{D}[TD|ティーディー]誤差と呼び、デルタで表します。") as v:
+            self.sfx("hit")
             self.play(FadeIn(title, shift=0.1 * DOWN), run_time=0.7)
             self.play(FadeIn(sub, shift=0.1 * DOWN), run_time=0.7)
             self.wait_to(v, "A")
@@ -566,6 +643,7 @@ class TD(VoiceScene):
             self.wait_to(v, "N")
             self.play(GrowFromCenter(b_now), FadeIn(l_now), run_time=0.6)
             self.wait_to(v, "D")
+            self.sfx("hit")
             self.play(GrowFromCenter(b_del), FadeIn(l_del, shift=0.1 * DOWN), run_time=0.8)
 
         # --- N5: ブートストラップ ---
@@ -576,21 +654,24 @@ class TD(VoiceScene):
             Rectangle(width=0.7, height=0.14, stroke_width=0, fill_color="#4a382b", fill_opacity=1).move_to([-0.15, 0.82, 0]),
             ArcBetweenPoints([-0.48, 0.93, 0], [-0.2, 0.93, 0], angle=-PI * 1.5, stroke_color=GREY_A,
                              stroke_width=5))
-        boot.scale(1.15).move_to(LEFT * 4.6 + DOWN * 1.35)
-        lift = Arrow(boot[2].get_top() + 0.05 * UP, boot[2].get_top() + 1.1 * UP, buff=0, color=WHITE, stroke_width=6)
-        bs_lab = jt("ブートストラップ", size=40, color=WHITE).next_to(boot, DOWN, buff=0.35)
+        boot.scale(1.15).move_to(LEFT * 5.0 + DOWN * 1.35)
+        bot = Robot(height=0.75).next_to(boot, RIGHT, buff=0.35).align_to(boot, DOWN).look(LEFT)
+        strap = Line(boot[2].get_top(), bot.get_left() + 0.1 * UP, stroke_color=GREY_A, stroke_width=3)
+        lift = Arrow(boot[2].get_top() + 0.3 * LEFT + 0.05 * UP, boot[2].get_top() + 0.3 * LEFT + 1.1 * UP, buff=0,
+                     color=WHITE, stroke_width=6)
+        bs_lab = jt("ブートストラップ", size=40, color=WHITE).next_to(VGroup(boot, bot), DOWN, buff=0.35)
         errs = td_error_curve(1000, seed=0)
-        ax = Axes(x_range=[0, 3, 1], y_range=[0, 0.2, 0.1], x_length=6.2, y_length=3.0, tips=False,
+        ax = Axes(x_range=[0, 3, 1], y_range=[0, 0.2, 0.1], x_length=5.8, y_length=3.0, tips=False,
                   axis_config={"stroke_color": GREY_C, "stroke_width": 2, "include_ticks": True})
-        ax.move_to(RIGHT * 2.9 + DOWN * 1.4)
+        ax.move_to(RIGHT * 3.3 + DOWN * 1.4)
         curve = VMobject(stroke_color=style.VALUE, stroke_width=5)
         curve.set_points_as_corners([ax.c2p(np.log10(i), min(errs[i], 0.2)) for i in range(1, len(errs))])
         xt = VGroup(*[mt(lab, size=30, color=GREY_B).next_to(ax.c2p(x, 0), DOWN, buff=0.15)
                       for x, lab in [(0, "1"), (1, "10"), (2, "100"), (3, "1000")]])
         xl = jt("エピソード（対数）", size=28, color=GREY_B).next_to(xt, DOWN, buff=0.1)
         yl = jt("真の価値とのずれ", size=30, color=GREY_B).next_to(ax, UP, buff=0.2).align_to(ax, LEFT)
-        with self.voice("推定値を使って、推定値を更新する。{A}自分の靴紐を引っ張って、自分を持ち上げるような、この方法を、{B}ブートストラップと呼びます。"
-                        "一見インチキのようですが、{C}ちゃんと、ベルマン方程式の解に収束します。") as v:
+        with self.voice("推定値を使って、推定値を更新する。{A}自分の靴紐を引っ張って、自分を持ち上げるような、この方法を、{B}《ブートストラップ》と呼びます。"
+                        "{I}一見インチキのようですが、{C}ちゃんと、ベルマン方程式の解に収束します。") as v:
             self.play(FadeOut(VGroup(b_tgt, l_tgt, b_now, l_now, b_del, l_del, title)),
                       td_eq.animate.move_to(UP * 1.9), run_time=0.8)
             loop = CurvedArrow(td_eq[15].get_top() + 0.1 * UP, td_eq[5].get_top() + 0.1 * UP, angle=0.7,
@@ -598,14 +679,23 @@ class TD(VoiceScene):
             self.play(Create(loop), Indicate(td_eq[15:19], color=style.VALUE), Indicate(td_eq[5:9], color=style.VALUE),
                       run_time=1.2)
             self.wait_to(v, "A")
-            self.play(FadeIn(boot, shift=0.2 * UP), run_time=0.6)
-            self.play(GrowArrow(lift), boot.animate.shift(0.35 * UP), run_time=0.8)
-            self.play(boot.animate.shift(0.25 * UP), rate_func=there_and_back, run_time=0.6)
+            self.sfx("pop")
+            self.play(FadeIn(boot, shift=0.2 * UP), FadeIn(bot), Create(strap), run_time=0.6)
+            self.play(bot.change("determined"), run_time=0.3)
+            self.play(GrowArrow(lift), VGroup(boot, strap).animate.shift(0.35 * UP), bot.animate.shift(0.35 * UP),
+                      run_time=0.8)
+            self.play(VGroup(boot, bot, strap).animate.shift(0.25 * UP), rate_func=there_and_back, run_time=0.6)
             self.wait_to(v, "B")
+            self.sfx("hit")
             self.play(FadeIn(bs_lab, shift=0.1 * UP), run_time=0.6)
+            self.wait_to(v, "I")
+            self.play(bot.change("worried"), run_time=0.4)
             self.wait_to(v, "C")
-            self.play(Create(ax), FadeIn(xl), FadeIn(yl), FadeIn(xt), run_time=0.7)
-            self.play(Create(curve), run_time=2.2)
+            self.play(Create(ax), FadeIn(xl), FadeIn(yl), FadeIn(xt), bot.animate.look(RIGHT), run_time=0.7)
+            self.play(Create(curve), run_time=2.0)
+            self.sfx("chime")
+            self.play(bot.change("happy"), run_time=0.3)
+            self.play(bot.hop(), run_time=0.45)
 
         # --- N6: バックアップの枝を1本だけ ---
         root = Circle(radius=0.3, stroke_color=style.STATE, stroke_width=4, fill_color=style.BG,
@@ -630,12 +720,16 @@ class TD(VoiceScene):
         leaf_lab = mt("r", "+", r"\gamma", *v_parts("s'"), size=58).next_to(chosen_leaf, DOWN, buff=0.3)
         with self.voice("実はこれは、前回のバックアップの、{A}すべての枝の平均の代わりに、{B}実際に起きた一本の枝だけを使ったもの、と見ることもできます。"
                         "{C}遷移確率を知らなくても、実際の経験が、その代わりをしてくれるわけです。") as v:
-            self.play(FadeOut(VGroup(boot, lift, bs_lab, ax, curve, xl, yl, xt, loop)),
-                      td_eq.animate.scale(0.75).move_to(DOWN * 3.1), run_time=0.8)
+            self.play(FadeOut(VGroup(boot, lift, bs_lab, ax, curve, xl, yl, xt, loop, strap)),
+                      td_eq.animate.become(td_bottom_eq()),
+                      bot.animate.set_mood("normal").scale(0.48).move_to(chosen_leaf.get_center()).look(UP),
+                      run_time=0.9)
             self.play(FadeIn(root), LaggedStart(*[Create(l) for l in e1], lag_ratio=0.1), FadeIn(acts),
                       run_time=0.8)
+            self.bring_to_front(bot)
             self.play(LaggedStart(*[Create(l) for l in e2], lag_ratio=0.03), FadeIn(kids), FadeIn(pi_lab),
                       FadeIn(p_lab), run_time=0.9)
+            self.bring_to_front(bot)
             self.wait_to(v, "A")
             ups1 = [Dot(c.get_center(), radius=0.07, color=style.VALUE) for kk in kids for c in kk]
             tgt1 = [acts[i // 3].get_center() for i in range(12)]
@@ -660,10 +754,234 @@ class TD(VoiceScene):
             self.play(Flash(root, color=style.VALUE, flash_radius=0.5), run_time=0.5)
             self.wait_to(v, "C")
             px = cross_mark(p_lab, width=5)
-            rb = Robot(height=0.36).move_to(chosen_leaf.get_center())
+            self.sfx("hit")
             self.play(Create(px), run_time=0.5)
-            self.play(FadeOut(VGroup(p_lab, px)), FadeIn(rb, scale=0.5), run_time=0.6)
-        self.play(FadeOut(VGroup(tree, leaf_lab, rb, td_eq)), run_time=0.9)
+            self.play(FadeOut(VGroup(p_lab, px)), bot.change("happy"), run_time=0.6)
+        # 式だけを残す（次のシーンの冒頭と同じ位置）
+        self.play(FadeOut(VGroup(tree, leaf_lab, bot)), run_time=0.9)
+
+
+# ---------------------------------------------------------------------------
+# 4b. ドーパミンと TD 誤差（この章いちばんの「なるほど」）
+# ---------------------------------------------------------------------------
+def lamp_icon(size=0.42, lit=False):
+    bulb = Circle(radius=size / 2, stroke_color=GREY_A, stroke_width=2.5,
+                  fill_color=CUE_COLOR if lit else "#1c1c22", fill_opacity=1)
+    base = RoundedRectangle(width=size * 0.5, height=size * 0.28, corner_radius=0.03, stroke_width=0,
+                            fill_color=GREY_B, fill_opacity=1).next_to(bulb, DOWN, buff=-0.02)
+    return VGroup(bulb, base)
+
+
+def juice_icon(size=0.46):
+    cup = Polygon([-0.5, 0.5, 0], [0.5, 0.5, 0], [0.36, -0.5, 0], [-0.36, -0.5, 0], stroke_color=GREY_A,
+                  stroke_width=2.5, fill_color="#16161A", fill_opacity=1).scale(size / 1.0)
+    liquid = Polygon([-0.44, 0.15, 0], [0.44, 0.15, 0], [0.36, -0.5, 0], [-0.36, -0.5, 0], stroke_width=0,
+                     fill_color=style.REWARD, fill_opacity=0.9).scale(size / 1.0)
+    liquid.align_to(cup, DOWN).shift(0.02 * UP)
+    return VGroup(cup, liquid)
+
+
+def neuron_icon(scale=1.0):
+    soma = Circle(radius=0.34, stroke_color=WHITE, stroke_width=3, fill_color="#20202a", fill_opacity=1)
+    nucleus = Dot(radius=0.08, color=GREY_B)
+    dend = VGroup(*[Line(ORIGIN, 0.75 * np.array([np.cos(a), np.sin(a), 0]), stroke_color=WHITE, stroke_width=3)
+                    .shift(0.3 * np.array([np.cos(a), np.sin(a), 0])) for a in (1.9, 2.6, 3.4, 4.2)])
+    axon = Line(0.34 * RIGHT, 1.6 * RIGHT, stroke_color=WHITE, stroke_width=3)
+    term = VGroup(*[Line(1.6 * RIGHT, 1.6 * RIGHT + 0.35 * np.array([np.cos(a), np.sin(a), 0]), stroke_color=WHITE,
+                         stroke_width=3) for a in (-0.6, 0, 0.6)])
+    return VGroup(dend, axon, term, soma, nucleus).scale(scale)
+
+
+CUE_COLOR = ManimColor("#9FD8FF")
+
+
+class Dopamine(VoiceScene):
+    def construct(self):
+        td_eq = td_bottom_eq()
+        self.add(td_eq)
+        deltas, omit = dopamine_td()
+        MID = 9                                   # 「途中」として見せる試行
+        conds = [deltas[0], deltas[MID - 1], deltas[-1], omit]
+
+        # ---- レイアウト ----
+        COLS = [(-5.0, -0.9), (0.3, 4.4)]          # δ（計算）と、発火（模式図）の横の範囲
+        ROW_Y = [1.95, 0.55, -0.85, -2.25]
+        step = (COLS[0][1] - COLS[0][0]) / DA_T
+
+        def tx(col, t):
+            return COLS[col][0] + t * step
+
+        # ---- N1: TD 誤差に注目 ----
+        robot = Robot(height=0.8).move_to([5.75, -0.2, 0])
+        with self.voice("[TD|ティーディー]誤差には、驚くような後日談があります。") as v:
+            self.play(td_eq.animate.become(eq(TD_EQ, size=66).move_to(UP * 0.6)), run_time=1.0)
+            b = Brace(VGroup(*td_eq[12:24]), DOWN, color=RED)
+            dl = mt(r"\delta", size=72, color=RED).next_to(b, DOWN, buff=0.15)
+            self.sfx("pop")
+            self.play(GrowFromCenter(b), FadeIn(dl, shift=0.1 * UP), FadeIn(robot), run_time=0.8)
+            self.play(robot.animate.look(LEFT), run_time=0.3)
+
+        # ---- N2: 1997年、サルのドーパミン神経細胞 ----
+        neuron = neuron_icon(1.1).move_to([2.2, 0.2, 0])
+        electrode = Line([2.55, 2.4, 0], neuron[3].get_center() + 0.3 * UR, stroke_color=GREY_B, stroke_width=3)
+        trace = VMobject(stroke_color=WHITE, stroke_width=2)
+        trng = np.random.default_rng(4)
+        pts, x = [], 0.0
+        while x < 4.2:
+            if trng.random() < 0.12:
+                pts += [[x, 0, 0], [x + 0.03, 0.55, 0], [x + 0.06, -0.2, 0], [x + 0.09, 0, 0]]
+                x += 0.09
+            else:
+                pts.append([x, trng.uniform(-0.03, 0.03), 0])
+                x += 0.06
+        trace.set_points_as_corners(np.array(pts))
+        trace.next_to(neuron, DOWN, buff=0.55)
+        cite = VGroup(Text("Schultz, Dayan & Montague (1997)", font_size=28, color=GREY_B),
+                      Text("Science", font_size=28, color=GREY_B, slant=ITALIC)).arrange(RIGHT, buff=0.2)
+        cite.to_edge(DOWN, buff=0.45)
+        who = jt("サルの中脳の、ドーパミン神経細胞", size=32, color=GREY_A).next_to(neuron, UP, buff=0.55)
+        with self.voice("1997年、サルの脳の、ドーパミンを出す神経細胞の記録が、{A}[TD|ティーディー]誤差と、そっくりの振る舞いをすることが報告されました。") as v:
+            eq_grp = VGroup(td_eq, b)
+            self.play(eq_grp.animate.scale(0.55).move_to([-3.6, 2.6, 0]), dl.animate.scale(1.2).move_to([-3.6, 0.2, 0]),
+                      run_time=1.0)
+            self.sfx("pop")
+            self.play(FadeIn(neuron, scale=0.8), Create(electrode), FadeIn(who, shift=0.1 * DOWN), run_time=1.0)
+            self.play(Create(trace), FadeIn(cite), run_time=1.4)
+            self.wait_to(v, "A")
+            sim = mt(r"\approx", size=90, color=WHITE).move_to([-1.3, 0.2, 0])
+            self.sfx("sparkle")
+            self.play(FadeIn(sim, scale=0.5), Indicate(dl, color=RED, scale_factor=1.3),
+                      robot.change("surprised"), run_time=0.9)
+
+        # ---- 表の枠：見出し、合図とジュースの時刻、4段の行 ----
+        head_l = VGroup(jt("TD誤差", size=32, color=WHITE), mt(r"\delta_t", size=48, color=RED),
+                        jt("（計算）", size=28, color=GREY_B)).arrange(RIGHT, buff=0.15)
+        head_l.move_to([(COLS[0][0] + COLS[0][1]) / 2, 3.42, 0])
+        head_r = jt("ドーパミン神経の発火（模式図）", size=30, color=WHITE)
+        head_r.move_to([(COLS[1][0] + COLS[1][1]) / 2, 3.42, 0])
+        mini = neuron_icon(0.28).next_to(head_r, LEFT, buff=0.2)
+        ev = VGroup()
+        lamps, cups = [], []
+        for col in (0, 1):
+            lp = lamp_icon(0.4).move_to([tx(col, DA_CUE + 0.5), 2.85, 0])
+            cp = juice_icon(0.42).move_to([tx(col, DA_REWARD + 0.5), 2.85, 0])
+            lamps.append(lp)
+            cups.append(cp)
+            ev.add(lp, cp)
+        guides = VGroup()
+        for col in (0, 1):
+            for t, colr in ((DA_CUE + 0.5, CUE_COLOR), (DA_REWARD + 0.5, style.REWARD)):
+                guides.add(DashedLine([tx(col, t), 2.55, 0], [tx(col, t), -2.95, 0], color=colr,
+                                      stroke_width=2, dash_length=0.08).set_opacity(0.45))
+        axes_lines = VGroup(*[Line([COLS[c][0], y, 0], [COLS[c][1], y, 0], stroke_color=GREY_D, stroke_width=2)
+                              for y in ROW_Y for c in (0, 1)])
+        row_names = ["1回目", "途中", "学習後", "報酬なし"]
+        row_labs = VGroup(*[jt(n, size=30, color=GREY_A).move_to([-6.05, y, 0]) for n, y in zip(row_names, ROW_Y)])
+        time_labs = VGroup(*[jt("時間 →", size=26, color=GREY_C).move_to([(COLS[c][0] + COLS[c][1]) / 2, -3.3, 0])
+                             for c in (0, 1)])
+
+        def bars(delta, y):
+            g = VGroup()
+            for t, d in enumerate(delta):
+                h = float(d) * 0.55
+                if abs(h) < 0.004:
+                    h = 0.004 if h >= 0 else -0.004
+                r = Rectangle(width=step * 0.7, height=abs(h), stroke_width=0,
+                              fill_color=style.REWARD if d >= 0 else RED, fill_opacity=0.95)
+                r.move_to([tx(0, t + 0.5), y + h / 2, 0])
+                g.add(r)
+            return g
+
+        def raster(delta, y, seed):
+            sp = spike_raster(delta, lanes=7, seed=seed)
+            g = VGroup()
+            for i, lane in enumerate(sp):
+                yy = y - 0.46 + i * 0.155
+                for tt in lane:
+                    g.add(Line([tx(1, tt), yy, 0], [tx(1, tt), yy + 0.12, 0], stroke_color=WHITE, stroke_width=1.6))
+            return g
+
+        # ---- N3: 1回目：ジュースが来た瞬間に反応 ----
+        bars0 = bars(conds[0], ROW_Y[0])
+        ras0 = raster(conds[0], ROW_Y[0], seed=1)
+        with self.voice("ランプが光った少しあとに、{J}ジュースがもらえる。最初のうちは、{A}ジュースが来た瞬間に、神経細胞が強く反応します。"
+                        "予想していなかった、良いことが起きたからです。") as v:
+            self.play(ReplacementTransform(dl, head_l[1]), FadeIn(head_l[0]), FadeIn(head_l[2]),
+                      ReplacementTransform(neuron, mini), FadeIn(head_r),
+                      FadeOut(VGroup(eq_grp, sim, electrode, trace, who, cite)),
+                      robot.change("normal"), run_time=1.2)
+            self.play(FadeIn(ev), Create(guides), FadeIn(axes_lines), FadeIn(row_labs[0]), FadeIn(time_labs),
+                      run_time=0.9)
+            self.sfx("pop")
+            self.play(*[lp[0].animate.set_fill(CUE_COLOR) for lp in lamps], robot.animate.look(UL), run_time=0.4)
+            self.play(*[Flash(lp, color=CUE_COLOR, flash_radius=0.35, line_length=0.12) for lp in lamps], run_time=0.5)
+            self.play(*[lp[0].animate.set_fill("#1c1c22") for lp in lamps], run_time=0.3)
+            self.wait_to(v, "J")
+            self.sfx("chime")
+            self.play(*[Flash(cp, color=style.REWARD, flash_radius=0.4, line_length=0.14) for cp in cups],
+                      robot.animate.look(UP), run_time=0.6)
+            self.wait_to(v, "A")
+            bang = robot.say("！", direction=UP)
+            self.play(FadeIn(bars0, lag_ratio=0.05), FadeIn(ras0, lag_ratio=0.002), robot.change("surprised"),
+                      FadeIn(bang, scale=0.7), run_time=1.3)
+            self.play(robot.change("happy"), run_time=0.4)
+            self.play(Indicate(bars0[DA_REWARD], color=WHITE, scale_factor=1.4), run_time=0.8)
+
+        # ---- N4: 学習が進むと、合図の瞬間に移る ----
+        bars1 = bars(conds[0], ROW_Y[1])
+        n_cnt = Integer(1, font_size=34, color=GREY_B)
+        n_lab = VGroup(n_cnt, jt("回目", size=26, color=GREY_B)).arrange(RIGHT, buff=0.06)
+        n_lab.next_to(row_labs[1], DOWN, buff=0.12)
+        bars2 = bars(conds[2], ROW_Y[2])
+        ras2 = raster(conds[2], ROW_Y[2], seed=2)
+        with self.voice("ところが、学習が進むと、{A}反応は、ランプが光った瞬間に移り、{B}ジュースそのものには、反応しなくなります。"
+                        "ジュースが来ることは、もう予想できているからです。") as v:
+            self.play(FadeOut(bang), robot.change("normal"), FadeIn(row_labs[1]), FadeIn(n_lab), FadeIn(bars1), run_time=0.6)
+            per = max(0.22, (v.until("A") - 0.3) / (MID - 1))
+            for n in range(2, MID + 1):
+                self.play(Transform(bars1, bars(deltas[n - 1], ROW_Y[1])), ChangeDecimalToValue(n_cnt, n),
+                          run_time=per)
+            self.wait_to(v, "A")
+            self.sfx("hit")
+            self.play(FadeIn(row_labs[2]), FadeIn(bars2, lag_ratio=0.05), FadeIn(ras2, lag_ratio=0.002),
+                      robot.animate.set_mood("happy").look(UL), run_time=1.2)
+            self.play(Indicate(bars2[DA_CUE], color=WHITE, scale_factor=1.4), run_time=0.8)
+            self.wait_to(v, "B")
+            ring = VGroup(*[Circle(radius=0.36, stroke_color=style.REWARD, stroke_width=4)
+                            .move_to([tx(c, DA_REWARD + 0.5), ROW_Y[2] + 0.1, 0]) for c in (0, 1)])
+            self.play(Create(ring), robot.change("normal"), run_time=0.7)
+            self.play(ring.animate.set_opacity(0.0), run_time=1.2)
+            self.remove(ring)
+
+        # ---- N5: ジュースを抜くと、来るはずの時刻に下がる ----
+        bars3 = bars(conds[3], ROW_Y[3])
+        ras3 = raster(conds[3], ROW_Y[3], seed=3)
+        no_juice = VGroup(*[VGroup(juice_icon(0.3), cross_mark(juice_icon(0.3), width=4, pad=0.05))
+                            .move_to([tx(c, DA_REWARD + 0.5) + 0.42, ROW_Y[3] + 0.76, 0]) for c in (0, 1)])
+        with self.voice("そして、{A}ジュースを抜くと、来るはずだった時刻に、活動が、ふだんより下がります。予想より悪かった、という信号です。") as v:
+            self.wait_to(v, "A")
+            self.play(FadeIn(row_labs[3]), FadeIn(no_juice), run_time=0.6)
+            self.sfx("thud")
+            self.play(FadeIn(bars3, lag_ratio=0.05), FadeIn(ras3, lag_ratio=0.002),
+                      robot.animate.set_mood("sad").look(DL), run_time=1.3)
+            dip = SurroundingRectangle(bars3[DA_REWARD], color=RED, buff=0.08)
+            self.play(Create(dip), run_time=0.6)
+            hole = Rectangle(width=0.9 * step * 2.2, height=1.15, stroke_color=RED, stroke_width=3)
+            hole.move_to([tx(1, DA_REWARD + 0.45), ROW_Y[3], 0])
+            self.play(Create(hole), run_time=0.6)
+
+        # ---- N6: 報酬ではなく、予想とのずれ ----
+        with self.voice("報酬そのものではなく、{A}《予想とのずれ》。脳は、[TD|ティーディー]学習のようなことを、しているのかもしれません。") as v:
+            self.play(FadeOut(VGroup(dip, hole)), robot.change("normal"), run_time=0.6)
+            self.wait_to(v, "A")
+            peaks = VGroup(bars0[DA_REWARD], bars2[DA_CUE], bars3[DA_CUE], bars3[DA_REWARD])
+            self.sfx("sparkle")
+            self.play(*[Indicate(p, color=WHITE, scale_factor=1.35) for p in peaks],
+                      Indicate(VGroup(ras0, ras2, ras3), color=style.REWARD, scale_factor=1.02),
+                      robot.change("happy"), run_time=1.4)
+            self.play(robot.hop(), run_time=0.5)
+        self.play(FadeOut(VGroup(head_l, head_r, mini, ev, guides, axes_lines, row_labs, time_labs, n_lab,
+                                 bars0, ras0, bars1, bars2, ras2, bars3, ras3, no_juice, robot)), run_time=1.0)
 
 
 # ---------------------------------------------------------------------------

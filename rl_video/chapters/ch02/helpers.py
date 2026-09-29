@@ -285,3 +285,82 @@ def pulse(node, color, scale=1.12):
         m.scale(scale)
         return m
     return ApplyFunction(f, node, rate_func=there_and_back)
+
+
+# ---------------------------------------------------------------------------
+# v2: 価値の3D地形（第1章 Outro3D と同じ見た目）
+# ---------------------------------------------------------------------------
+TERRAIN_CELL = 1.25
+
+
+def terrain_height(v):
+    """第1章 Outro3D と同じ換算（価値 0 で 0.25、価値 1 で 3.25）。"""
+    return 0.25 + 3.0 * v
+
+
+def terrain_pos(s, cell=TERRAIN_CELL):
+    W, H = WORLD.width, WORLD.height
+    origin = np.array([-(W - 1) * cell / 2, -(H - 1) * cell / 2, 0])
+    return origin + np.array([s[0] * cell, s[1] * cell, 0])
+
+
+def terrain_tile(s, v, cell=TERRAIN_CELL, depth=None):
+    from manim import OUT, Prism
+    h = terrain_height(v) if depth is None else depth
+    p = Prism(dimensions=[cell * 0.94, cell * 0.94, h])
+    p.set_fill(value_color(v), 1).set_stroke(GREY_E, 0.6)
+    p.move_to(terrain_pos(s, cell) + h / 2 * OUT)
+    return p
+
+
+def terrain_walls(cell=TERRAIN_CELL):
+    from manim import OUT, Prism
+    return VGroup(*[Prism(dimensions=[cell * 0.94, cell * 0.94, 0.3]).set_fill("#3A3A40", 1).set_stroke(GREY_E, 0.6)
+                    .move_to(terrain_pos(s, cell) + 0.15 * OUT) for s in WORLD.walls])
+
+
+def terrain_extras(cell=TERRAIN_CELL):
+    """床の枠線、星（球）、穴（円）。"""
+    from manim import OUT, RED, Circle, Sphere
+    board = VGroup(*[Square(cell, stroke_color=GREY_D, stroke_width=1.5).move_to(terrain_pos((x, y), cell))
+                     for x in range(WORLD.width) for y in range(WORLD.height)])
+    goal = Sphere(radius=0.28, resolution=(12, 24)).set_color(style.REWARD).move_to(terrain_pos(GOAL, cell) + 0.3 * OUT)
+    pit = Circle(radius=0.42, stroke_color=RED, stroke_width=4, fill_color="#050506", fill_opacity=1)
+    pit.move_to(terrain_pos(PIT, cell))
+    return board, goal, pit
+
+
+def tile_anim(tile, s, v, cell=TERRAIN_CELL):
+    """柱の高さと色を価値 v に合わせるアニメーション。"""
+    from manim import OUT
+    h = terrain_height(v)
+    return tile.animate.stretch_to_fit_depth(h).move_to(terrain_pos(s, cell) + h / 2 * OUT).set_fill(value_color(v), 1)
+
+
+# ---------------------------------------------------------------------------
+# v2: 縮小写像の実験（同じ方策の評価を、違う初期値から2本走らせる）
+# ---------------------------------------------------------------------------
+def pe_step(V, policy=None):
+    policy = policy or UNIFORM
+    out = {}
+    for s in WORLD.states:
+        if WORLD.is_terminal(s):
+            out[s] = 0.0
+            continue
+        out[s] = sum(pa * sum(p * (r + (0 if WORLD.is_terminal(n) else GAMMA * V[n]))
+                              for p, n, r in WORLD.outcomes(s, a)) for a, pa in policy[s].items())
+    return out
+
+
+def two_start_runs(n=31, seed=7):
+    """全部0から と [-1,1] の乱数から の反復方策評価。(histA, histB, dist)"""
+    rng = np.random.default_rng(seed)
+    A = {s: 0.0 for s in WORLD.states}
+    B = {s: (0.0 if WORLD.is_terminal(s) else float(rng.uniform(-1, 1))) for s in WORLD.states}
+    ha, hb, d = [], [], []
+    for _ in range(n):
+        ha.append(A)
+        hb.append(B)
+        d.append(max(abs(A[s] - B[s]) for s in WORLD.states))
+        A, B = pe_step(A), pe_step(B)
+    return ha, hb, d

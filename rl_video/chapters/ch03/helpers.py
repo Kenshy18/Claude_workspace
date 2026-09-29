@@ -449,3 +449,61 @@ def breakout_pixels(ball=(46, 52), paddle_x=38, seed=3):
     by, bx = ball
     img[by:by + 2, bx:bx + 2] = 230
     return img
+
+
+# ---------------------------------------------------------------------------
+# ドーパミンと TD 誤差（合図 → 遅れ → 報酬 の鎖で TD(0) を回す）
+# ---------------------------------------------------------------------------
+DA_T, DA_CUE, DA_K = 13, 3, 6          # 時間ステップ数, 合図の時刻, 合図から報酬までのステップ数
+DA_REWARD = DA_CUE + DA_K              # 報酬（ジュース）の時刻
+
+
+def dopamine_td(trials=300, alpha=0.2, gamma=1.0):
+    """合図の状態 c_0 … c_{K-1} を順にたどり、最後にジュース（報酬 1）がもらえる課題。
+
+    合図が出る前（試行の合間）の状態の価値は 0 のまま（合図がいつ出るかは予測できないため）。
+    返り値: (各試行の δ_t の配列のリスト, 学習後に報酬を抜いた試行の δ_t)
+    δ_t は「新しい情報が届いた時刻」t に置く（合図の出現は DA_CUE、ジュースは DA_REWARD）。
+    """
+    V = np.zeros(DA_K)
+    out = []
+
+    def one_trial(reward, learn):
+        d = np.zeros(DA_T)
+        d[DA_CUE] = gamma * V[0] - 0.0
+        for k in range(DA_K):
+            tgt = gamma * V[k + 1] if k < DA_K - 1 else reward
+            dl = tgt - V[k]
+            d[DA_CUE + k + 1] = dl
+            if learn:
+                V[k] += alpha * dl
+        return d
+
+    for _ in range(trials):
+        out.append(one_trial(1.0, True))
+    omit = one_trial(0.0, False)
+    return out, omit
+
+
+def spike_raster(delta, lanes=7, seed=0, base=1.0, burst=9.0, width=0.8, dt=0.02):
+    """δ の形をなぞった「発火」の模式図用のスパイク時刻（lane ごとのリスト）。
+
+    ふだんは毎ステップ base 個くらい。δ>0 の時刻の直後 width ステップは burst·δ 個ぶん増え、
+    δ<0 のときは base·(1+δ) まで下がる（δ=-1 で止まる）。
+    """
+    rng = np.random.default_rng(seed)
+    ts = np.arange(0, DA_T, dt)
+    rate = np.full_like(ts, base)
+    for t, d in enumerate(delta):
+        if abs(d) < 1e-9:
+            continue
+        m = (ts >= t) & (ts < t + width)
+        if d > 0:
+            rate[m] += burst * d
+        else:
+            rate[m] = base * max(0.0, 1 + d)
+    spikes = []
+    for _ in range(lanes):
+        fire = rng.random(len(ts)) < rate * dt
+        spikes.append(ts[fire])
+    return spikes

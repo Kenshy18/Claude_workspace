@@ -354,7 +354,7 @@ class Supervised(VoiceScene):
 # ---------------------------------------------------------------------------
 # 4. 三つの違い
 # ---------------------------------------------------------------------------
-def make_card(content, label, sub=None, width=2.0, height=1.45):
+def make_card(content, label, sub=None, width=1.9, height=1.2):
     """図をそのまま縮めて入れる、まとめ用のカード。"""
     box = RoundedRectangle(width=width, height=height, corner_radius=0.14, stroke_color=GREY_C,
                            stroke_width=2, fill_color="#141418", fill_opacity=1)
@@ -363,24 +363,24 @@ def make_card(content, label, sub=None, width=2.0, height=1.45):
     if c.width > width - 0.3:
         c.scale_to_fit_width(width - 0.3)
     c.move_to(box)
-    texts = VGroup(jt(label, size=28, color=WHITE))
+    texts = VGroup(jt(label, size=26, color=WHITE))
     if sub:
-        texts.add(jt(sub, size=22, color=GREY_C))
-    texts.arrange(DOWN, aligned_edge=LEFT, buff=0.1)
+        texts.add(jt(sub, size=20, color=GREY_C))
+    texts.arrange(DOWN, buff=0.08)
     card = VGroup(box, c)
-    row = VGroup(card, texts).arrange(RIGHT, buff=0.25)
+    row = VGroup(card, texts).arrange(DOWN, buff=0.12)
     return row
 
 
 def place_card(card, y):
-    """右の列（仕切り線の右）に左詰めで置く。"""
-    return card.next_to(RIGHT * 1.95 + UP * y, RIGHT, buff=0)
+    """右の列（仕切り線の右）の中央に置く。"""
+    return card.move_to(RIGHT * 4.45 + UP * y)
 
 
 class Differences(VoiceScene):
     def construct(self):
         divider = Line(UP * 3.5, DOWN * 3.5, stroke_color=GREY_E, stroke_width=2).move_to(RIGHT * 1.75)
-        slots = [2.3, 0.0, -2.3]
+        slots = [2.45, 0.0, -2.45]
 
         g = GridView(WORLD, cell=1.12).move_to(LEFT * 2.9 + 0.8 * UP)
         s0 = (2, 1)
@@ -1299,10 +1299,10 @@ class Survival(VoiceScene):
                 r"\sum_k", r"\gamma^k", r"r_{t+k+1}", size=40, tex_template=style.JP_TEX)
         f2[3].set_color(style.GAMMA)
         f2[4].set_color(style.REWARD)
-        fs = VGroup(f1, f2).arrange(DOWN, buff=0.45).move_to(DOWN * 0.4)
+        fs = VGroup(f1, f2).arrange(DOWN, buff=0.45).move_to(UP * 1.1)
         with self.voice("k歩先の報酬を受け取れるのは、k歩先まで、動き続けられた場合だけです。"
                         "だから、{A}いつ止まるか分からない世界で、報酬を割り引かずに足したときの期待値は、{B}割り引いたリターンと、ちょうど同じになるんです。") as v:
-            self.play(FadeOut(VGroup(bots, k_lab)), VGroup(axis, ticks, ylab, bars, ref, ref_lab).animate.scale(0.55).to_corner(DR, buff=0.4),
+            self.play(FadeOut(VGroup(bots, k_lab)), VGroup(axis, ticks, ylab, bars, ref, ref_lab).animate.scale(0.5).move_to(DOWN * 2.2),
                       run_time=1.2)
             self.play(Write(f1), run_time=1.2)
             self.wait_to(v, "A")
@@ -1549,17 +1549,17 @@ class RewardHacking(VoiceScene):
 
         score_lab = jt("点数", size=32, color=GREY_B)
         score = Integer(0, font_size=48, color=style.REWARD)
-        hud = VGroup(score_lab, score).arrange(RIGHT, buff=0.25).to_corner(UR, buff=0.5)
+        hud = VGroup(score_lab, score).arrange(RIGHT, buff=0.25).to_corner(UR, buff=0.5).shift(1.3 * LEFT)
         watcher = Robot(height=0.8).to_corner(DL, buff=0.5)
 
         with self.voice("ところで、この報酬は、誰が決めるのでしょうか。{A}人間です。") as v:
-            self.play(FadeIn(watcher, shift=0.2 * UP), run_time=0.6)
+            self.play(FadeIn(watcher, shift=0.2 * UP), FadeIn(course, lag_ratio=0.05), run_time=1.2)
             self.play(watcher.animate.look(UR), run_time=0.4)
             self.wait_to(v, "A")
             self.play(watcher.blink())
         with self.voice("そして強化学習は、報酬の合計を大きくすることに、{A}恐ろしいほど忠実です。"
                         "たとえそれが、人間の意図と、違っていても。") as v:
-            self.play(FadeIn(course, lag_ratio=0.05), run_time=1.6)
+            self.play(Indicate(flag, color=WHITE), run_time=1.0)
             self.wait_to(v, "A")
             self.play(watcher.change("worried"))
 
@@ -1605,7 +1605,7 @@ class RewardHacking(VoiceScene):
             self.sfx("hit")
             self.play(Indicate(hud, color=style.REWARD, scale_factor=1.2))
             no_finish = VGroup(jt("完走", size=30, color=GREY_B), Cross(stroke_color=RED, stroke_width=5).scale(0.18)).arrange(RIGHT, buff=0.2)
-            no_finish.next_to(hud, DOWN, buff=0.3).align_to(hud, RIGHT)
+            no_finish.next_to(hud, DOWN, buff=0.3).align_to(hud, LEFT)
             self.play(FadeIn(no_finish), watcher.change("sad"))
 
         with self.voice("報酬は、エージェントに、何をしてほしいかを伝える、ほとんど唯一の言葉です。"
@@ -1745,11 +1745,11 @@ class Outro3D(VoiceScene3D):
             self.play(FadeIn(title), run_time=0.6)
             self.wait_to(v, "B")
             route = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (2, 3), (3, 3)]
-            ball = Sphere(radius=0.16, resolution=(10, 20)).set_color(BLUE_C)
-            ball.move_to(pos(route[0]) + (heights[route[0]] + 0.16) * OUT)
+            ball = Sphere(radius=0.24, resolution=(12, 24)).set_color(BLUE_B)
+            ball.move_to(pos(route[0]) + (heights[route[0]] + 0.24) * OUT)
             self.play(FadeIn(ball), run_time=0.4)
             for s in route[1:]:
-                self.play(ball.animate.move_to(pos(s) + (heights[s] + 0.16) * OUT), run_time=0.45)
+                self.play(ball.animate.move_to(pos(s) + (heights[s] + 0.24) * OUT), run_time=0.45)
             self.sfx("chime")
             self.play(ball.animate.move_to(pos(GOAL) + 0.45 * OUT), run_time=0.5)
             self.begin_ambient_camera_rotation(rate=0.08)

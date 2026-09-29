@@ -324,3 +324,32 @@ def sample_returns(pi, n, seed, start=None, max_steps=100):
             G = r + mdp.gamma * G
         out.append(G)
     return out
+
+
+# ---------------------------------------------------------------------------
+# おもちゃの言語モデル（Intuition の言語モデルの例）
+# ---------------------------------------------------------------------------
+LM_PROMPT = "日本の首都は"
+# 位置ごとの候補トークンと、今の方策の確率（ロジット = log p とみなす）
+LM_TABLE = [
+    (["東京", "大阪", "京都", "名古屋"], [0.45, 0.30, 0.15, 0.10]),
+    (["です", "。", "だ", "かな"], [0.60, 0.20, 0.12, 0.08]),
+    (["。", "よ", "ね", "！"], [0.70, 0.12, 0.10, 0.08]),
+]
+
+
+def lm_update(choice, weight, lr=1.0):
+    """選んだトークン列 choice（位置ごとの候補番号）の対数確率を weight で重み付けして1回更新する。
+
+    ソフトマックスのロジット z に z += lr * weight * (onehot - p) を足す（= ∇ log p の方向）。
+    返り値: [(トークン, 更新前の確率, 更新後の確率)]
+    """
+    out = []
+    for (toks, p), k in zip(LM_TABLE, choice):
+        p = np.asarray(p, dtype=float)
+        onehot = np.eye(len(p))[k]
+        z = np.log(p) + lr * weight * (onehot - p)
+        q = np.exp(z - z.max())
+        q /= q.sum()
+        out.append((toks[k], float(p[k]), float(q[k])))
+    return out
