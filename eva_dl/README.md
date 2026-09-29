@@ -4,6 +4,8 @@
 
 **完成品:** [`dist/neon_genesis_gradient_descent.mp4`](dist/neon_genesis_gradient_descent.mp4)
 
+![contact sheet](dist/contact_sheet.jpg)
+
 映像も音も**全部コードから生成**しています。素材の取り込みはしていません。HUD や数式のアニメーションは
 Canvas 2D と WebGL のポストエフェクトで描画し、数式は MathJax で組版、音楽と効果音は NumPy/SciPy で
 オシレーターから合成しています。画面上の数値（エネルギースコア、マハラノビス距離、MoE ルーティング、KL 最適方策、

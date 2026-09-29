@@ -309,7 +309,7 @@ def clap(t, g=1.0, pan=0.0):
         o = int((k * 0.009 + rng.random() * 0.003) * SR)
         b = bp(noise(d), 900, 2600) * expdec(d, 0.012 if k < 3 else 0.07)
         x[o:] += b[:len(x) - o]
-    add(sfx, x, t, 0.25 * g, pan=pan, send=0.35)
+    add(sfx, x, t, 0.17 * g, pan=pan, send=0.35)
 
 
 def bubbles(t0, t1, rate=6, g=1.0):
@@ -557,19 +557,19 @@ for c in cues('clap'):
 # a growing crowd of claps under the ring
 t = s + 1.0
 while t < s + 7.0:
-    clap(t, g=0.22 * min(1, (t - s) / 4), pan=rng.uniform(-1, 1))
+    clap(t, g=0.13 * min(1, (t - s) / 4), pan=rng.uniform(-1, 1))
     t += rng.exponential(0.07)
 ar = cue('arigatou')['t']
 for f in ('D3', 'A3', 'D4', 'F#4', 'A4'):
     piano(ar, hz(f), g=0.7, dur=4.0)
 melody = ['F#5', 'E5', 'D5', 'A4']
 for c, m in zip(cues('line'), melody):
-    piano(c['t'], hz(m), g=0.65, dur=4.0, send=0.6)
-    piano(c['t'], hz(m) / 2, g=0.3, dur=4.0, send=0.6)
+    piano(c['t'], hz(m), g=0.95, dur=4.0, send=0.6)
+    piano(c['t'], hz(m) / 2, g=0.45, dur=4.0, send=0.6)
 pad(cues('line')[0]['t'], ['D3', 'A3'], 6.5, g=0.5, cut=800, a=1.5)
 fn = cue('fin')['t']
-timpani(fn, hz('D2'), g=1.0, send=0.8)
-bell(fn, hz('D3'), g=0.6, dur=6.0, send=0.9)
+timpani(fn, hz('D2'), g=0.6, send=0.8)
+bell(fn, hz('D3'), g=0.45, dur=6.0, send=0.9)
 for f in ('D2', 'A2', 'D3', 'F#3', 'A3'):
     piano(fn, hz(f), g=0.6, dur=5.5, send=0.7)
 
@@ -613,7 +613,8 @@ mix = mix - 0.55 * lp(mix, 100) + 0.6 * bp(mix, 900, 5000) + 0.35 * hp(mix, 5000
 mix = np.tanh(mix * 1.1) / 1.1
 peak = np.max(np.abs(mix))
 mix = mix / peak * 0.93
-fade = int(1.2 * SR)
-mix[:, -fade:] *= np.linspace(1, 0, fade)
+f0, f1 = int((TOTAL - 1.6) * SR), int(TOTAL * SR)   # fade out with the last frame of 終劇
+mix[:, f0:f1] *= np.linspace(1, 0, f1 - f0) ** 1.5
+mix[:, f1:] = 0
 wavfile.write(f'{ROOT}/out/score.wav', SR, (mix.T * 32767).astype(np.int16))
 print('wrote out/score.wav', mix.shape[1] / SR, 's, peak', peak)
