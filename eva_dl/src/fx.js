@@ -1,0 +1,141 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  WebGL post-processing: two-level bloom, chromatic aberration, glitch slices,
+//  scanlines, film grain, vignette, flash. Driven per-frame by an fx object.
+// ─────────────────────────────────────────────────────────────────────────────
+class PostFX {
+  constructor(canvas, w, h) {
+    const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false });
+    if (!gl) throw new Error('WebGL unavailable');
+    this.gl = gl; this.w = w; this.h = h;
+    const vs = `attribute vec2 p; varying vec2 uv; void main(){ uv = p*0.5+0.5; gl_Position = vec4(p,0.,1.); }`;
+    const bright = `precision highp float; varying vec2 uv; uniform sampler2D src; uniform float thr; uniform float gain;
+      void main(){ vec3 c = texture2D(src, uv).rgb; float l = max(max(c.r,c.g),c.b);
+        float k = smoothstep(thr, thr+0.25, l); gl_FragColor = vec4(c*k*gain,1.); }`;
+    const blur = `precision highp float; varying vec2 uv; uniform sampler2D src; uniform vec2 dir;
+      void main(){ vec3 c = texture2D(src, uv).rgb*0.2270270270;
+        c += texture2D(src, uv+dir*1.3846153846).rgb*0.3162162162; c += texture2D(src, uv-dir*1.3846153846).rgb*0.3162162162;
+        c += texture2D(src, uv+dir*3.2307692308).rgb*0.0702702703; c += texture2D(src, uv-dir*3.2307692308).rgb*0.0702702703;
+        gl_FragColor = vec4(c,1.); }`;
+    const final = `precision highp float; varying vec2 uv;
+      uniform sampler2D src; uniform sampler2D b1; uniform sampler2D b2;
+      uniform float bloom, ca, grain, scan, vig, glitch, time, flash, sat, contrast;
+      uniform vec3 flashCol; uniform vec2 res;
+      float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+      void main(){
+        vec2 u = uv;
+        // glitch: displaced horizontal bands
+        if (glitch > 0.0) {
+          float band = floor(u.y * 38.0);
+          float n = h(vec2(band, floor(time*24.0)));
+          if (n < glitch*0.55) { u.x += (h(vec2(band, floor(time*24.0)+7.0))-0.5) * 0.12 * glitch; }
+          float band2 = floor(u.y * 140.0);
+          if (h(vec2(band2, floor(time*30.0)+3.0)) < glitch*0.25) u.x += (h(vec2(band2,1.0))-0.5)*0.03;
+        }
+        vec2 d = u - 0.5;
+        float r2 = dot(d,d);
+        vec2 off = d * ca * (0.35 + r2*1.6) * 0.0055;
+        float cr = texture2D(src, u + off).r;
+        float cg = texture2D(src, u).g;
+        float cb = texture2D(src, u - off).b;
+        vec3 c = vec3(cr,cg,cb);
+        if (glitch > 0.0) {
+          float gl2 = h(vec2(floor(u.y*60.0), floor(time*20.0)));
+          if (gl2 < glitch*0.08) c = c.gbr;
+        }
+        vec3 bl = texture2D(b1, u).rgb * 0.9 + texture2D(b2, u).rgb * 1.1;
+        c += bl * bloom;
+        // contrast / saturation
+        float l = dot(c, vec3(0.299,0.587,0.114));
+        c = mix(vec3(l), c, sat);
+        c = (c - 0.5) * contrast + 0.5;
+        // scanlines (3px period) + slight rolling bar
+        float sl = 0.5 + 0.5*sin(u.y*res.y*2.0943951);
+        c *= 1.0 - scan * (0.55*sl + 0.08*sin(u.y*9.0 - time*2.5));
+        // vignette
+        c *= mix(1.0, smoothstep(0.95, 0.18, r2*1.9), vig);
+        // grain
+        float gt = floor(time*15.0); float g = h(floor(u*res*0.5) + vec2(gt*61.0, gt*17.0)) - 0.5;
+        c += g * grain;
+        c = mix(c, flashCol, clamp(flash,0.0,1.0));
+        gl_FragColor = vec4(clamp(c,0.0,1.0), 1.0);
+      }`;
+    this.pBright = this.prog(vs, bright);
+    this.pBlur = this.prog(vs, blur);
+    this.pFinal = this.prog(vs, final);
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    this.srcTex = this.tex(w, h);
+    this.half = [this.fbo(w / 2, h / 2), this.fbo(w / 2, h / 2)];
+    this.quarter = [this.fbo(w / 4, h / 4), this.fbo(w / 4, h / 4)];
+  }
+  prog(vsSrc, fsSrc) {
+    const gl = this.gl;
+    const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    const p = gl.createProgram();
+    gl.attachShader(p, mk(gl.VERTEX_SHADER, vsSrc)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fsSrc));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    p.u = {};
+    const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); p.u[info.name] = gl.getUniformLocation(p, info.name); }
+    p.a = gl.getAttribLocation(p, 'p');
+    return p;
+  }
+  tex(w, h) {
+    const gl = this.gl, t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
+  fbo(w, h) {
+    const gl = this.gl, t = this.tex(w, h), f = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { f, t, w, h };
+  }
+  pass(p, target, texs, uni) {
+    const gl = this.gl;
+    gl.useProgram(p);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.f : null);
+    gl.viewport(0, 0, target ? target.w : this.w, target ? target.h : this.h);
+    gl.enableVertexAttribArray(p.a);
+    gl.vertexAttribPointer(p.a, 2, gl.FLOAT, false, 0, 0);
+    let unit = 0;
+    for (const [name, t] of Object.entries(texs)) {
+      gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.uniform1i(p.u[name], unit); unit++;
+    }
+    for (const [name, v] of Object.entries(uni)) {
+      const loc = p.u[name]; if (!loc) continue;
+      if (Array.isArray(v)) (v.length === 2 ? gl.uniform2fv : gl.uniform3fv).call(gl, loc, v);
+      else gl.uniform1f(loc, v);
+    }
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  render(srcCanvas, fx) {
+    const gl = this.gl;
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.bindTexture(gl.TEXTURE_2D, this.srcTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, srcCanvas);
+    const [h0, h1] = this.half, [q0, q1] = this.quarter;
+    this.pass(this.pBright, h0, { src: this.srcTex }, { thr: fx.thr ?? 0.55, gain: 1.0 });
+    this.pass(this.pBlur, h1, { src: h0.t }, { dir: [2.0 / h0.w, 0] });
+    this.pass(this.pBlur, h0, { src: h1.t }, { dir: [0, 2.0 / h0.h] });
+    this.pass(this.pBlur, q0, { src: h0.t }, { dir: [2.4 / q0.w, 0] });
+    this.pass(this.pBlur, q1, { src: q0.t }, { dir: [0, 2.8 / q0.h] });
+    this.pass(this.pBlur, q0, { src: q1.t }, { dir: [3.2 / q0.w, 0] });
+    this.pass(this.pBlur, q1, { src: q0.t }, { dir: [0, 3.6 / q0.h] });
+    this.pass(this.pFinal, null, { src: this.srcTex, b1: h0.t, b2: q1.t }, {
+      bloom: fx.bloom ?? 0.8, ca: fx.ca ?? 0.25, grain: fx.grain ?? 0.06, scan: fx.scan ?? 0.08,
+      vig: fx.vig ?? 0.55, glitch: fx.glitch ?? 0, time: fx.time ?? 0, flash: fx.flash ?? 0,
+      flashCol: fx.flashCol || [1, 1, 1], sat: fx.sat ?? 1, contrast: fx.contrast ?? 1, res: [this.w, this.h],
+    });
+  }
+}

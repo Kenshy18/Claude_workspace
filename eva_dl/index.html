@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Neon Genesis Gradient Descent</title>
+<style>
+  @font-face { font-family: 'Share Tech Mono'; src: url(fonts/ShareTechMono.ttf); font-weight: 400; }
+  @font-face { font-family: 'Barlow Condensed'; src: url(fonts/BarlowCondensed-500.ttf); font-weight: 500; }
+  @font-face { font-family: 'Barlow Condensed'; src: url(fonts/BarlowCondensed-700.ttf); font-weight: 700; }
+  @font-face { font-family: 'Barlow Condensed'; src: url(fonts/BarlowCondensed-800.ttf); font-weight: 800; }
+  @font-face { font-family: 'JetBrains Mono'; src: url(fonts/JetBrainsMono-400.ttf); font-weight: 400; }
+  @font-face { font-family: 'JetBrains Mono'; src: url(fonts/JetBrainsMono-700.ttf); font-weight: 700; }
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #scene { display: none; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1920" height="1080"></canvas>
+<canvas id="scene" width="1920" height="1080"></canvas>
+<script src="src/formulas.js"></script>
+<script src="src/core.js"></script>
+<script src="src/fx.js"></script>
+<script>const SCENES = [];</script>
+<script src="src/scenes/cards.js"></script>
+<script src="src/scenes/s0_open.js"></script>
+<script src="src/scenes/e1_ood.js"></script>
+<script src="src/scenes/e2_sync.js"></script>
+<script src="src/scenes/e3_magi.js"></script>
+<script src="src/scenes/e4_restraint.js"></script>
+<script src="src/scenes/e5_instrumentality.js"></script>
+<script src="src/scenes/e6_end.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>
