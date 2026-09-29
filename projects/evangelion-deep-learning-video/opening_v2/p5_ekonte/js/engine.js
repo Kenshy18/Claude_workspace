@@ -92,6 +92,8 @@ function buildPaper() {
   const rg = vg.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 1.15);
   rg.addColorStop(0, 'rgba(40,30,20,0)'); rg.addColorStop(1, 'rgba(40,30,20,0.22)');
   vg.fillStyle = rg; vg.fillRect(0, 0, W, H);
+  hatchMask('wash'); hatchMask('graphite');
+  for (const k of ['wash', 'graphite']) { const t = mkCanvas(8, 8).getContext('2d'); t.drawImage(HMASK[k], 0, 0); t.getImageData(0, 0, 1, 1); }
 }
 
 function formText(g, s, x, y, size, o = {}) {
@@ -407,7 +409,7 @@ class Builder {
   }
   // ── marker (flat colour with streaks), revealed as a sweep ──
   marker(poly, col, o = {}) {
-    const it = { kind: 'marker', poly, col, alpha: o.a ?? 0.82, ang: o.ang ?? -0.35, streak: o.streak ?? 1, seed: o.seed || this.seed(), blend: o.blend, mode: o.mode, layer: o.layer };
+    const it = { kind: 'marker', poly, col, alpha: o.a ?? 0.82, ang: o.ang ?? -0.35, streak: o.streak ?? 1, seed: o.seed || this.seed(), blend: o.blend, mode: o.mode, layer: o.layer, full: o.full };
     return this.push(it, o.weight ?? 400);
   }
   rectMarker(x, y, w, h, col, o) { return this.marker([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], col, o); }
@@ -458,15 +460,16 @@ function wobblePoly(poly, seed, amp = 2.6, step = 22) {
 //  'solid'    explicit (inked finals, e.g. the logo)
 const PAT = {};
 function hexLum(hex) { if (!hex || hex[0] !== '#') return 0.5; const n = parseInt(hex.slice(1, 7), 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }
-function hatchTile(col, kind) {
-  // hand hatching: clusters of 4-9 near-parallel strokes, direction varies per cluster
-  const key = col + '|' + kind;
-  if (PAT[key]) return PAT[key];
+const HMASK = {};
+function hatchMask(kind) {
+  // one alpha mask per kind (hand hatching: clusters of near-parallel strokes); colourised per colour below
+  if (HMASK[kind]) return HMASK[kind];
   const S = 384, c = mkCanvas(S, S), g = c.getContext('2d');
-  const rng = mulberry32(strSeed(key));
-  g.strokeStyle = col; g.lineCap = 'round';
+  const rng = mulberry32(strSeed('hatch|' + kind));
+  g.strokeStyle = '#000'; g.lineCap = 'round';
   const dense = kind === 'graphite';
   const nc = dense ? 280 : 150;
+  const buckets = new Map();      // batch strokes by (alpha, width) so the tile costs a few dozen stroke() calls
   for (let q = 0; q < nc; q++) {
     const cx = rng() * S, cy = rng() * S;
     const ang = -0.95 + (rng() - 0.5) * 0.28 + (dense && q % 3 === 0 ? 1.35 : 0);
@@ -475,14 +478,29 @@ function hatchTile(col, kind) {
     for (let j = 0; j < k; j++) {
       const off = (j - k / 2) * sp, sh = (rng() - 0.5) * 14, l2 = len * (0.7 + rng() * 0.4);
       const x0 = cx - sa * off + ca * sh, y0 = cy + ca * off + sa * sh;
-      g.globalAlpha = aBase * (0.75 + rng() * 0.3);
-      g.lineWidth = 1.0 + rng() * (dense ? 1.9 : 1.4);
+      const al = Math.round(aBase * (0.75 + rng() * 0.3) * 10) / 10;
+      const lw = Math.round((1.0 + rng() * (dense ? 1.9 : 1.4)) * 2) / 2;
+      const key = al + '|' + lw;
+      if (!buckets.has(key)) buckets.set(key, new Path2D());
+      const P = buckets.get(key);
       const dx = ca * l2, dy = sa * l2, bow = (rng() - 0.5) * 5;
+      const bx0 = Math.min(x0, x0 + dx) - 4, bx1 = Math.max(x0, x0 + dx) + 4, by0 = Math.min(y0, y0 + dy) - 4, by1 = Math.max(y0, y0 + dy) + 4;
       for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) {
-        g.beginPath(); g.moveTo(x0 + ox, y0 + oy); g.quadraticCurveTo(x0 + dx / 2 + ox - sa * bow, y0 + dy / 2 + oy + ca * bow, x0 + dx + ox, y0 + dy + oy); g.stroke();
+        if (bx1 + ox < 0 || bx0 + ox > S || by1 + oy < 0 || by0 + oy > S) continue;
+        P.moveTo(x0 + ox, y0 + oy); P.quadraticCurveTo(x0 + dx / 2 + ox - sa * bow, y0 + dy / 2 + oy + ca * bow, x0 + dx + ox, y0 + dy + oy);
       }
     }
   }
+  for (const [key, P] of buckets) { const [al, lw] = key.split('|').map(Number); g.globalAlpha = al; g.lineWidth = lw; g.stroke(P); }
+  HMASK[kind] = c;
+  return c;
+}
+function hatchTile(col, kind) {
+  const key = col + '|' + kind;
+  if (PAT[key]) return PAT[key];
+  const m = hatchMask(kind), c = mkCanvas(m.width, m.height), g = c.getContext('2d');
+  g.drawImage(m, 0, 0);
+  g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
   PAT[key] = c;
   return c;
 }
@@ -502,7 +520,13 @@ function drawMarker(ctx, it, p) {
   ctx.save();
   const rng = mulberry32(it.seed);
   if (!it.path) {
-    const wp = it.col === '#ffffff' || it.poly.length > 60 ? it.poly : wobblePoly(it.poly, it.seed % 997);
+    let src = it.poly;
+    // a full-frame BG tone is laid in loosely by hand: a ragged patch that leaves paper at the edges
+    if (it.poly === FULL && !it.full && hexLum(it.col) >= 0.24) {
+      const r2 = mulberry32(it.seed + 3);
+      src = blob(720 + (r2() - 0.5) * 120, 540 + (r2() - 0.5) * 80, 800 + r2() * 90, 590 + r2() * 60, it.seed % 9973, 0.16, 44, (r2() - 0.5) * 0.3);
+    }
+    const wp = it.col === '#ffffff' || src.length > 60 ? src : wobblePoly(src, it.seed % 997);
     it.path = new Path2D();
     wp.forEach(([x, y], i) => (i ? it.path.lineTo(x, y) : it.path.moveTo(x, y)));
     it.path.closePath();
@@ -510,6 +534,7 @@ function drawMarker(ctx, it, p) {
     for (const [x, y] of it.poly) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
     it.bb = [x0, y0, x1, y1];
     it.mode = markerMode(it);
+    if (src !== it.poly && it.mode === 'graphite') { it.path = new Path2D(); it.poly.forEach(([x, y], i) => (i ? it.path.lineTo(x, y) : it.path.moveTo(x, y))); it.path.closePath(); }
   }
   const path = it.path, [x0, y0, x1, y1] = it.bb;
   if (p < 1) { ctx.beginPath(); ctx.rect(x0 - 20, y0 - 20, (x1 - x0 + 40) * p, y1 - y0 + 40); ctx.clip(); }

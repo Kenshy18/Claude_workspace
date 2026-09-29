@@ -65,7 +65,7 @@ function jpLayout(ctx, str, o) {
     else if (ch === '　') adv = size;
     else if (isKana(ch) && ch !== 'ー') {
       const ink = m.l + m.r, pad = SMALL_KANA.includes(ch) ? kpad * 0.6 : kpad;
-      const kk = KERN[ch], kl = kk ? kk[0] * size : 0, kr = (kk ? kk[1] * size : 0) + (DAKU.includes(ch) ? 0.035 * size : 0);
+      const kk = KERN[ch], kl = kk ? kk[0] * size : 0, kr = (kk ? kk[1] * size : 0) + (DAKU.includes(ch) ? 0.012 * size : 0);
       adv = ink + 2 * pad + kl + kr; dx = pad + m.l + kl;
     } else if (HALF_PUNCT.includes(ch)) { adv = m.w * 0.55; }
     else if (OPENB.includes(ch)) { adv = m.w * 0.55; dx = -m.w * 0.45; }

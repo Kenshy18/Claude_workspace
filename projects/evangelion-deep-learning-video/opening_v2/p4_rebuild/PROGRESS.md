@@ -15,7 +15,19 @@
   hunched stance, NO chest fan; GPU joke subtle: heatsink fins on pylons, small TYPE-01 stencil);
   (2) credits must sit on sky/flat areas; (3) aerial city grey blotches (terrain urb tint) → remove.
 - Plan: new buildUnit (loft helper + inverted-hull silhouette, jointed legs/torso/head, anchors), then city fixes.
-- 21:50 DONE Unit-01 rebuild (world.js buildUnit): loft()/slab()/faceOut() helpers, inverted-hull silhouette (hullMat,
+- 21:35 DONE Unit-01 rebuild (world.js buildUnit): loft()/slab()/faceOut() helpers, inverted-hull silhouette (hullMat,
   withHull), jointed hips/knees/ankles/torso/head/shoulders/elbows, anchors (eyes/head/horn/chest/socket/handL/handR)
   via WD.unitAnchor(); tapered heatsink pylons (fin pattern 6) beside a 1.3× head w/ horn+jaw; TYPE-01 decal;
   umbilical plug + cable. shots.js unitPose() = hunched default; all Unit shots re-framed with camAt(anchor,...).
+- 21:45 DONE lead items 2+3: credits carry a faint soft dark fringe (credits.js shadowBlur); terrain urb tint softened
+  (smoothstep edge, near-land tone, tUrbA 0.6); octa excluded from shadow pass. Re-framed: sky_tilt (holds in blue sky
+  under credit block 1, fast drop at 25.6 to the basin; towers sunk), emergence (from the southern rim, credits on green),
+  attention (long lens, skyline in flat navy silhouette + cream beams), ring (city right half, credits on terrain).
+- DONE intro: A.redClouds (3 airbrushed parallax layers, painted at init), slam: A.smoke zoom-blurred painted smoke +
+  pre-blurred dark cross; blue_core octa moved right of credits.
+- 22:10 DONE chorus pass: rank mugshots (camera outside the ring on the chunk face, flat colour bg, LEDs full, RANK n
+  label), head mugshots (silhouette skyline on flat colour, HEAD n + W_Q label; R(-h) sign fixed), pink pyramid,
+  NABLA keyline, satellite framed inside terrain, loss_a (both ribbons into the basin), loss_b (Unit turns head),
+  converged (f(3,2)=0 + arrival steps), 監督 138px. Shader warm-up in main.js (WD.warmup()).
+- Perf (bench.mjs, load ~3.6): mean 274 ms, worst non-first frame ~490 ms. First frame of a run ~700 ms (warm-up).
+- NEXT: NOTES.md; ≥60-timestamp compare review; remaining polish (lance shot, sunset_touch hand, c_unit02 read).

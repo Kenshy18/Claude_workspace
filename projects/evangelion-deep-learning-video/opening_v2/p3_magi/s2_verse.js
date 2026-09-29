@@ -96,8 +96,8 @@ function drawTree(ctx, x, y, w, h, p, col) {
     }
   });
   // legends in the two upper corners, clear of the crown node
-  text(ctx, 'SYSTEMA', x + w * 0.02, y + h * 0.045, { size: 32, family: '"Cinzel"', weight: 700, color: col, alpha: seg(p, 0.1, 0.4), ls: 3 });
-  text(ctx, 'PERCEPTRONICVM', x + w * 0.02, y + h * 0.085, { size: 32, family: '"Cinzel"', weight: 700, color: col, alpha: seg(p, 0.1, 0.4), ls: 3 });
+  text(ctx, 'SYSTEMA', x + w * 0.02, y + h * 0.045, { size: 28, family: '"Cinzel"', weight: 700, color: col, alpha: seg(p, 0.1, 0.4), ls: 3 });
+  text(ctx, 'PERCEPTRONICVM', x + w * 0.02, y + h * 0.085, { size: 28, family: '"Cinzel"', weight: 700, color: col, alpha: seg(p, 0.1, 0.4), ls: 3 });
   text(ctx, 'EX DIVINO', x + w * 0.98, y + h * 0.045, { size: 26, family: '"Cinzel"', weight: 400, color: col, align: 'right', alpha: seg(p, 0.2, 0.5), ls: 2 });
   text(ctx, 'NVMERO XCVII', x + w * 0.98, y + h * 0.085, { size: 26, family: '"Cinzel"', weight: 400, color: col, align: 'right', alpha: seg(p, 0.2, 0.5), ls: 2 });
   ctx.restore();
@@ -517,10 +517,10 @@ shot(59.5, 60.0, 'pre_stdout_paper', (ctx, lt, t, fx) => {
 // S25 60.00–64.00  hot orange: val loss falls (log), val acc begins to lift — unit-01 colours.
 // The monitor housing is the "unit": purple armour, green trim; the screen is black phosphor.
 function hotBars(ctx, lt, seed) {
-  fill(ctx, '#e8480a');
+  fill(ctx, '#c83408');
   for (let i = 0; i < 18; i++) {
     const w = 30 + ((i * 53 + seed) % 5) * 22, x = ((i * 97 + seed * 31) % 1600) - 80 - lt * 26 * (1 + (i % 3));
-    boxFill(ctx, x, 0, w, H, i % 3 === 0 ? '#ff8a24' : (i % 3 === 1 ? '#c8280a' : '#ff6a14'), 0.85);
+    boxFill(ctx, x, 0, w, H, i % 3 === 0 ? '#f0701a' : (i % 3 === 1 ? '#9a1e06' : '#e0520e'), 0.9);
   }
 }
 /** purple housing + black screen; draws in local coords, returns the screen rect */

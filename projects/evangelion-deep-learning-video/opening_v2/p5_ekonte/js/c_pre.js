@@ -13,11 +13,11 @@ function spikyHair(y0, y1, n, seed, x0 = -40, x1 = 1480) {
 }
 // vertical light streaks of the hot orange cage BG (flat cel bands, no gradient)
 function hotBands(B, seed, o = {}) {
-  bg(B, o.base || '#e8581f', 0.9, { ang: -1.5 });
+  bg(B, o.base || '#e8581f', 0.7, { ang: -1.5 });
   const rng = mulberry32(seed);
-  for (let i = 0; i < 16; i++) {
-    const x = rng() * 1440, w = 20 + rng() * 90;
-    B.marker([[x, -20], [x + w, -20], [x + w * 0.8, 1100], [x - w * 0.2, 1100]], i % 3 ? '#f5a13a' : '#b8261c', { a: 0.55 + rng() * 0.3, streak: 0.3, ang: -1.5, weight: 5 });
+  for (let i = 0; i < 11; i++) {
+    const x = rng() * 1440, w = 20 + rng() * 80;
+    B.marker([[x, -20], [x + w, -20], [x + w * 0.8, 1100], [x - w * 0.2, 1100]], i % 3 ? '#f5a13a' : '#b8261c', { a: 0.5 + rng() * 0.3, streak: 0.3, ang: -1.5, weight: 5, mode: 'wash' });
   }
 }
 // cage gantry (black): converging beams for the low angle, with rungs

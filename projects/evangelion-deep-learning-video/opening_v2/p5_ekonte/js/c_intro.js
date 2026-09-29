@@ -262,7 +262,7 @@ SPEC['C-004'] = {
     B.paste((ctx, p, lt) => {
       const a = clamp(lt / 0.3);
       credit(ctx, [{ s: '企画', x: 230, y: 330, size: 46, role: true }, { s: '掲載', x: 230, y: 575, size: 46, role: true }], { alpha: a });
-      credit(ctx, [{ s: 'Project Eval.', x: 420, y: 340, size: 88, fam: FONT.minchoN, w: 900 }, { s: 'arXiv:1706.03762', x: 420, y: 585, size: 80, fam: FONT.minchoN, w: 900, sx: 0.8 },
+      credit(ctx, [{ s: 'Chinchilla', x: 420, y: 340, size: 88, fam: FONT.minchoN, w: 900 }, { s: '(Hoffmann et al., 2022)', x: 424, y: 404, size: 34, fam: FONT.minchoN, w: 700, sx: 0.9 }, { s: 'arXiv:1706.03762', x: 420, y: 585, size: 80, fam: FONT.minchoN, w: 900, sx: 0.8 },
         { s: 'NeurIPS 2017', x: 420, y: 720, size: 80, fam: FONT.minchoN, w: 900, sx: 0.84 }], { alpha: a });
     }, { cred: [0.05, 9] });
     B.at(0.2, 0.8);

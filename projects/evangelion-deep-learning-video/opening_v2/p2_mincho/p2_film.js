@@ -421,7 +421,7 @@
   S(41.6, (ctx, lt, dur, t) => {
     // second face: the seeker. argmin as a double exposure; a black ℒ stands at the right
     bg(ctx, '#ee9a2c');
-    ctx.save(); ctx.fillStyle = '#f6c24a'; ctx.beginPath(); ctx.arc(1180, 420, 130, 0, Math.PI * 2); ctx.fill(); ctx.restore();   // the sun
+    ctx.save(); ctx.fillStyle = '#e0561a'; ctx.beginPath(); ctx.arc(1180, 420, 130, 0, Math.PI * 2); ctx.fill(); ctx.restore();   // the sun
     const a = 0.46 * seg(t, 41.6, 42.4) * (1 - seg(t, 44.75, 45.05));
     const drift = seg(t, 41.6, 48.4);
     fml(ctx, 'argmin', 110 - drift * 40, 640, 150, K.white, { alpha: a });
@@ -1038,6 +1038,7 @@
     const a = seg(t, 88.3, 88.5) * (1 - seg(t, 89.9, 90.45));
     role(ctx, '製作', 354, 506, a, { size: 72, sx: 0.9 });
     ring(ctx, 628, 424, 44, K.white, 14, a);
+    fml(ctx, 'nabla', 628, 440, 46, K.white, { align: 'center', alpha: a, sw: 30 });   // the station mark: ∇ in a ring
     jp(ctx, '勾配', 628, 506, { size: 30, weight: 900, color: K.white, align: 'center', alpha: a });
     jp(ctx, '電気代', 750, 470, { size: 104, family: FGo, weight: 900, color: K.white, alpha: a, sx: 0.95 });
     lat(ctx, 'GPU', 700, 710, { size: 150, family: FH, weight: 700, color: K.white, alpha: a, sx: 1.25, align: 'center' });

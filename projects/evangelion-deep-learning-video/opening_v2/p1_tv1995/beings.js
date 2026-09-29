@@ -57,7 +57,7 @@ function transformerBoxes(o = {}) {
 function drawTransformer(ctx, cam, o = {}) {
   let B = transformerBoxes(o);
   if (o.pal === undefined && o.silhouette) { B = transformerBoxes({ pal: Object.fromEntries(Object.keys(PAPER).map((k) => [k, [o.silhouette, o.silhouette, o.silhouette]])) }); }
-  if (o.silhouette) B.forEach((b) => { b.decal = null; b.side = null; });
+  if (o.silhouette || o.plain) B.forEach((b) => { b.decal = null; b.side = null; });   // plain: no paper labels (under dense credits)
   drawBoxes(ctx, B, cam, { line: o.silhouette || o.line || LINE, lw: o.lw || 3, light: o.light });
 }
 

@@ -200,7 +200,7 @@
       sunDisc(ctx, 40, 560, 110, '#fff0a0');
       const k = seg(T, 44.85, 48.4);
       LG.setTransform(1, 0, 0, 1, 0, 0); LG.clearRect(0, 0, W, H);
-      drawTransformer(LG, { yaw: -0.1, pitch: 0.06, roll: 0, cx: 760, cy: 700, f: 1700, dist: 2400, scale: 2.7 + k * 0.1 }, { light: [0.5, 0.4, 0.75], tint: (c) => c.map((x) => mixHex(x, '#d0603a', 0.42)) });
+      drawTransformer(LG, { yaw: -0.1, pitch: 0.06, roll: 0, cx: 760, cy: 700, f: 1700, dist: 2400, scale: 2.7 + k * 0.1 }, { light: [0.5, 0.4, 0.75], plain: true, tint: (c) => c.map((x) => mixHex(x, '#d0603a', 0.42)) });
       withAlpha(ctx, 0.78, () => ctx.drawImage(LAYER, 0, 0));
       ctx.save(); ctx.translate(430, 930); ctx.rotate(-0.55); silLSTM(ctx, 0, 0, 0.8, '#0a0710'); ctx.restore();
       const c = cAlpha(T, 44.9, 48.35);

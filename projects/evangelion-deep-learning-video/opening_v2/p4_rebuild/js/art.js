@@ -269,7 +269,8 @@ export function nabla(ctx) {
   ctx.save(); ctx.translate(W / 2, H / 2 - 20);
   ctx.beginPath(); ctx.moveTo(-330, -300); ctx.lineTo(330, -300); ctx.lineTo(0, 300); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#000'; ctx.beginPath(); ctx.moveTo(-170, -212); ctx.lineTo(250, -212); ctx.lineTo(10, 188); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = R; ctx.font = '700 170px "Liberation Serif"'; ctx.textAlign = 'center'; ctx.save(); ctx.scale(1.25, 1); ctx.fillText('NABLA', 0, 20); ctx.restore();
+  ctx.font = '700 170px "Liberation Serif"'; ctx.textAlign = 'center'; ctx.save(); ctx.scale(1.25, 1);
+  ctx.lineJoin = 'miter'; ctx.lineWidth = 16; ctx.strokeStyle = '#000'; ctx.strokeText('NABLA', 0, 20); ctx.fillStyle = R; ctx.fillText('NABLA', 0, 20); ctx.restore();
   ctx.font = 'italic 500 38px "EB Garamond"'; ctx.fillText("Grad's in his heaven — all's right with the world", 0, 400);
   ctx.restore(); ctx.textAlign = 'left';
 }
@@ -288,7 +289,7 @@ export function dataGrid(ctx, lt, head = 1) {
     ctx.fillStyle = v > 0.5 ? '#eaffea' : v > 0.1 ? '#35ff6a' : '#1b9a3c'; ctx.fillText(v.toFixed(2), x0 + j * cw + cw / 2, y0 + i * ch + 56);
   }
   ctx.fillStyle = '#ff8a1a'; ctx.font = '400 30px "Share Tech Mono"'; ctx.textAlign = 'left';
-  ctx.fillText(`HEAD ${head + 1}  W_Q = 3·R(${-[0, -1, -2, -3][head]})  d = 64  softmax(qk/√d)`, x0, y0 + n * ch + 50);
+  ctx.fillText(`HEAD ${head + 1}  W_Q = 3·R(${[0, -1, -2, -3][head]})  d = 64  softmax(qk/√d)`, x0, y0 + n * ch + 50);
   ctx.restore();
 }
 
@@ -329,11 +330,11 @@ export function redFinal(ctx, lt) {
 export function satelliteLabels(ctx, lt) {
   ctx.save();
   ctx.fillStyle = '#d0141e'; ctx.fillRect(70, 60, 360, 150);
-  ctx.fillStyle = '#fff'; ctx.font = '700 30px "Roboto Condensed"'; ctx.fillText('ILSVRC-2012 VALIDATION', 88, 100);
+  ctx.fillStyle = '#fff'; ctx.font = '700 30px "Roboto Condensed"'; ctx.fillText('ILSVRC-2012  TEST SET', 88, 100);
   ctx.font = '700 84px "Roboto Condensed"'; ctx.fillText('A.D. 2012', 88, 186);
   ctx.strokeStyle = '#ff3040'; ctx.lineWidth = 3; ctx.strokeRect(1500, 900, 360, 110);
   ctx.fillStyle = '#ff3040'; ctx.font = '700 48px "Roboto Condensed"'; ctx.fillText('EPOCH 90', 1530, 972);
   ctx.font = '400 26px "Share Tech Mono"'; ctx.fillText('GTX 580 3GB ×2', 1530, 1002);
-  ctx.font = '700 40px "Roboto Condensed"'; ctx.fillStyle = '#fff'; ctx.fillText('TOP-5 ERROR  26.2% → 15.3%', 88, 1000);
+  ctx.font = '700 40px "Roboto Condensed"'; ctx.fillStyle = '#fff'; ctx.fillText('TOP-5 TEST ERROR  26.2% → 15.3%', 88, 1000);
   ctx.restore();
 }

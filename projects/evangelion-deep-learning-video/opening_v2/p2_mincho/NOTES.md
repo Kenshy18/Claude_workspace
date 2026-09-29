@@ -54,7 +54,7 @@ Format: 4:3, 1440×1080, 30 fps, 2715 frames. Entry: `index.html` → `p2_lib.js
 | 77.67–78.57 | red city, pink explosion, robot, cross whiteout | red flash · 発散 · LOSS SPIKE · **NaN** on the yellow whiteout | divergence |
 | 78.57–79.63 | berserk robot, commander, crying child, rotated figure | 暴走 exploding gradients · 勾配クリッピング ‖g‖ ≤ 1.0 · 忘 as a hairline sketch · 破滅的忘却 CATASTROPHIC FORGETTING rotated 90° | |
 | 79.63–80.33 | cross pendant, "SECOND IMPACT" (red), white giant, A.D. 2000 crater | white cross on red · **SECOND DESCENT** in red · 175,000,000,000 パラメータ GPT-3 · crater "A.D. 2019 / INTERPOLATION THRESHOLD" | double descent |
-| 80.33–80.97 | blue void, sketch, green eye | ∅ · 蒸留 teacher → student · val_acc 1.000 with a green eye | |
+| 80.33–80.97 | blue void, sketch, green eye | ∅ · 蒸留 teacher → student · Eva-purple card, green eye, val_acc 1.000 | the grokked run's final accuracy |
 | 80.97–81.13 | "ADAM" | **ADAM**, black on white (kept, since it names the optimizer) | |
 | 81.13–82.63 | scientist profile, green data grid, director turning | Adam m_t · green grid with Adam's six lines · 逃げちゃダメだ ×3, squeezed tighter each time, （局所解から）, on the sub-cuts · vertical あなたは、何を最小化しているの？ · θ* outline sketch | |
 | 82.63–83.7 | 監督 card, green slash 83.63 | 監督 (vertical, small) **勾配降下** (three across, 下 below), same placement; green slash | |
@@ -62,7 +62,7 @@ Format: 4:3, 1440×1080, 30 fps, 2715 frames. Entry: `index.html` → `p2_lib.js
 | 86.1–87.67 | protagonist looks up; strained on teal | θ (narrow) turns into θ* at 86.66; θ* squeezed on teal | converged |
 | 87.67–87.93 | black frame, washed-out flashback | one black frame; θ₀ almost white on white | memory of initialisation |
 | 87.93–88.2 | smiling | おめでとう on green | ep.26 |
-| 88.2–90.5 | red, scrawls, 製作 + logos, fade | red with hairline ∂ ∇ ℒ θ ∅ 1; 製作 ○勾配 電気代 / GPU; fade to black | who really paid |
+| 88.2–90.5 | red, scrawls, 製作 + logos, fade | red with hairline ∂ ∇ ℒ θ ∅ 1; 製作 + a station mark (∇ in a ring, 勾配 beneath) 電気代 / GPU; fade to black | who really paid |
 
 ## Numbers and facts on screen, with sources
 - Countdown 0:38:50 (51.87–52.27): the film's own remaining time, 90.5 − t, formatted m:ss:cc. The 8:88:88 on its first two frames is the all-segments lamp test.

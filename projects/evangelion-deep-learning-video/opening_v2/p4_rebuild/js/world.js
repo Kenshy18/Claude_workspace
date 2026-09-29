@@ -841,4 +841,10 @@ export function render() { const a = performance.now();
     if (gv) OBJ.geo.children[0].visible = true; for (const k of hide) OBJ[k].visible = true;
     renderer.autoClear = false; renderer.render(scene, camera); renderer.autoClear = true;
   } else renderer.render(scene, camera); if (window.PROFILE) syncGL(renderer.getContext()); PROF.main += performance.now() - a; return renderer.domElement; }
+// compile every program once at load (first-use compiles otherwise land inside a timed frame)
+export function warmup() {
+  const vis = {}; for (const k of Object.keys(OBJ)) { vis[k] = OBJ[k].visible; OBJ[k].visible = true; }
+  renderer.compile(scene, camera); setCam([0, 60, 200], [0, 40, 0], 40); render(); shadows([0, 30, 0], 200);
+  for (const k of Object.keys(OBJ)) OBJ[k].visible = vis[k];
+}
 export { THREE };

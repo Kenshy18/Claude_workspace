@@ -63,6 +63,7 @@ async function registerFonts() {
   await initPaint();
   initArt();
   post = new PostFX(out, W, H);
+  WD.warmup(); for (const f of [0, 360, 1500]) renderAt(f / FPS);   // shader + canvas warm-up (frames stay pure functions of t)
   window.renderFrame = (f) => renderAt(f / FPS);
   window.__readyResolve({ total: TOTAL, frames: Math.round(TOTAL * FPS), w: W, h: H });
 })().catch((e) => { console.error('INIT FAILED', e && e.stack || e); });

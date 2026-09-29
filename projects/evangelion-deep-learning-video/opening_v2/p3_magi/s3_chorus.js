@@ -134,10 +134,11 @@ shot(68.62, 68.75, 'card_mlp01', (ctx) => card(ctx, [{ s: 'MLP-01', y: 640, size
 shot(68.75, 69.0, 'cu_wnorm', (ctx, lt, t, fx) => {
   const step = stepAt(t);
   fill(ctx, '#0a0400'); fx.bloom = 0.7; fx.thr = 0.5; fx.curve = 0.06;
-  ctx.save(); cam(ctx, 1.5, 720, 540, -60, 0);
+  ctx.save(); cam(ctx, 1.5, 720, 600, -60, 0);
   seg7(ctx, mAt('wnorm', step).toFixed(1), 150, 760, 460, '#ff8a1c', { thick: 0.15 });
-  monoText(ctx, '‖W‖', 160, 240, 60, '#ff8a1c');
   ctx.restore();
+  jpText(ctx, '重みノルム', 90, 1010, 64, '#ff8a1c', { weight: 900 });
+  monoText(ctx, `||W||  STEP ${fmtInt(step)}`, 440, 1004, 40, '#ff8a1c');
 });
 shot(69.0, 69.25, 'cu_losses', (ctx, lt, t, fx) => {
   const step = stepAt(t);
@@ -164,10 +165,14 @@ shot(69.5, 69.75, 'paper_mask', (ctx, lt, t) => {
   drawEmb(ctx, 720, 540, 380, 0, { emb: e, color: '#18181a', dot: 13, star: true, starAlpha: 0.9, starW: 3, starColor: '#18181a' });
 });
 shot(69.75, 70.12, 'red_core', (ctx, lt, t, fx) => {
-  fill(ctx, '#140000'); fx.bloom = 1.0; fx.thr = 0.4;
-  const g = ctx.createRadialGradient(720, 540, 60, 720, 540, 460);
-  g.addColorStop(0, '#ff5a3a'); g.addColorStop(0.7, '#d8140c'); g.addColorStop(1, '#5a0204');
-  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(720, 540, 460, 0, 7); ctx.fill();
+  // the core: a flat cel-shaded sphere (base, shadow crescent, one hard highlight)
+  fill(ctx, '#140000'); fx.bloom = 0.5; fx.thr = 0.72;
+  ctx.save(); ctx.beginPath(); ctx.arc(720, 540, 460, 0, 7); ctx.clip();
+  ctx.fillStyle = '#d8140c'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#7a0406'; ctx.beginPath(); ctx.arc(720, 540, 460, 0, 7); ctx.arc(640, 450, 450, 0, 7, true); ctx.fill('evenodd');
+  ctx.fillStyle = '#ff6a48'; ctx.beginPath(); ctx.ellipse(560, 330, 150, 80, -0.6, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ffd6c4'; ctx.beginPath(); ctx.ellipse(530, 310, 54, 26, -0.6, 0, 7); ctx.fill();
+  ctx.restore();
   const e = embSnap(stepAt(t));
   drawEmb(ctx, 720, 540, 360, 0, { emb: e, color: '#ffd0b0', dot: 7, star: true, starAlpha: 0.5, starW: 2, starColor: '#ffb090', rot: lt * 0.8 });
 });
@@ -449,10 +454,11 @@ shot(83.7, 86.1, 'light_bars', (ctx, lt, t, fx) => {
   const F_ = fourierAt(step);
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (let n = 1; n < 97; n++) {
-    const k = n <= 48 ? n : 97 - n, v = Math.sqrt(F_[k - 1] / 0.17);
+    // one column per DFT bin n (k and 97−k carry equal power): the 5 key + 2 late frequencies burn white, the rest barely glow
+    const k = n <= 48 ? n : 97 - n, v = clamp(F_[k - 1] / 0.12);
     const x = (n - 0.5) * (W / 96);
-    ctx.fillStyle = `rgba(255,${Math.round(150 + 90 * v)},${Math.round(40 + 120 * v * v)},${0.18 + 0.7 * v})`;
-    ctx.fillRect(x - 5 - 4 * v, 0, 10 + 8 * v, H);
+    ctx.fillStyle = `rgba(255,${Math.round(120 + 135 * v)},${Math.round(30 + 210 * v * v)},${0.1 + 0.9 * v})`;
+    ctx.fillRect(x - 3 - 9 * v, 0, 6 + 18 * v, H);
   }
   ctx.restore();
   // the "+" of the task, standing in the light like the unit with its arms spread (unit-01 purple, green trim)

@@ -52,7 +52,7 @@ export function credits(ctx, t) {
 // 監督 card (82.63–83.7): vertical small role, huge name 逆伝播 / 法, white mincho on black
 export function directorCard(ctx, lt) {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-  vert(ctx, '監督', X(0.07), Y(0.08), 92, { sx: 0.9 });
+  vert(ctx, '監督', X(0.085), Y(0.1), 138, { sx: 0.9, lead: 1.0 });
   const s = 300; const x0 = X(0.26);
   jp(ctx, '逆伝播', x0, Y(0.56), s, { sx: 0.88 });
   const w = jpW(ctx, '逆伝播', s, { sx: 0.88 });

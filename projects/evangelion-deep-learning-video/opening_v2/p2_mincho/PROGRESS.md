@@ -15,6 +15,12 @@
 - NOTES.md written (21:45). Perf: mean 250 ms/still incl. PNG, max ~500 (first engraving frame, warm-up);
   engraving rays batched. Outro re-cut: 87.667 black 1f, 87.7 θ₀ washed-out memory, 87.933 おめでとう.
 
+- 21:55: official compare.sh run, 67 timestamps (out/opening_v2/p2_mincho/compare.jpg), all reviewed in compact
+  sheets. Polished: val_acc card (Eva purple, green eye, big 1.000), crater (concentric cels + survey ×),
+  ∇-in-ring station mark on 製作.
+
+- 22:00: voiced-kana right air 0.035→0.012 em (デザイン looked loose); sun at 41.6–48.4 now deep orange
+  (#e0561a) so the ED column reads. Frame-accurate cut check at 76.4–76.9 OK. FINAL STATE: complete.
+
 ## Next
-1. Compare 66.7–90.5 vs reference; final compare.sh run (≥60 ts).
-2. Final compare.sh (≥60 ts) + final polish pass; update NOTES shot table if anything changes.
+1. Optional polish only. Deliverables complete (index.html + JS, NOTES.md).

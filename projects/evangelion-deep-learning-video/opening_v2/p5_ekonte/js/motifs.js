@@ -156,37 +156,62 @@ function gpuModule(B, x, y, s, o = {}) {
 
 // ── the "unit": a transformer-mecha. Green lines = the residual stream. ─────
 // front view, height ~1000 units * s, origin at horn tip; o.arms in [0,1] (down -> spread)
+function clipHalf(poly, nx, ny, c) {       // keep the part of poly where nx*x + ny*y >= c (Sutherland–Hodgman, one plane)
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const P = poly[i], Q = poly[(i + 1) % poly.length];
+    const dp = nx * P[0] + ny * P[1] - c, dq = nx * Q[0] + ny * Q[1] - c;
+    if (dp >= 0) out.push(P);
+    if ((dp >= 0) !== (dq >= 0)) { const t = dp / (dp - dq); out.push([P[0] + (Q[0] - P[0]) * t, P[1] + (Q[1] - P[1]) * t]); }
+  }
+  return out;
+}
+function centroid(poly) { let x = 0, y = 0; for (const p of poly) { x += p[0]; y += p[1]; } return [x / poly.length, y / poly.length]; }
+function taperLimb(p0, p1, r0, rm, r1) {
+  const dx = p1[0] - p0[0], dy = p1[1] - p0[1], l = Math.hypot(dx, dy), nx = -dy / l, ny = dx / l;
+  const pt = (u, r, sg) => [p0[0] + dx * u + nx * r * sg, p0[1] + dy * u + ny * r * sg];
+  return [pt(0, r0, 1), pt(0.45, rm, 1), pt(1, r1, 1), pt(1, r1, -1), pt(0.45, rm * 0.92, -1), pt(0, r0, -1)];
+}
 function mechaParts(o = {}) {
   const arms = o.arms ?? 0.1;
   const P = {};
-  P.horn = [[0, 0], [-10, 64], [10, 64]];
-  P.head = [[-34, 60], [-50, 96], [-44, 130], [-24, 152], [24, 152], [44, 130], [50, 96], [34, 60]];
-  P.jaw = [[-24, 152], [0, 172], [24, 152]];
+  const mir = (pts) => pts.map(([x, y]) => [-x, y]);
+  P.horn = [[0, 0], [-5, 30], [-11, 72], [11, 72], [5, 30]];
+  P.head = [[-30, 58], [-44, 78], [-50, 108], [-46, 136], [-30, 150], [30, 150], [46, 136], [50, 108], [44, 78], [30, 58], [12, 52], [-12, 52]];
+  P.jaw = [[-28, 140], [-22, 166], [-8, 180], [8, 180], [22, 166], [28, 140]];
   P.visor = [[-40, 100], [-12, 112], [12, 112], [40, 100]];
-  P.neck = [[-20, 168], [20, 168], [26, 190], [-26, 190]];
-  P.torso = [[-86, 190], [86, 190], [100, 300], [62, 420], [-62, 420], [-100, 300]];
-  P.waist = [[-58, 420], [58, 420], [70, 486], [-70, 486]];
-  const pyl = (sx) => [[70, 180], [158, 150], [186, 196], [168, 268], [98, 256], [78, 214]].map(([px, py]) => [px * sx, py]);
-  P.pylL = pyl(-1); P.pylR = pyl(1);
-  const leg = (sx) => ({
-    thigh: [[20, 486], [64, 486], [62, 690], [26, 690]].map(([px, py]) => [px * sx, py]),
-    shin: [[22, 700], [68, 700], [64, 930], [30, 930]].map(([px, py]) => [px * sx, py]),
-    foot: [[16, 930], [82, 930], [96, 972], [8, 972]].map(([px, py]) => [px * sx, py]),
-  });
-  P.legL = leg(-1); P.legR = leg(1);
-  // arms: shoulder joint at (±150, 228). angle from straight down (0) to horizontal (pi/2 * 0.95)
+  P.eyes = [[[-36, 104], [-14, 110], [-15, 117], [-34, 112]], [[36, 104], [14, 110], [15, 117], [34, 112]]];
+  P.neck = [[-18, 170], [18, 170], [24, 198], [-24, 198]];
+  P.torso = [[-92, 196], [-40, 190], [40, 190], [92, 196], [108, 250], [96, 320], [70, 392], [-70, 392], [-96, 320], [-108, 250]];
+  P.waist = [[-62, 392], [62, 392], [56, 428], [-56, 428]];
+  P.hips = [[-76, 428], [76, 428], [88, 470], [40, 492], [0, 502], [-40, 492], [-88, 470]];
+  const pyl = [[70, 190], [118, 150], [176, 138], [206, 176], [200, 232], [176, 282], [120, 272], [88, 236]];
+  P.pylR = pyl; P.pylL = mir(pyl);
+  const leg = {
+    thigh: [[18, 482], [80, 470], [88, 560], [76, 690], [30, 696], [20, 580]],
+    knee: [[22, 690], [80, 684], [88, 718], [72, 744], [30, 746], [16, 720]],
+    shin: [[26, 744], [74, 742], [88, 800], [78, 900], [64, 940], [34, 940], [28, 860]],
+    foot: [[22, 938], [74, 938], [100, 976], [94, 992], [8, 992], [12, 960]],
+  };
+  P.legR = leg; P.legL = { thigh: mir(leg.thigh), knee: mir(leg.knee), shin: mir(leg.shin), foot: mir(leg.foot) };
   const arm = (sx) => {
-    const ang = lerp(0.18, 1.45, arms);
-    const j = [150 * sx, 228];
-    const d1 = [Math.sin(ang) * sx, Math.cos(ang)];
-    const e = [j[0] + d1[0] * 190, j[1] + d1[1] * 190];
-    const ang2 = ang + lerp(0.05, 0.12, arms) * (arms > 0.5 ? -1 : 1);
-    const d2 = [Math.sin(ang2) * sx, Math.cos(ang2)];
-    const h = [e[0] + d2[0] * 190, e[1] + d2[1] * 190];
-    const limb = (p0, p1, r0, r1) => { const dx = p1[0] - p0[0], dy = p1[1] - p0[1], l = Math.hypot(dx, dy); const nx = -dy / l, ny = dx / l; return [[p0[0] + nx * r0, p0[1] + ny * r0], [p1[0] + nx * r1, p1[1] + ny * r1], [p1[0] - nx * r1, p1[1] - ny * r1], [p0[0] - nx * r0, p0[1] - ny * r0]]; };
+    const ang = lerp(0.2, 1.47, arms);
+    const j = [150 * sx, 226];
+    const e = [j[0] + Math.sin(ang) * sx * 196, j[1] + Math.cos(ang) * 196];
+    const ang2 = ang + lerp(0.08, -0.06, arms);
+    const h = [e[0] + Math.sin(ang2) * sx * 200, e[1] + Math.cos(ang2) * 200];
+    const du = [Math.sin(ang2) * sx, Math.cos(ang2)], dn = [-du[1], du[0]];
     const hand = [];
-    for (let f = -1.5; f <= 1.5; f += 1) { const fa = ang2 + f * 0.16; hand.push([[h[0], h[1]], [h[0] + Math.sin(fa) * sx * 70, h[1] + Math.cos(fa) * 70]]); }
-    return { upper: limb(j, e, 30, 24), fore: limb(e, h, 26, 20), hand, j, e, h };
+    for (let f = 0; f < 4; f++) {
+      const off = (f - 1.5) * 13, fa = ang2 + (f - 1.5) * 0.1 * sx;
+      const b0 = [h[0] + du[0] * 34 + dn[0] * off, h[1] + du[1] * 34 + dn[1] * off];
+      const len = 62 - Math.abs(f - 1.5) * 8;
+      hand.push(taperLimb(b0, [b0[0] + Math.sin(fa) * sx * len, b0[1] + Math.cos(fa) * len], 6.5, 6.5, 4.5));
+    }
+    const palm = taperLimb([h[0] - du[0] * 6, h[1] - du[1] * 6], [h[0] + du[0] * 38, h[1] + du[1] * 38], 22, 28, 27);
+    const tb = [h[0] + du[0] * 12 - dn[0] * 26 * sx, h[1] + du[1] * 12 - dn[1] * 26 * sx];
+    hand.push(taperLimb(tb, [tb[0] + (du[0] - dn[0] * sx * 0.8) * 40, tb[1] + (du[1] - dn[1] * sx * 0.8) * 40], 7, 7, 5));
+    return { upper: taperLimb(j, e, 30, 34, 24), fore: taperLimb(e, h, 25, 31, 20), palm, hand, j, e, h };
   };
   P.armL = arm(-1); P.armR = arm(1);
   return P;
@@ -194,54 +219,88 @@ function mechaParts(o = {}) {
 function mecha(B, x, y, s, o = {}) {
   const P = mechaParts(o);
   const T = (pts) => pts.map(([px, py]) => [x + px * s, y + py * s]);
-  const a = o.a ?? 0.85, w = o.w ?? 2.6;
-  const shapes = [P.head, P.neck, P.torso, P.waist, P.pylL, P.pylR, P.legL.thigh, P.legL.shin, P.legL.foot, P.legR.thigh, P.legR.shin, P.legR.foot,
-    P.armL.upper, P.armL.fore, P.armR.upper, P.armR.fore];
-  if (o.sil) {   // black silhouette (marker)
-    for (const sh of shapes.concat([P.horn])) B.marker(T(sh), o.silCol || COL.mBlack, { a: o.silA ?? 0.93, streak: 0.3 });
-    for (const side of [P.armL, P.armR]) for (const f of side.hand) B.line(...T(f)[0], ...T(f)[1], { w: 14 * s, a: 0.9, col: o.silCol || COL.mBlack, passes: 1 });
-    if (o.eyes) for (const ex of [-1, 1]) B.marker(T([[ex * 14, 104], [ex * 38, 98], [ex * 34, 108], [ex * 16, 112]]), '#ffffff', { a: 1, streak: 0 });
+  const a = o.a ?? 0.88, w = o.w ?? 2.6;
+  const armor = [P.head, P.torso, P.pylL, P.pylR, P.legL.thigh, P.legL.shin, P.legR.thigh, P.legR.shin, P.armL.upper, P.armL.fore, P.armR.upper, P.armR.fore];
+  const minor = [P.neck, P.waist, P.hips, P.legL.knee, P.legR.knee, P.legL.foot, P.legR.foot, P.armL.palm, P.armR.palm];
+  const fingers = P.armL.hand.concat(P.armR.hand);
+  const all = armor.concat(minor, [P.horn, P.jaw], fingers);
+  if (o.sil) {   // silhouette: dense graphite tone
+    for (const sh of all) B.marker(T(sh), o.silCol || COL.mBlack, { a: o.silA ?? 0.93, streak: 0.3, mode: o.silMode });
+    if (o.eyes) for (const e of P.eyes) B.marker(T(e), '#ffffff', { a: 1, streak: 0 });
     return;
   }
-  if (o.marker !== false) {
-    for (const sh of shapes) B.marker(T(sh), COL.mPurple, { a: 0.72, streak: 0.7 });
-    B.marker(T(P.horn), COL.mPurple, { a: 0.72 });
-    B.marker(T(P.jaw.concat([[0, 160]])), COL.mGreen, { a: 0.8 });
+  // construction lines (light blue pencil), as a storyboard artist lays in the figure first
+  if (o.guides !== false) {
+    const gc = { w: 1.4, a: 0.4, col: COL.blue, passes: 1, wob: 0.8 };
+    B.line(...T([[0, -30]])[0], ...T([[0, 1010]])[0], gc);
+    for (const yy of [226, 430, 716]) B.line(...T([[-220, yy]])[0], ...T([[220, yy + 4]])[0], gc);
+    B.ellipse(...T([[0, 105]])[0], 62 * s, 70 * s, gc);
   }
-  for (const sh of shapes) B.poly(T(sh), { w, a });
-  B.poly(T(P.horn), { w, a }); B.stroke(T(P.jaw), { w, a }); B.stroke(T(P.visor), { w: w * 0.9, a });
-  // chest plates = layers
-  for (let i = 0; i < 6; i++) { const yy = 222 + i * 30; const hw = 88 - Math.max(0, i - 3) * 10; B.line(...T([[-hw, yy]])[0], ...T([[hw, yy]])[0], { w: w * 0.7, a: a * 0.8 }); }
-  for (const side of [P.armL, P.armR]) for (const f of side.hand) B.line(...T(f)[0], ...T(f)[1], { w: w * 1.1, a });
-  // residual stream (green)
+  if (o.marker !== false) {
+    for (const sh of armor) B.marker(T(sh), o.col || COL.mPurple, { a: o.ma ?? 0.8, streak: 0.7, mode: 'wash' });
+    B.marker(T(P.horn), o.col || COL.mPurple, { a: o.ma ?? 0.8, mode: 'wash' });
+    B.marker(T(P.jaw), COL.mGreen, { a: 0.85, mode: 'accent' });
+  }
+  // shadow side (light from upper left): hatch the right part of every armour piece
+  if (o.shade !== false) for (const sh of armor.concat(minor)) {
+    const Q = T(sh), [cx] = centroid(Q);
+    const half = clipHalf(Q, 1, -0.25, cx + 4 * s - 0.25 * centroid(Q)[1]);
+    if (half.length > 2) B.hatch(half, 0.75, Math.max(5, 9 * s * 0.9), { w: Math.max(1, w * 0.45), a: a * 0.5 });
+  }
+  const outer = { w: w * 1.25, a };
+  for (const sh of armor.concat([P.horn])) B.poly(T(sh), outer);
+  for (const sh of minor) B.poly(T(sh), { w: w * 0.9, a });
+  for (const f of fingers) B.poly(T(f), { w: w * 0.7, a, passes: 1 });
+  B.stroke(T(P.jaw), { w, a }); B.stroke(T(P.visor), { w: w * 0.8, a });
+  for (const e of P.eyes) B.poly(T(e), { w: w * 0.7, a, passes: 1 });
+  // armour seams
+  const seam = { w: w * 0.55, a: a * 0.8, passes: 1 };
+  B.stroke(T([[-60, 200], [0, 236], [60, 200]]), seam);
+  B.stroke(T([[-100, 262], [-24, 292], [24, 292], [100, 262]]), seam);
+  for (const [yy, hw] of [[322, 88], [348, 80], [372, 72]]) B.line(...T([[-hw, yy]])[0], ...T([[hw, yy]])[0], seam);
+  for (const sx of [-1, 1]) {
+    B.stroke(T([[118 * sx, 150], [150 * sx, 218], [176 * sx, 282]]), seam);
+    B.stroke(T([[40 * sx, 600], [70 * sx, 610]]), seam);
+    B.stroke(T([[36 * sx, 790], [76 * sx, 796]]), seam);
+  }
+  for (const A of [P.armL, P.armR]) { B.circle(...T([A.j])[0], 26 * s, { w: w * 0.8, a }); B.circle(...T([A.e])[0], 16 * s, { w: w * 0.7, a: a * 0.9, passes: 1 }); }
+  // residual stream (green stripes)
   const g = { w: (o.gw || 7) * s * 0.6 + 1.5, a: 0.9, col: COL.mGreen, passes: 1, wob: 0.8 };
   if (o.green !== false) {
-    B.line(...T([[0, 196]])[0], ...T([[0, 416]])[0], g);
-    for (const L2 of [P.legL, P.legR]) { const c = L2.thigh; B.line(...T([[(c[0][0] + c[1][0]) / 2, 492]])[0], ...T([[(c[0][0] + c[1][0]) / 2, 924]])[0], g); }
-    for (const A of [P.armL, P.armR]) B.stroke(T([A.j, A.e, A.h]), g);
-    if (o.eyes) for (const ex of [-1, 1]) B.marker(T([[ex * 14, 104], [ex * 38, 98], [ex * 34, 108], [ex * 16, 112]]), '#ffffff', { a: 1, streak: 0 });
+    B.line(...T([[0, 238]])[0], ...T([[0, 388]])[0], g);
+    for (const sx of [-1, 1]) {
+      B.line(...T([[54 * sx, 500]])[0], ...T([[58 * sx, 680]])[0], g);
+      B.line(...T([[52 * sx, 760]])[0], ...T([[56 * sx, 920]])[0], g);
+      B.stroke(T([[96 * sx, 208], [100 * sx, 300]]), g);
+    }
+    for (const A of [P.armL, P.armR]) B.stroke(T([A.j, A.e, A.h]), { ...g, w: g.w * 0.8 });
+    if (o.eyes) for (const e of P.eyes) B.marker(T(e), '#ffffff', { a: 1, streak: 0 });
   }
-  if (o.labels) {
-    B.text('L1–L12', ...T([[112, 300]])[0], { size: 24 * s * 1.6, col: COL.red, a: 0.9 });
-  }
+  if (o.labels) B.text('L1–L12', ...T([[112, 300]])[0], { size: 24 * s * 1.6, col: COL.red, a: 0.9 });
 }
 // head close-up (3/4 front), local 0..1 box of size s (~ unit = 1000)
 function mechaHead(B, x, y, s, o = {}) {
   const T = (pts) => pts.map(([px, py]) => [x + px * s, y + py * s]);
   const a = o.a ?? 0.88, w = o.w ?? 3;
-  const helm = [[-300, -60], [-380, 140], [-330, 420], [-180, 560], [180, 560], [330, 420], [380, 140], [300, -60], [120, -120], [-120, -120]];
-  const horn = [[-40, -110], [0, -560], [40, -110]];
-  const jaw = [[-180, 560], [-120, 700], [0, 760], [120, 700], [180, 560]];
-  const eyeL = [[-290, 190], [-70, 250], [-80, 300], [-270, 270]];
+  const helm = [[-110, -170], [-230, -80], [-285, 80], [-272, 260], [-222, 400], [-150, 500], [150, 500], [222, 400], [272, 260], [285, 80], [230, -80], [110, -170]];
+  const horn = [[-40, -160], [-10, -440], [0, -620], [10, -440], [40, -160]];
+  const jaw = [[-150, 470], [-142, 620], [-72, 770], [72, 770], [142, 620], [150, 470]];
+  const eyeL = [[-245, 150], [-70, 212], [-82, 258], [-228, 228]];
   const eyeR = eyeL.map(([px, py]) => [-px, py]);
   if (o.sil) {
     for (const sh of [helm, horn, jaw]) B.marker(T(sh), o.silCol || COL.mBlack, { a: 0.94, streak: 0.3 });
   } else {
-    if (o.marker !== false) { B.marker(T(helm), COL.mPurple, { a: 0.72 }); B.marker(T(horn), COL.mPurple, { a: 0.72 }); B.marker(T(jaw), o.jawCol || COL.mGreen, { a: 0.78 }); }
-    B.poly(T(helm), { w, a }); B.poly(T(horn), { w, a }); B.stroke(T(jaw), { w, a });
-    B.stroke(T([[-150, 580], [-60, 690]]), { w: w * 0.8, a }); B.stroke(T([[150, 580], [60, 690]]), { w: w * 0.8, a });
-    B.stroke(T([[-330, 420], [-120, 380], [120, 380], [330, 420]]), { w: w * 0.8, a: a * 0.8 });
-    B.hatch(T([[-380, 140], [-300, -60], [-230, -80], [-300, 150], [-330, 420]]), 1.1, 16 * s * 3, { w: w * 0.7, a: a * 0.6 });
+    if (o.marker !== false) { B.marker(T(helm), COL.mPurple, { a: 0.8, mode: 'wash' }); B.marker(T(horn), COL.mPurple, { a: 0.8, mode: 'wash' }); B.marker(T(jaw), o.jawCol || COL.mGreen, { a: 0.78, mode: 'accent' }); }
+    B.poly(T(helm), { w: w * 1.2, a }); B.poly(T(horn), { w: w * 1.1, a }); B.stroke(T(jaw), { w, a });
+    const seam = { w: w * 0.6, a: a * 0.8, passes: 1 };
+    B.stroke(T([[-120, 520], [-60, 740]]), seam); B.stroke(T([[120, 520], [60, 740]]), seam);
+    B.stroke(T([[-272, 260], [-120, 330], [120, 330], [272, 260]]), seam);
+    B.stroke(T([[-110, -170], [-90, 40], [0, 90], [90, 40], [110, -170]]), seam);
+    B.stroke(T([[-230, -80], [-160, 110]]), seam); B.stroke(T([[230, -80], [160, 110]]), seam);
+    for (const sx of [-1, 1]) B.poly(T([[300 * sx, 60], [380 * sx, 10], [360 * sx, 220], [282 * sx, 250]]), { w: w * 0.9, a });
+    const half = clipHalf(T(helm), 1, -0.2, x + 30 * s - 0.2 * y);
+    if (half.length > 2) B.hatch(half, 0.8, 11 * Math.max(0.7, s), { w: w * 0.45, a: a * 0.5 });
+    B.hatch(clipHalf(T(jaw), 1, 0, x + 20 * s), 0.8, 9 * Math.max(0.7, s), { w: w * 0.45, a: a * 0.5 });
   }
   if (o.eyes !== false) {
     for (const e of [eyeL, eyeR]) {

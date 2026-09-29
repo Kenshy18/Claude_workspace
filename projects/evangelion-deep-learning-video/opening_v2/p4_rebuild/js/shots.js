@@ -8,7 +8,7 @@ import * as M from './mathml.js';
 import * as A from './art.js';
 import * as L from './logo.js';
 import { credits, directorCard, productionCard } from './credits.js';
-const { W, H, clamp, seg, lerp, ease } = P;
+const { W, H, clamp, seg, lerp, ease, jp } = P;
 export const TOTAL = 90.5;
 const cx = M.S * 3, cz = -M.S * 2;           // Tokyo-3 = the (3,2) minimum
 const G = WD.ground;
@@ -192,8 +192,8 @@ add(22.9, 23.4, 'x_flash', (ctx, lt, t, fx) => {
 // VERSE A — blue sky over the GPU city
 add(23.4, 26.93, 'sky_tilt', (ctx, lt, t, fx) => {   // tilt down from open sky to the basin: towers still sunk (they rise next shot)
   WD.mood('day'); vis('terrain', 'city', 'octa'); U.uRiseT.value = -1; OBJ.octa.position.set(cx - 250, 300, cz - 380);
-  const k = ease.io(lt / 3.53); const pos = [cx + 40, 0, cz + 300]; pos[1] = G(pos[0], pos[2]) + 26;
-  WD.setCam(pos, [cx - 60, lerp(640, 40, k), cz - 150], 36);
+  const k = 0.12 * (lt / 2.2) * (lt < 2.2) + (lt >= 2.2) * (0.12 + 0.88 * ease.io(seg(lt, 2.2, 2.95))); const pos = [cx + 40, 0, cz + 300]; pos[1] = G(pos[0], pos[2]) + 26;
+  WD.setCam(pos, [cx + lerp(-60, 30, k), lerp(900, 40, k), cz - 150], 36);
   render3d(ctx, 'day', { shadow: { s: 300 } });
 });
 add(26.93, 29.9, 'emergence', (ctx, lt, t, fx) => {   // towers rise on the warmup ramp; seen from the basin's southern rim
@@ -214,7 +214,7 @@ add(29.9, 33.9, 'attention', (ctx, lt, t, fx) => {   // long lens from the south
   const head = lt < 2.0 ? 1 : 2; const pp = lt < 2.0 ? lt / 1.4 : (lt - 2.0) / 1.4;
   beams(ctx, head, pp);
   ctx.font = '400 24px "Share Tech Mono"'; ctx.fillStyle = 'rgba(255,248,230,0.95)';
-  ctx.fillText(`HEAD ${head + 1}/8   q = 3·R(${head})·PE(p),  k = 3·PE(j),  d = 64`, 1180, 1040);
+  ctx.fillText(`HEAD ${head + 1}/8   q = 3·R(-${head})·PE(p),  k = 3·PE(j),  d = 64`, 1180, 1040);
 });
 add(33.9, 37.9, 'ring', (ctx, lt, t, fx) => {
   WD.mood('day'); vis('terrain', 'city');
@@ -362,16 +362,18 @@ add(70.5, 71.23, 'c_octa_moon', (ctx, lt, t, fx) => {
 add(71.23, 71.37, 'c_card_priors', (ctx) => A.card(ctx, 'PRIORS'));
 add(71.37, 71.73, 'c_city_sunset', (ctx, lt) => { WD.mood('sunset'); vis('terrain', 'city', 'octa'); WD.setCam([cx + 330, 170, cz + 260], [cx - 60, 40, cz - 60], 30); render3d(ctx, 'sunset', { shadow: { s: 300 }, skyO: { dx: 2600 } }); });
 add(71.73, 71.87, 'c_card_tokyo3', (ctx) => A.card(ctx, 'TOKYO-3'));
-add(71.87, 72.23, 'c_pyramid', (ctx, lt) => { WD.mood('geo'); vis('geo'); U.uLed.value = 1; const y0 = WD.GEO.y0; WD.setCam([260 - lt * 40, y0 + 60, 260], [0, y0 + 80, 0], 40); render3d(ctx, null, { bg: '#0c0808' }); });
+add(71.87, 72.23, 'c_pyramid', (ctx, lt) => { WD.mood('geo'); vis('geo'); U.uLed.value = 1; U.uWarm.value.set(1.45, 0.95, 1.15); U.uFog.value.set(0.85, 0.45, 0.62); U.uFogR.value.set(120, 900); const y0 = WD.GEO.y0; WD.setCam([230 - lt * 40, y0 + 40, 230], [0, y0 + 70, 0], 40); render3d(ctx, null, { bg: '#c86a8c' }); });
 add(72.23, 72.37, 'c_nabla', (ctx) => A.nabla(ctx));
 // "staff mugshots" → the eight ranks of the ring, one tower face each
-const rankShot = (r) => (ctx, lt, t, fx) => {
-  const R = WD.CITYDATA.ring[r]; WD.mood('day'); vis('terrain', 'city'); ringDraw(ctx, 14); const d = [Math.cos(-R.ry + Math.PI / 2 + 0.0), Math.sin(-R.ry + Math.PI / 2)];
-  const ang = Math.atan2(cz - R.z, cx - R.x); const px = R.x + Math.cos(ang) * 40, pz = R.z + Math.sin(ang) * 40;
-  WD.setCam([px + Math.sin(ang) * 10, R.top - 14, pz - Math.cos(ang) * 10], [R.x, R.top - 16, R.z], 34);
-  render3d(ctx, 'day', { shadow: { s: 300 } });
-  ctx.font = '700 60px "Roboto Condensed"'; ctx.fillStyle = '#fff'; ctx.fillText(`RANK ${r}`, 120, 980);
-  ctx.font = '400 26px "Share Tech Mono"'; ctx.fillText(`chunk ${(r + 1) % 8} reduced first · all 8 chunks = sum over 8 ranks`, 124, 1020);
+const RANK_BG = ['#3a78c8', '#8a5ab8', '#e08a3a', '#3f9a9a', '#c84a5a', '#5a7ad0', '#d0a040', '#5a9a5a'];
+const rankShot = (r) => (ctx, lt, t, fx) => {   // the eight ranks as quick "mugshots": each tower's chunk display after the all-reduce
+  const R = WD.CITYDATA.ring[r]; WD.mood('day'); vis('terrain', 'city'); ringDraw(ctx, 14);
+  const ang = Math.atan2(R.z - cz, R.x - cx), side = r % 2 ? 1 : -1;       // outward: the chunk face looks away from the ring centre
+  const px = R.x + Math.cos(ang) * 34 - Math.sin(ang) * 8 * side, pz = R.z + Math.sin(ang) * 34 + Math.cos(ang) * 8 * side;
+  WD.setCam([px, R.top - 22, pz], [R.x, R.top - 12, R.z], 36, 0.06 * side);
+  U.uLed.value = 1; fill(ctx, RANK_BG[r]); render3d(ctx, null);
+  jp(ctx, `RANK ${r}`, 110, 990, 110, { family: '"Roboto Condensed"', weight: 700, sx: 0.9 });
+  ctx.font = '400 28px "Share Tech Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(`owns reduced chunk ${(r + 1) % 8} · 8/8 contributions in every cell`, 116, 1036);
 };
 add(72.37, 72.6, 'c_rank0', rankShot(0));
 add(72.6, 72.73, 'c_map', (ctx, lt) => { WD.setCam([150, 2600, 10], [150, 0, 0], 30); A.engraving(ctx, 0, { bg: '#1c2a3a', ink: '220,230,240' }); });
@@ -392,9 +394,14 @@ add(75.47, 75.57, 'c_card_proto', (ctx) => A.card(ctx, 'PROTOTYPE'));
 add(75.57, 75.97, 'c_unit02', (ctx, lt) => { WD.mood('day'); unitPose({ eyes: 1, spread: 0.3, lean: 0.2, look: 0.25 }); U.uSwap.value = 2; WD.setCam([-18, 38, 44], [0, 46, 0], 40); render3d(ctx, null, { bg: '#1c2a44' }); });
 add(75.97, 76.13, 'c_card_prod', (ctx) => A.card(ctx, 'PRODUCTION'));
 // "classmates" → attention heads, one per cut
-const headShot = (head, side) => (ctx, lt) => { WD.mood('day'); vis('terrain', 'city'); const T = WD.CITYDATA.tokens; const m = T[4 + side];
-  WD.setCam([m.x + 60 * (side ? 1 : -1), m.top - 10, m.z + 80], [m.x, m.top + 20, m.z], 44); render3d(ctx, 'day', { shadow: { s: 300 } }); beams(ctx, head, 1.2);
-  ctx.font = '700 60px "Roboto Condensed"'; ctx.fillStyle = '#fff'; ctx.fillText(`HEAD ${head + 1}`, 120, 980); };
+const HEAD_BG = ['#4a86d0', '#e0843a', '#9a62c0', '#3a9a8a'];
+const headShot = (head, side) => (ctx, lt) => {   // "classmates" → attention heads: silhouette skyline on a flat colour, one head per cut
+  WD.mood('day'); vis('terrain', 'city'); const T = WD.CITYDATA.tokens; const m = T[4 + side];
+  WD.setCam([m.x + 60 * (side ? 1 : -1), m.top + 6, m.z + 330], [m.x, m.top + 52, m.z], 22, 0.05 * (side ? 1 : -1)); U.uLed.value = 0;
+  U.uMode.value = 2; U.uSil.value.set(0.06, 0.07, 0.14); fill(ctx, HEAD_BG[head]); render3d(ctx, null); beams(ctx, head, 1.2);
+  jp(ctx, `HEAD ${head + 1}`, 110, 990, 110, { family: '"Roboto Condensed"', weight: 700, sx: 0.9 });
+  ctx.font = '400 28px "Share Tech Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(`W_Q = 3·R(${head ? '-' + head : 0}) — attends ${head === 0 ? 'to itself' : head + (head === 1 ? ' token' : ' tokens') + ' back'}`, 116, 1036);
+};
 add(76.13, 76.47, 'c_head0', headShot(0, 0));
 add(76.47, 76.63, 'c_head1', headShot(1, 1));
 add(76.63, 76.97, 'c_head2', headShot(2, 0));
@@ -427,7 +434,7 @@ add(79.63, 79.7, 'c_cross_red', (ctx) => { fill(ctx, '#c8121c'); ctx.fillStyle =
 add(79.7, 79.8, 'c_card_si', (ctx) => A.card(ctx, 'SECOND IMPACT'));
 add(79.8, 80.13, 'c_white_giant', (ctx, lt, t, fx) => { WD.mood('day'); unitPose({ eyes: 0, spread: 1.42, elbow: 0, lean: 0, hip: 0, knee: 0, nod: 0.35, cable: false }); U.uMode.value = 2; U.uSil.value.set(0.96, 0.88, 0.94); WD.setCam([0, 36, 120], [0, 38, 0], 40); fill(ctx, '#171320'); render3d(ctx, null); fx.bloom = 0.6; fx.thr = 0.8; });
 add(80.13, 80.33, 'c_satellite', (ctx, lt, t, fx) => {
-  WD.mood('dusk'); vis('terrain'); WD.TU.tLineA.value = 0.9; U.uRiseT.value = 0; WD.setCam([cx, 1500, cz + 900], [cx, 0, cz], 30);
+  WD.mood('dusk'); vis('terrain'); WD.TU.tLineA.value = 0.9; U.uRiseT.value = 0; WD.setCam([cx - 40, 820, cz + 420], [cx, 0, cz - 20], 34);
   render3d(ctx, null, { bg: '#2a1050' });
   const c = WD.project([cx, 0, cz]); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], 380); g.addColorStop(0, 'rgba(255,255,220,0.95)'); g.addColorStop(0.25, 'rgba(255,60,50,0.9)'); g.addColorStop(1, 'rgba(160,0,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(c[0], c[1], 520, 250, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   ctx.strokeStyle = '#ff4050'; ctx.lineWidth = 3; for (const m of M.CRIT) { const p = WD.project(M.toWorld(m.u, m.v)); ctx.beginPath(); ctx.moveTo(p[0] - 12, p[1] - 12); ctx.lineTo(p[0] + 12, p[1] + 12); ctx.moveTo(p[0] + 12, p[1] - 12); ctx.lineTo(p[0] - 12, p[1] + 12); ctx.stroke(); }
@@ -442,8 +449,15 @@ add(81.13, 81.37, 'c_adam_profile', (ctx, lt) => {
   ctx.font = '700 46px "Roboto Condensed"'; ctx.fillStyle = '#fff'; ctx.fillText('ADAM (Kingma & Ba, 2014)   β₁=0.9  β₂=0.999  ε=10⁻⁸', 110, 1000);
 });
 add(81.37, 81.63, 'c_data_grid', (ctx, lt) => A.dataGrid(ctx, lt, 1));
-add(81.63, 81.97, 'c_loss_a', (ctx, lt) => { WD.mood('day'); vis('terrain', 'city', 'trailAdam', 'trailSGD'); OBJ.trailAdam.material.uniforms.uHead.value = 300; OBJ.trailSGD.material.uniforms.uHead.value = 300; WD.setCam([cx + 40, 120, cz + 120], [cx, 10, cz - 10], 34); render3d(ctx, 'day', { shadow: { s: 300 } }); });
-add(81.97, 82.37, 'c_loss_b', (ctx, lt) => { WD.mood('day'); vis('terrain', 'city', 'octa'); WD.setCam([cx - 120, 120 + lt * 20, cz + 60], [cx + 40, 150, cz - 60], 36); render3d(ctx, 'day', { shadow: { s: 300 } }); });
+add(81.63, 81.97, 'c_loss_a', (ctx, lt) => {   // both optimizer ribbons run down into the (3,2) basin
+  WD.mood('day'); vis('terrain', 'city', 'trailAdam', 'trailSGD'); OBJ.trailAdam.material.uniforms.uHead.value = 300; OBJ.trailSGD.material.uniforms.uHead.value = 300;
+  WD.setCam([-120 + lt * 30, 300, 260], [170, 20, -110], 32); render3d(ctx, 'day', { shadow: { s: 420, c: [150, 40, -100] } });
+});
+add(81.97, 82.37, 'c_loss_b', (ctx, lt) => {   // "operations director turning": Unit-01 turns its head to the lens
+  const u = UC(); WD.mood('day'); vis('terrain', 'city');
+  unitPose({ eyes: 1, x: u[0], y: u[1] - 1, z: u[2], ry: 0.9, look: lerp(-0.7, 0.35, ease.io(clamp(lt / 0.3))), nod: -0.05 });
+  const h = UA('head'); WD.setCam([h[0] + 30, h[1] - 6, h[2] + 22], [h[0], h[1] - 3, h[2]], 38); render3d(ctx, 'day', { shadow: { s: 300 } });
+});
 add(82.37, 82.63, 'c_sketch5', (ctx) => { WD.mood('day'); vis('city', 'terrain'); U.uMode.value = 1; WD.TU.tLineA.value = 0; WD.setCam([cx + 150, 70, cz + 150], [cx, 40, cz], 36); render3d(ctx, null, { bg: '#e8dcc8' }); });
 add(82.63, 83.7, 'director', (ctx, lt, t, fx) => {
   directorCard(ctx, lt);
@@ -463,10 +477,11 @@ add(86.1, 87.27, 'c_final_sky', (ctx, lt) => { const u = UC(); cityDay(ctx, [u[0
 add(87.27, 87.6, 'c_teal', (ctx, lt, t, fx) => { WD.mood('night'); unitPose({ eyes: 1, look: 0.3, nod: 0.12, cable: false }); camAt('head', [-7, -1, 12], [0, 0, 0], 34, -0.2); render3d(ctx, null, { bg: '#1c6a6e' }); fx.tint = [0.85, 1.05, 1.05]; });
 add(87.6, 87.73, 'c_black', (ctx) => fill(ctx, '#000'));
 add(87.73, 87.87, 'c_flash', (ctx, lt, t, fx) => { fill(ctx, '#fff'); fx.flash = 0.6; });
-add(87.87, 88.2, 'c_converged', (ctx, lt) => {
+add(87.87, 88.2, 'c_converged', (ctx, lt) => {   // both runs arrive: f(3,2) = 0
   WD.mood('day'); vis('terrain', 'city', 'trailAdam', 'trailSGD'); OBJ.trailAdam.material.uniforms.uHead.value = 300; OBJ.trailSGD.material.uniforms.uHead.value = 300;
-  WD.setCam([cx + 60, 70, cz + 90], [cx, 20, cz], 34); render3d(ctx, 'day', { shadow: { s: 300 } });
-  ctx.font = '400 30px "Share Tech Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(`f(3, 2) = 0   ADAM step ${M.ARRIVE.adam}   SGD+M step ${M.ARRIVE.sgd}`, 110, 1020);
+  WD.setCam([60, 420, 160], [cx - 40, 0, cz + 20], 36); render3d(ctx, 'day', { shadow: { s: 420, c: [150, 40, -100] } });
+  jp(ctx, 'f(3, 2) = 0', 110, 960, 84, { family: '"Roboto Condensed"', weight: 700, sx: 0.9 });
+  ctx.font = '400 30px "Share Tech Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(`ADAM reaches f < 0.01 at step ${M.ARRIVE.adam}   SGD+MOMENTUM at step ${M.ARRIVE.sgd}`, 114, 1012);
 });
 add(88.2, 90.51, 'production', (ctx, lt, t, fx) => {
   A.redFinal(ctx, lt); productionCard(ctx, lt);
