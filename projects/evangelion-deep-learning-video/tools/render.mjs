@@ -1,8 +1,8 @@
 // Render driver: serves the project over HTTP, drives headless Chromium frame by frame,
 // and streams frames into ffmpeg. Modes:
-//   node tools/render.mjs --stills 12.3,40,99.5   -> out/stills/*.png
-//   node tools/render.mjs --cues                  -> out/cues.json (audio cue sheet)
-//   node tools/render.mjs --video [--workers 3] [--from s --to s] [--fps-scale 1]
+//   node tools/render.mjs --film episodes --stills 12.3,40,99.5  -> out/episodes/stills/*.png
+//   node tools/render.mjs --film opening --cues                  -> out/opening/cues.json (audio cue sheet)
+//   node tools/render.mjs --film episodes --video [--workers 4] [--from s --to s]
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,11 +10,16 @@ import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const OUT = path.join(ROOT, 'out');
-fs.mkdirSync(OUT, { recursive: true });
+const OUT0 = path.join(ROOT, 'out');
 const args = process.argv.slice(2);
 const arg = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const has = (k) => args.includes(k);
+// --film picks the page and its output folder: episodes (本編) or opening (OP)
+const FILM = arg('--film', 'episodes');
+const PAGE = `${FILM}.html`;
+const NAME = FILM;
+const OUT = path.join(OUT0, NAME);
+fs.mkdirSync(OUT, { recursive: true });
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.ttf': 'font/ttf', '.json': 'application/json', '.png': 'image/png' };
 function serve() {
@@ -36,7 +41,7 @@ async function openPage(port) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('[page]', m.text()); });
   page.on('pageerror', (e) => console.log('[pageerror]', e.message));
-  await page.goto(`http://127.0.0.1:${port}/index.html`);
+  await page.goto(`http://127.0.0.1:${port}/${PAGE}`);
   const info = await page.evaluate(() => window.READY);
   return { browser, page, info };
 }

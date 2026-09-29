@@ -1,6 +1,6 @@
 // ── timeline assembly + frame entry points used by tools/render.mjs ─────────
-const ORDER = ['open', 'card1', 'ood', 'card2', 'sync', 'card3', 'magi', 'card4', 'restraint',
-  'card5', 'collapse', 'residual', 'card6', 'end'];
+// each page may set window.ORDER; otherwise scenes play in registration order
+const ORDER = window.ORDER || null;
 
 const sceneCanvas = document.getElementById('scene');
 const sctx = sceneCanvas.getContext('2d', { willReadFrequently: false });
@@ -10,7 +10,7 @@ let TIMELINE = [], TOTAL = 0;
 function buildTimeline() {
   const byName = Object.fromEntries(SCENES.map((s) => [s.name, s]));
   let t0 = 0;
-  TIMELINE = ORDER.filter((n) => byName[n]).map((n) => { const s = byName[n]; const e = { ...s, start: t0 }; t0 += s.dur; return e; });
+  TIMELINE = (ORDER || SCENES.map((s) => s.name)).filter((n) => byName[n]).map((n) => { const s = byName[n]; const e = { ...s, start: t0 }; t0 += s.dur; return e; });
   TOTAL = t0;
 }
 

@@ -1,11 +1,11 @@
 {
-  "name": "neon-genesis-gradient-descent",
+  "name": "evangelion-deep-learning-video",
   "private": true,
   "type": "module",
   "scripts": {
     "formulas": "node tools/build_formulas.mjs",
-    "audio": "python3 audio/synth.py",
-    "render": "node tools/render.mjs",
+    "audio": "python3 audio/score_episodes.py && python3 audio/score_opening.py",
+    "render": "node tools/render.mjs --video --workers 4 --film",
     "still": "node tools/render.mjs --stills"
   },
   "devDependencies": {
