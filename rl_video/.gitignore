@@ -1,0 +1,11 @@
+# 外部から取得する大きなバイナリ（setup.sh で再取得できる）
+.vendor/
+# 合成音声・中間生成物のキャッシュ
+.cache/
+media/
+build/
+__pycache__/
+*.pyc
+# 下書きレンダリング（480p）は残さない
+output/*_480p15.*
+output/*_720p30.*
