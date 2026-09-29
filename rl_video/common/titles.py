@@ -21,7 +21,13 @@ def play_title_card(scene, number: int, title: str, subtitle: str | None = None,
     if subtitle:
         sub = style.jt(subtitle, size=28, color=GREY_C).next_to(line, DOWN, buff=0.35)
         items.append(sub)
+    if main.width > 12.4:
+        main.scale_to_fit_width(12.4)
+        line.set_width(main.width + 1.2).next_to(main, DOWN, buff=0.35)
     VGroup(*items).move_to(0.2 * UP)
+    if hasattr(scene, "sfx"):
+        scene.sfx("whoosh", offset=0.1)
+        scene.sfx("hit", offset=1.0)
     scene.play(FadeIn(series, shift=0.15 * DOWN), run_time=0.8)
     scene.play(Write(main), Create(line), run_time=1.6)
     if subtitle:
@@ -34,7 +40,10 @@ def play_end_card(scene, next_title: str | None = None, hold: float = 3.0):
     lines = []
     if next_title:
         lines.append(style.jt("次回", size=32, color=GREY_C))
-        lines.append(style.jt(next_title, size=54, color=WHITE, weight="MEDIUM"))
+        t = style.jt(next_title, size=54, color=WHITE, weight="MEDIUM")
+        if t.width > 12.4:
+            t.scale_to_fit_width(12.4)
+        lines.append(t)
     credit = style.jt(f"ナレーション　{rconf.narrator_credit()}", size=28, color=GREY_C)
     tools = style.jt("アニメーション　Manim Community", size=28, color=GREY_C)
     g_top = VGroup(*lines).arrange(DOWN, buff=0.3) if lines else VGroup()

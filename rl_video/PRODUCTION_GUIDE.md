@@ -60,3 +60,32 @@ python3 tools/transcript.py chNN                 # 台本 chapters/chNN/script.m
 1. `build.py -q l` → シーンごとに `sheet.py`（3〜4秒間隔）で一覧画像を作り、Read で全コマを見る。
 2. チェック項目: はみ出し／重なり／小さすぎる文字／何も映っていない時間／ナレーションと絵のズレ／数値の正しさ。
 3. 直したシーンだけ `--scenes` で再レンダリングして、同じ確認を繰り返す。
+
+## v2 の演出ルール（第1章 v2 が見本）
+
+ユーザーの評価は「及第点だが驚きはない」。v2 では次の4点を必ず満たす。
+
+1. **「なるほど」の瞬間を章に最低2つ**。定義の説明で終わらせず、意外な見方・実験・歴史的な事実を、実際の計算で見せる
+   （例: 第1章の「割引率＝生き残る確率」を100台のロボットのシミュレーションで示す、報酬ハッキングのボート、アルファ碁ゼロ）。
+2. **連続性**: 出して消す（FadeIn/FadeOut）の繰り返しを避け、ある物が別の物に「なる」ように見せる
+   （Transform / ReplacementTransform / TransformFromCopy / TransformMatchingTex）。
+   第1章 Differences のように、説明に使った図をそのまま縮めてまとめのカードにする、など。
+   シーンの境目も、次のシーンの冒頭で同じ物を同じ位置に `self.add` しておけば、切れ目なくつながる。
+3. **カメラとキャラクター**:
+   - `self.focus_on(mob, height=...)` / `self.reset_frame()` でズーム・パン（章に数回）。3D が効く場面は `VoiceScene3D`。
+   - ロボットは感情を持つ登場人物。`robot.change("happy"|"surprised"|"sad"|"worried"|"determined"|"normal")`,
+     `robot.hop()`, `robot.look(dir)`, `robot.blink()`, `robot.say("…")` / `robot.think("？")`（吹き出し）, `robot.sweat()`。
+     数式の場面でも、隅に置いたロボットが「？」→「！」と反応すると、見る側の気持ちの流れが作れる。
+   - `glow_dot(point, color)` は光る点（価値の伝播、ボートなど）。
+4. **音**:
+   - 効果音 `self.sfx(name)`: pop（重要な物の登場）, hit（ラベル・結果の確定）, chime（成功）, fall / thud（失敗）,
+     sparkle（なるほどの瞬間）, whoosh（カメラ移動・場面転換）, tick（カウンタ）。平均 5〜10 秒に1回程度、控えめに。
+   - BGM は build.py が自動で入れる（章ごとに別のシード）。シーン側では何もしなくてよい。
+   - ナレーションの《強調》は、1シーンに1〜2語まで。
+
+その他の注意（各章の作業から）:
+- `self.remove(group)` は、別々にアニメーションした部品が残ることがある。`self.remove(*m.get_family())` を使う。
+- MathTex の1文字ラベルは Text より小さく見える。1文字なら size 60 以上。
+- 回転の中心を保存して回す部品は、移動後に壊れる。回転は毎回 `get_center()` を基準に。
+- `GridView.center_of` は移動後も正しいが、`_pos` / `origin` は移動前の座標のまま。
+- 作業ファイル（ログ、コマ一覧）はスクラッチパッドの章ごとのサブフォルダに書く（並列作業で上書きし合わないように）。

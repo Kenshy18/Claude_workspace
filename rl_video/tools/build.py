@@ -22,6 +22,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tools import mixdown  # noqa: E402
+
 QUALITY_DIR = {"l": "480p15", "m": "720p30", "h": "1080p60", "k": "2160p60"}
 
 
@@ -72,6 +74,7 @@ def main():
     ap.add_argument("--scenes", default=None, help="再レンダリングするシーン（カンマ区切り）")
     ap.add_argument("--no-render", action="store_true", help="レンダリングせず結合だけ")
     ap.add_argument("--max-mb", type=float, default=29.0, help="本番出力のサイズ上限（MiB）")
+    ap.add_argument("--no-bgm", action="store_true", help="BGM を入れない")
     a = ap.parse_args()
 
     path, mod = load_chapter(a.chapter)
@@ -122,11 +125,18 @@ def main():
                     str(concat_list), "-an", "-c", "copy", str(video)], check=True)
     alist = work / "audio.txt"
     alist.write_text("".join(f"file '{p}'\n" for p in audio_parts))
-    audio = work / "audio.m4a"
-    # ナレーションだけなのでモノラル 80kbps で十分（共有しやすいサイズに収める）
+    voice = work / "voice.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(alist),
-                    "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", "-ac", "1", "-c:a", "aac",
-                    "-b:a", "80k", str(audio)], check=True)
+                    "-ar", "48000", str(voice)], check=True)
+    audio = work / "audio.m4a"
+    if a.no_bgm:
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(voice), "-af",
+                        "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", "-ac", "1", "-c:a", "aac",
+                        "-b:a", "80k", str(audio)], check=True)
+    else:
+        # 章ごとに違う BGM（シードは章番号）をナレーションの下に敷く
+        seed = int("".join(c for c in a.chapter if c.isdigit()) or 0)
+        mixdown.mix(voice, audio, seed=seed)
     for i, sub in enumerate(subs, 1):
         sub.index = i
     out_dir = ROOT / "output"

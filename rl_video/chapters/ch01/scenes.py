@@ -8,18 +8,19 @@ import numpy as np
 from manim import *
 
 from common import style
-from common.mobjects import ACTION_VEC, GridView, ProbBars, Robot, value_color
+from common.mobjects import ACTION_VEC, GridView, ProbBars, Robot, glow_dot, value_color
 from common.rl import (ACTIONS, DOWN as A_DOWN, LEFT as A_LEFT, RIGHT as A_RIGHT, UP as A_UP,
                        main_world, q_learning)
 from common.style import jt, mt
 from common.titles import play_end_card, play_title_card
-from common.voice_scene import VoiceScene
+from common.voice_scene import VoiceScene, VoiceScene3D
 
 CHAPTER_TITLE = "第1章 報酬から学ぶ"
 
 SCENES = [
-    "Hook", "Title", "Supervised", "Differences", "Loop", "MDP", "Markov", "Policy",
-    "Return", "Discount", "Objective", "Roadmap", "Outro",
+    "Hook", "Title", "Supervised", "Differences", "Beyond", "Loop", "MDP", "Markov", "Policy",
+    "Return", "Discount", "Survival", "Recursion", "Objective", "RewardHacking", "Roadmap",
+    "Outro3D", "End",
 ]
 
 WORLD = main_world()
@@ -110,40 +111,53 @@ class Hook(VoiceScene):
     def construct(self):
         g = GridView(WORLD, cell=1.4).shift(0.15 * DOWN)
         robot = Robot(height=0.7).move_to(g.center_of(WORLD.start))
+        # 暗闇の中のロボットに寄ったところから始めて、世界を見せる
+        self.frame.set(height=2.6).move_to(robot)
 
         with self.voice("ここに、小さなロボットがいます。") as v:
-            self.play(FadeIn(g.board, lag_ratio=0.03), run_time=1.2)
-            self.play(GrowFromCenter(robot), run_time=0.6)
+            self.sfx("pop", offset=0.2)
+            self.play(GrowFromCenter(robot), run_time=0.7)
             self.play(robot.blink())
+            self.play(robot.animate.look(LEFT), run_time=0.4)
+            self.play(robot.animate.look(RIGHT), run_time=0.4)
 
         with self.voice("このロボットは、右上の{A}星にたどり着くと、ごほうびがもらえます。"
                         "逆に、[その下|そのした]の{B}赤い穴に落ちると、罰を受けます。") as v:
+            self.sfx("whoosh")
+            self.play(self.reset_frame(run_time=1.8), FadeIn(g.board, lag_ratio=0.02, run_time=1.8),
+                      robot.animate(run_time=1.8).look(UP))
             self.wait_to(v, "A")
-            self.play(FadeIn(g.icons[GOAL], scale=0.6), robot.animate.look(UR), run_time=0.8)
-            self.play(Indicate(g.icons[GOAL], color=style.REWARD, scale_factor=1.25))
+            self.sfx("sparkle")
+            self.play(FadeIn(g.icons[GOAL], scale=0.5), robot.animate.look(UR), run_time=0.8)
+            self.play(Flash(g.center_of(GOAL), color=style.REWARD, flash_radius=0.55, num_lines=14))
             self.wait_to(v, "B")
+            self.sfx("thud")
             self.play(FadeIn(g.icons[PIT], scale=0.6), robot.animate.look(RIGHT + 0.6 * UP), run_time=0.8)
-            self.play(Indicate(g.icons[PIT], color=RED, scale_factor=1.2))
+            self.play(robot.change("worried"), Indicate(g.icons[PIT], color=RED, scale_factor=1.15))
 
-        q = jt("？", size=60, color=GREY_A).next_to(robot, UP, buff=0.15)
-        with self.voice("ところが、ロボットは最初、このルールを何も知りません。"
+        bubble = robot.think("？", direction=UR)
+        with self.voice("ところが、ロボットは最初、このルールを、《何も》知りません。"
                         "どちらに進めばいいのかも、そもそも何が「良いこと」なのかも、分からないんです。") as v:
+            self.play(robot.change("normal"), run_time=0.4)
             self.play(robot.animate.look(LEFT), run_time=0.5)
             self.play(robot.animate.look(RIGHT), run_time=0.6)
-            self.play(FadeIn(q, shift=0.2 * UP), robot.animate.look(UP), run_time=0.6)
+            self.sfx("pop")
+            self.play(FadeIn(bubble, shift=0.15 * UP, scale=0.8), robot.animate.look(UR), run_time=0.6)
             self.play(robot.blink())
 
         # でたらめに動いて穴に落ちる（一様ランダム方策の実際のロールアウト）
         _, traj = find_seed(lambda t: t[-1][3] == PIT and 9 <= len(t) <= 13, uniform_rollout)
         with self.voice("だから、はじめは、でたらめに動いてみるしかありません。") as v:
-            self.play(FadeOut(q), run_time=0.5)
+            self.play(FadeOut(bubble), run_time=0.5)
         dots = VGroup()
         for s, a, r, n in traj[:-1]:
             dot = Dot(g.center_of(s), radius=0.06, color=GREY_B).set_opacity(0.6)
             dots.add(dot)
             self.add(dot, robot)
             self.play(*step_anims(robot, g, s, a, n, run_time=0.36))
-        with self.voice("あ、落ちてしまいました。", pad=0.2):
+        with self.voice("あ、落ちてしまいました。", pad=0.3):
+            self.play(robot.change("surprised"), robot.animate.look(UR), run_time=0.25)
+            self.sfx("fall")
             fall_into_pit(self, robot, g)
 
         # 学習の早回し：Q学習の実際のエピソード
@@ -164,17 +178,19 @@ class Hook(VoiceScene):
                 anims = [Create(line), num.animate.set_value(ep)]
                 if prev is not None:
                     anims.append(FadeOut(prev))
+                self.sfx("tick")
                 self.play(*anims, run_time=per * 0.8)
                 self.wait(per * 0.2)
                 prev = line
         self.play(FadeOut(prev), FadeOut(counter), run_time=0.5)
 
         # 学習後：最適方策でまっすぐ星へ
-        robot = Robot(height=0.7).move_to(g.center_of(WORLD.start))
+        robot = Robot(height=0.7).move_to(g.center_of(WORLD.start)).set_mood("determined")
         _, clean = find_seed(lambda t: len(t) == 7 and t[-1][3] == GOAL,
                              lambda sd: WORLD.rollout(PI_STAR, np.random.default_rng(sd)))
         trail = VGroup()
         with self.voice("そして、やがてロボットは、穴をうまく避けながら、星へまっすぐ向かうようになります。") as v:
+            self.sfx("pop")
             self.play(FadeIn(robot, scale=0.8), run_time=0.5)
             for s, a, r, n in clean[:-1]:
                 seg = Line(g.center_of(s), g.center_of(n), stroke_color=style.REWARD, stroke_width=5)
@@ -186,8 +202,11 @@ class Hook(VoiceScene):
             trail.add(seg)
             self.add(seg, robot)
             self.play(Create(seg), run_time=0.3)
+            self.sfx("chime")
             reach_goal(self, robot, g)
-        with self.voice("誰も、正しい動き方を、一度も教えていないのに、です。") as v:
+            self.play(robot.change("happy"), run_time=0.3)
+            self.play(robot.hop())
+        with self.voice("誰も、正しい動き方を、《一度も》教えていないのに、です。") as v:
             self.play(trail.animate.set_stroke(width=8), rate_func=there_and_back, run_time=1.2)
 
         world = VGroup(g, robot, trail)
@@ -195,6 +214,7 @@ class Hook(VoiceScene):
         with self.voice("試行錯誤から学ぶ。この仕組みを、数学の言葉で扱えるようにしたのが、{A}強化学習です。") as v:
             self.play(world.animate.set_opacity(0.25), run_time=1.0)
             self.wait_to(v, "A")
+            self.sfx("hit")
             self.play(FadeOut(world, scale=0.9), Write(title), run_time=1.4)
 
         keys = ["MDP", "価値", "ベルマン方程式", "TD学習", "Q学習", "DQN", "方策勾配", "PPO", "RLHF"]
@@ -204,6 +224,7 @@ class Hook(VoiceScene):
                         "最終的な目標は、{A}大規模言語モデルの学習に使われている手法を、その中身から理解することです。") as v:
             self.play(LaggedStart(*[FadeIn(c, shift=0.15 * UP) for c in chips], lag_ratio=0.15),
                       run_time=v.until("A"))
+            self.sfx("sparkle")
             self.play(chips[-2:].animate.set_color(style.REWARD), run_time=0.8)
         self.play(FadeOut(VGroup(title, chips)), run_time=1.0)
 
@@ -331,23 +352,28 @@ class Supervised(VoiceScene):
 # ---------------------------------------------------------------------------
 # 4. 三つの違い
 # ---------------------------------------------------------------------------
+def make_card(content, label, sub=None, width=2.3, height=1.55):
+    """図をそのまま縮めて入れる、まとめ用のカード。"""
+    box = RoundedRectangle(width=width, height=height, corner_radius=0.14, stroke_color=GREY_C,
+                           stroke_width=2, fill_color="#141418", fill_opacity=1)
+    c = content.copy()
+    c.scale_to_fit_height(height - 0.3)
+    if c.width > width - 0.3:
+        c.scale_to_fit_width(width - 0.3)
+    c.move_to(box)
+    texts = VGroup(jt(label, size=32, color=WHITE))
+    if sub:
+        texts.add(jt(sub, size=24, color=GREY_C))
+    texts.arrange(DOWN, aligned_edge=LEFT, buff=0.1)
+    card = VGroup(box, c)
+    row = VGroup(card, texts).arrange(RIGHT, buff=0.3)
+    return row
+
+
 class Differences(VoiceScene):
     def construct(self):
-        heads = [
-            ("評価しかもらえない", "正解は教えてもらえない"),
-            ("報酬が遅れて届く", "信用割り当て問題"),
-            ("データを自分で集める", "探索と活用"),
-        ]
-        col = VGroup()
-        for i, (h, sub) in enumerate(heads):
-            num = jt(f"{i + 1}", size=40, color=style.REWARD, weight="BOLD")
-            ht = jt(h, size=36, color=WHITE)
-            st = jt(sub, size=28, color=GREY_C)
-            row = VGroup(num, VGroup(ht, st).arrange(DOWN, aligned_edge=LEFT, buff=0.15)).arrange(
-                RIGHT, buff=0.3, aligned_edge=UP)
-            col.add(row)
-        col.arrange(DOWN, aligned_edge=LEFT, buff=0.8).move_to(RIGHT * 4.6)
         divider = Line(UP * 3.5, DOWN * 3.5, stroke_color=GREY_E, stroke_width=2).move_to(RIGHT * 1.75)
+        slots = [RIGHT * 4.4 + UP * 2.3, RIGHT * 4.4, RIGHT * 4.4 + DOWN * 2.3]
 
         g = GridView(WORLD, cell=1.12).move_to(LEFT * 2.9 + 0.8 * UP)
         s0 = (2, 1)
@@ -356,30 +382,33 @@ class Differences(VoiceScene):
 
         with self.voice("強化学習では、ここが根本的に違います。") as v:
             self.play(FadeIn(tag), FadeIn(g), FadeIn(robot), Create(divider), run_time=1.2)
-        with self.voice("ロボットが今、{A}右に進んだとしましょう。環境から返ってくるのは、{B}「報酬ゼロ」という数字だけです。") as v:
+        rew = VGroup(jt("報酬", size=40, color=style.REWARD), mt("0", size=56, color=style.REWARD)).arrange(RIGHT, buff=0.25)
+        rew.next_to(g, DOWN, buff=0.6)
+        with self.voice("ロボットが今、{A}右に進んだとしましょう。環境から返ってくるのは、{B}「報酬ゼロ」という、数字だけです。") as v:
             self.wait_to(v, "A")
             self.play(robot.animate.move_to(g.center_of((3, 1))).look(RIGHT), run_time=0.6)
             self.wait_to(v, "B")
-            rew = VGroup(jt("報酬", size=40, color=style.REWARD), mt("0", size=56, color=style.REWARD)).arrange(RIGHT, buff=0.25)
-            rew.next_to(g, DOWN, buff=0.6)
+            self.sfx("hit")
             self.play(FadeIn(rew, shift=0.2 * UP))
 
         ghost = Robot(height=0.58).move_to(g.center_of(s0)).set_opacity(0.35)
         up_arrow = DashedLine(g.center_of(s0), g.center_of((2, 2)), color=GREY_B, stroke_width=4)
-        qm = jt("？", size=48, color=GREY_A).move_to(g.center_of((2, 2)))
+        qm = robot.think("上なら？", direction=UR, size=28)
         with self.voice("{A}上に進んでいたら、もっと良かったのか。それは誰も教えてくれません。知りたければ、実際に上に進んでみるしかないんです。") as v:
-            self.play(FadeIn(ghost), Create(up_arrow), run_time=0.8)
-            self.play(FadeIn(qm, scale=0.7))
-            self.play(Wiggle(qm), run_time=1.0)
+            self.play(FadeIn(ghost), Create(up_arrow), robot.animate.look(UL), run_time=0.8)
+            self.sfx("pop")
+            self.play(FadeIn(qm, scale=0.8))
+            self.play(robot.change("worried"))
 
+        card1 = make_card(VGroup(g, robot, rew), "評価しかもらえない", "正解は教えてもらえない").move_to(slots[0])
         with self.voice("一つ目の違いはこれです。もらえるのは、{A}正解ではなく、{B}評価だけ。") as v:
-            self.play(FadeIn(col[0][0]), run_time=0.4)
+            self.play(FadeOut(VGroup(ghost, up_arrow, qm)), robot.change("normal"), run_time=0.6)
             self.wait_to(v, "A")
-            self.play(FadeIn(col[0][1][1]), run_time=0.5)
+            self.play(TransformFromCopy(VGroup(g, robot, rew), card1[0][1]), FadeIn(card1[0][0]), run_time=1.2)
             self.wait_to(v, "B")
-            self.play(FadeIn(col[0][1][0], shift=0.1 * RIGHT), run_time=0.6)
-        self.play(FadeOut(VGroup(ghost, up_arrow, qm, rew)),
-                  robot.animate.move_to(g.center_of((0, 0))).look(ORIGIN), run_time=0.8)
+            self.sfx("hit")
+            self.play(FadeIn(card1[1], shift=0.1 * RIGHT), run_time=0.6)
+        self.play(FadeOut(rew), robot.animate.move_to(g.center_of((0, 0))).look(ORIGIN), run_time=0.8)
 
         # 2. 遅れてくる報酬
         path = [(0, 0), (1, 0), (2, 0), (3, 0), (3, 1), (2, 1), (2, 2), (2, 3), (3, 3), (4, 3)]
@@ -391,7 +420,7 @@ class Differences(VoiceScene):
             rv = mt("+1" if last else "0", size=38, color=style.REWARD if last else GREY_C)
             steps.add(VGroup(ar, rv).arrange(DOWN, buff=0.22))
         steps.arrange(RIGHT, buff=0.36).next_to(g, DOWN, buff=0.65)
-        with self.voice("二つ目。報酬は、たいてい遅れてやってきます。") as v:
+        with self.voice("二つ目。報酬は、たいてい、遅れてやってきます。") as v:
             self.play(Indicate(g.icons[GOAL], color=style.REWARD, scale_factor=1.3), run_time=1.2)
         with self.voice("{A}9歩動いて、星にたどり着き、最後に{B}プラス1をもらえたとしましょう。この成功は、どの一手のおかげだったのでしょうか。") as v:
             trail = VGroup()
@@ -403,8 +432,9 @@ class Differences(VoiceScene):
                 self.play(robot.animate.move_to(g.center_of(n)).look(n_vec(s, n)), Create(seg),
                           FadeIn(steps[k][0]), FadeIn(steps[k][1]), run_time=0.34)
             self.wait_to(v, "B")
+            self.sfx("chime")
             self.play(Flash(g.center_of(GOAL), color=style.REWARD, flash_radius=0.5),
-                      Indicate(steps[-1][1], color=style.REWARD, scale_factor=1.4))
+                      Indicate(steps[-1][1], color=style.REWARD, scale_factor=1.4), robot.change("happy"))
             qms = VGroup(*[jt("?", size=34, color=GREY_B).next_to(st, UP, buff=0.15) for st in steps])
             self.play(LaggedStart(*[FadeIn(q, shift=0.1 * DOWN) for q in qms], lag_ratio=0.08), run_time=1.2)
 
@@ -418,10 +448,13 @@ class Differences(VoiceScene):
 
         credit_arrow = CurvedArrow(steps[-1].get_bottom() + 0.1 * DOWN, steps[0].get_bottom() + 0.1 * DOWN,
                                    angle=-0.45, color=style.REWARD, stroke_width=4)
+        card2 = make_card(VGroup(steps, qms, credit_arrow), "報酬が遅れて届く", "信用割り当て問題").move_to(slots[1])
         with self.voice("結果から、原因となった行動をさかのぼって、手柄を割り振らなければならない。これは{A}信用割り当て問題と呼ばれています。") as v:
             self.play(Create(credit_arrow), run_time=1.5)
             self.wait_to(v, "A")
-            self.play(FadeIn(col[1][0]), FadeIn(col[1][1], shift=0.1 * RIGHT))
+            self.play(TransformFromCopy(VGroup(steps, qms, credit_arrow), card2[0][1]), FadeIn(card2[0][0]), run_time=1.2)
+            self.sfx("hit")
+            self.play(FadeIn(card2[1], shift=0.1 * RIGHT), run_time=0.6)
         self.play(FadeOut(VGroup(steps, qms, credit_arrow, trail, robot, g)), run_time=0.8)
 
         # 3. データを自分で集める
@@ -459,25 +492,123 @@ class Differences(VoiceScene):
             self.add(c, robot)
 
         unknown = [(2, 0), (3, 0), (4, 0), (2, 1), (3, 1), (4, 1), (2, 2)]
+        fog = VGroup(*[g.cells[s].copy().set_fill(BLACK, 0.8).set_stroke(width=0) for s in unknown])
+        qs = VGroup(*[jt("?", size=34, color=GREY_C).move_to(g.center_of(s)) for s in unknown])
         with self.voice("もしロボットが、左の通路ばかり通っていたら、{A}右側がどうなっているのかは、永遠に分かりません。") as v:
             self.wait_to(v, "A")
-            fog = VGroup(*[g.cells[s].copy().set_fill(BLACK, 0.8).set_stroke(width=0) for s in unknown])
-            qs = VGroup(*[jt("?", size=34, color=GREY_C).move_to(g.center_of(s)) for s in unknown])
-            self.play(FadeIn(fog), LaggedStart(*[FadeIn(q) for q in qs], lag_ratio=0.1), run_time=1.2)
+            self.play(FadeIn(fog), LaggedStart(*[FadeIn(q) for q in qs], lag_ratio=0.1), robot.animate.look(DR), run_time=1.2)
 
+        card3 = make_card(VGroup(g, robot, glow, fog, qs), "データを自分で集める", "探索と活用").move_to(slots[2])
         with self.voice("今知っている一番良い行動を取るべきか、それとも、まだ試していない行動を探ってみるべきか。"
                         "このジレンマは、{A}探索と活用のトレードオフと呼ばれ、第3章で詳しく扱います。") as v:
-            self.play(Indicate(qs, color=WHITE), run_time=1.2)
+            self.play(robot.change("worried"), Indicate(qs, color=WHITE), run_time=1.2)
             self.wait_to(v, "A")
-            self.play(FadeIn(col[2][0]), FadeIn(col[2][1], shift=0.1 * RIGHT))
+            self.play(TransformFromCopy(VGroup(g, robot, glow, fog, qs), card3[0][1]), FadeIn(card3[0][0]), run_time=1.2)
+            self.sfx("hit")
+            self.play(FadeIn(card3[1], shift=0.1 * RIGHT), run_time=0.6)
 
+        cards = VGroup(card1, card2, card3)
         with self.voice("評価しかもらえない。報酬が遅れて届く。データを自分で集める。"
-                        "この三つが、強化学習を、教師あり学習とはまったく別の問題にしています。") as v:
-            self.play(FadeOut(VGroup(g, robot, glow, fog, qs, divider)), col.animate.move_to(ORIGIN).scale(1.15),
-                      run_time=1.2)
-            for row in col:
-                self.play(Indicate(row[1][0], color=style.REWARD, scale_factor=1.08), run_time=0.9)
-        self.play(FadeOut(VGroup(col, tag)), run_time=0.9)
+                        "この三つが、強化学習を、教師あり学習とは、まったく別の問題にしています。") as v:
+            self.play(FadeOut(VGroup(g, robot, glow, fog, qs, divider)), run_time=0.6)
+            final = VGroup()
+            for c in cards:
+                t = c.copy()
+                t[1].arrange(DOWN, buff=0.12)
+                VGroup(t[0], t[1]).arrange(DOWN, buff=0.3)
+                final.add(t)
+            final.scale(1.25).arrange(RIGHT, buff=0.7).move_to(0.2 * DOWN)
+            self.play(*[Transform(c, f) for c, f in zip(cards, final)], run_time=1.4)
+            for c in cards:
+                self.play(Indicate(c[1][0], color=style.REWARD, scale_factor=1.08), run_time=0.8)
+        self.play(FadeOut(VGroup(cards, tag)), run_time=0.9)
+
+
+# ---------------------------------------------------------------------------
+# 4b. お手本を超える
+# ---------------------------------------------------------------------------
+def go_board(n=9, size=3.2):
+    step = size / (n - 1)
+    lines = VGroup()
+    for i in range(n):
+        lines.add(Line(LEFT * size / 2 + UP * (i * step - size / 2), RIGHT * size / 2 + UP * (i * step - size / 2),
+                       stroke_color="#2b2112", stroke_width=2))
+        lines.add(Line(UP * size / 2 + RIGHT * (i * step - size / 2), DOWN * size / 2 + RIGHT * (i * step - size / 2),
+                       stroke_color="#2b2112", stroke_width=2))
+    wood = Square(size + 0.5, stroke_width=0, fill_color="#C9A162", fill_opacity=1)
+    stones = VGroup()
+    pattern = [(2, 2, 1), (6, 6, 0), (2, 6, 1), (6, 2, 0), (4, 4, 1), (3, 4, 0), (4, 3, 1), (5, 4, 0),
+               (4, 5, 1), (3, 3, 0), (5, 5, 1), (6, 4, 0)]
+    for x, y, black in pattern:
+        st = Circle(radius=step * 0.45, stroke_width=1, stroke_color=GREY_D,
+                    fill_color="#111111" if black else "#F2F2F2", fill_opacity=1)
+        st.move_to(RIGHT * (x * step - size / 2) + UP * (y * step - size / 2))
+        stones.add(st)
+    return VGroup(wood, lines, stones)
+
+
+class Beyond(VoiceScene):
+    def construct(self):
+        ax = Axes(x_range=[0, 10, 1], y_range=[0, 1.2, 0.2], x_length=7.2, y_length=4.4,
+                  axis_config=dict(color=GREY_C, include_ticks=False, stroke_width=2),
+                  tips=True).move_to(LEFT * 2.6 + 0.2 * DOWN)
+        xl = jt("学習の進み", size=28, color=GREY_B).next_to(ax.x_axis, DOWN, buff=0.25).align_to(ax.x_axis, RIGHT)
+        yl = jt("うまさ", size=28, color=GREY_B).next_to(ax.y_axis, UP, buff=0.15).align_to(ax.y_axis, LEFT)
+        teacher_y = 0.75
+        teacher = DashedLine(ax.c2p(0, teacher_y), ax.c2p(10, teacher_y), color=GREY_A, stroke_width=3)
+        tlab = jt("お手本", size=30, color=GREY_A).next_to(teacher, RIGHT, buff=0.15)
+        sl = ax.plot(lambda x: teacher_y * 0.96 * (1 - np.exp(-0.7 * x)), x_range=[0, 10], color=BLUE_B, stroke_width=5)
+        rl = ax.plot(lambda x: 1.1 / (1 + np.exp(-(x - 5.0) * 0.9)) - 1.1 / (1 + np.exp(4.5)),
+                     x_range=[0, 10], color=style.REWARD, stroke_width=5)
+        sll = jt("教師あり学習（真似る）", size=28, color=BLUE_B).next_to(ax.c2p(10, 0.72), DOWN, buff=0.25).shift(1.4 * LEFT)
+        rll = jt("強化学習（評価で鍛える）", size=28, color=style.REWARD).next_to(ax.c2p(10, 1.08), UP, buff=0.1).shift(1.6 * LEFT)
+        note = jt("イメージ", size=22, color=GREY_C).to_corner(DL, buff=0.4)
+
+        with self.voice("こう並べると、強化学習は、ずいぶん不便な設定に見えるかもしれません。"
+                        "でも、この不便さと引き換えに、《とても大きなもの》が手に入ります。") as v:
+            self.play(Create(ax), FadeIn(xl), FadeIn(yl), FadeIn(note), run_time=1.2)
+        with self.voice("教師あり学習は、{A}お手本を真似る学習です。どんなに上手に真似ても、{B}お手本より上には、なかなか行けません。") as v:
+            self.play(Create(teacher), FadeIn(tlab), run_time=0.8)
+            self.wait_to(v, "A")
+            self.play(Create(sl), FadeIn(sll), run_time=2.0)
+            self.wait_to(v, "B")
+            self.play(Indicate(teacher, color=WHITE), Flash(ax.c2p(10, teacher_y * 0.96), color=BLUE_B))
+        with self.voice("強化学習に必要なのは、{A}結果の良し悪しを判定する方法だけ。お手本は、いりません。だから、{B}お手本を《超える》ことができるんです。") as v:
+            self.wait_to(v, "A")
+            self.play(Create(rl), run_time=v.until("B"))
+            self.sfx("sparkle")
+            self.play(FadeIn(rll, shift=0.1 * UP), Flash(ax.c2p(10, 1.08), color=style.REWARD, flash_radius=0.5))
+        graph = VGroup(ax, xl, yl, teacher, tlab, sl, rl, sll, rll, note)
+
+        board = go_board().scale(0.9).move_to(RIGHT * 3.9 + 0.6 * UP)
+        r1 = Robot(height=0.75).next_to(board, LEFT, buff=0.35).shift(0.9 * DOWN)
+        r2 = Robot(height=0.75, color=MAROON_B).next_to(board, RIGHT, buff=0.35).shift(0.9 * DOWN)
+        loop = VGroup(CurvedArrow(r1.get_bottom() + 0.1 * DOWN, r2.get_bottom() + 0.1 * DOWN, angle=0.9, color=GREY_B),
+                      )
+        selfplay = jt("自分自身と対局", size=28, color=GREY_B).next_to(board, DOWN, buff=1.1)
+        score = VGroup(jt("以前の版", size=28, color=GREY_B), mt("0", ":", "100", size=56),
+                       jt("ゼロ", size=28, color=style.REWARD)).arrange(RIGHT, buff=0.35)
+        score[1][2].set_color(style.REWARD)
+        score.next_to(board, UP, buff=0.35)
+        with self.voice("有名な例が、囲碁です。2017年に発表された、アルファ碁ゼロは、{A}人間の棋譜を一切使わず、自分自身との対局だけから学び、"
+                        "{B}人間の棋譜から学んだ、以前のバージョンに、100戦100勝しました。") as v:
+            self.play(graph.animate.scale(0.62).to_edge(LEFT, buff=0.3), run_time=1.0)
+            self.play(FadeIn(board, shift=0.2 * UP), run_time=0.8)
+            self.wait_to(v, "A")
+            self.play(FadeIn(r1), FadeIn(r2), Create(loop), FadeIn(selfplay), run_time=1.0)
+            self.play(r1.animate.look(RIGHT), r2.animate.look(LEFT))
+            self.wait_to(v, "B")
+            self.sfx("chime")
+            self.play(FadeIn(score, shift=0.2 * DOWN), r2.change("happy"), r1.change("sad"))
+
+        with self.voice("言語モデルでも、同じことが言えます。お手本の文章を真似るだけでなく、{A}答えの良し悪しで評価して鍛えることで、"
+                        "お手本を超えた力を引き出そうとしている。{B}それが、このシリーズの最終章のテーマです。") as v:
+            self.play(FadeOut(VGroup(board, r1, r2, loop, selfplay, score)), run_time=0.7)
+            self.wait_to(v, "A")
+            self.play(graph.animate.scale(1 / 0.62).move_to(0.2 * DOWN), run_time=1.0)
+            self.wait_to(v, "B")
+            self.play(Indicate(rll, color=style.REWARD), run_time=1.2)
+        self.play(FadeOut(graph), run_time=0.8)
 
 
 # ---------------------------------------------------------------------------
@@ -487,6 +618,7 @@ class Loop(VoiceScene):
     def construct(self):
         agent = Robot(height=1.4)
         with self.voice("では、この状況を、数学の言葉で書いていきましょう。") as v:
+            self.sfx("pop", offset=0.1)
             self.play(GrowFromCenter(agent), run_time=0.8)
             self.play(agent.blink())
 
@@ -501,6 +633,7 @@ class Loop(VoiceScene):
         with self.voice("登場するのは二つです。行動を選んで学習する{A}エージェントと、それ以外のすべてをひっくるめた、{B}環境です。") as v:
             self.wait_to(v, "A")
             self.play(agent.animate.move_to(agent_pos), FadeIn(agent_lab, shift=0.1 * UP))
+            self.sfx("pop")
             self.wait_to(v, "B")
             self.play(Create(env_box), FadeIn(mini), FadeIn(mini_robot), FadeIn(env_lab, shift=0.1 * UP))
 
@@ -539,6 +672,7 @@ class Loop(VoiceScene):
                 self.play(MoveAlongPath(d1, top), run_time=0.5)
                 self.remove(d1)
                 self.play(mini_robot.animate.move_to(mini.center_of(n)).look(n_vec(s, n)), run_time=0.35)
+                self.sfx("tick")
                 self.play(MoveAlongPath(d2, bot), t_lab[2].animate.set_value(k + 1), run_time=0.5)
                 self.remove(d2)
 
@@ -624,6 +758,7 @@ class MDP(VoiceScene):
 
         with self.voice("まず{A}状態。ここでは、ロボットがいるマスが、状態です。壁を除くと、全部で{B}17個あります。") as v:
             self.wait_to(v, "A")
+            self.sfx("hit")
             self.play(FadeIn(s_row[:2], shift=0.1 * LEFT))
             outlines = VGroup(*[g.cells[s].copy().set_fill(opacity=0).set_stroke(style.STATE, 5)
                                 for s in WORLD.states])
@@ -634,6 +769,7 @@ class MDP(VoiceScene):
                           for a in ACTIONS])
         with self.voice("次に{A}行動。上、下、左、右の4つです。") as v:
             self.wait_to(v, "A")
+            self.sfx("hit")
             self.play(FadeIn(a_row[:2], shift=0.1 * LEFT), LaggedStart(*[GrowArrow(a) for a in arrows], lag_ratio=0.15))
             self.play(FadeIn(a_row[2]))
         self.play(FadeOut(arrows), run_time=0.5)
@@ -661,6 +797,7 @@ class MDP(VoiceScene):
         with self.voice("壁や外周にぶつかったときは、{A}その場にとどまります。") as v:
             self.play(FadeOut(fan), run_time=0.5)
             self.wait_to(v, "A")
+            self.sfx("thud")
             self.play(robot.animate(rate_func=there_and_back, run_time=0.5).shift(0.22 * DOWN).look(DOWN))
             self.play(robot.animate(rate_func=there_and_back, run_time=0.5).shift(0.22 * DOWN))
             self.play(robot.animate.look(ORIGIN), run_time=0.3)
@@ -906,8 +1043,12 @@ class Return(VoiceScene):
         lab = jt("リターン", size=38, color=WHITE)
         VGroup(lab, g0).arrange(RIGHT, buff=0.5).next_to(brace, DOWN, buff=0.6)
         with self.voice("時刻tより先の報酬の合計を、{A}リターンと呼び、[Gₜ|ジーティー]と書きます。") as v:
+            self.play(TransformFromCopy(VGroup(rewards[0][2], rewards[1][2], rewards[2][2]),
+                                        VGroup(g0[2], g0[4], g0[6])),
+                      FadeIn(g0[3]), FadeIn(g0[5]), FadeIn(g0[7:]), run_time=1.4)
             self.wait_to(v, "A")
-            self.play(Write(g0), FadeIn(lab, shift=0.1 * RIGHT), run_time=1.3)
+            self.sfx("hit")
+            self.play(FadeIn(g0[0:2], shift=0.2 * RIGHT), FadeIn(lab, shift=0.1 * RIGHT), run_time=1.0)
 
         with self.voice("ただ、単純に足すだけだと、困ったことが起こります。") as v:
             self.play(FadeOut(VGroup(rewards, brace)), VGroup(g0, lab).animate.to_edge(UP, buff=0.5), run_time=1.0)
@@ -1047,7 +1188,125 @@ class Discount(VoiceScene):
             self.play(FadeIn(ra, shift=0.2 * RIGHT))
             self.wait_to(v, "B")
             self.play(FadeIn(rb, shift=0.2 * RIGHT))
-        self.play(FadeOut(VGroup(ra, rb)), g1.animate.move_to(UP * 1.8), run_time=0.8)
+        self.play(FadeOut(VGroup(ra, rb)), run_time=0.8)
+
+
+# ---------------------------------------------------------------------------
+# 10b. 割引率のもう一つの見方：生き残る確率
+# ---------------------------------------------------------------------------
+SURVIVAL_SEED = 24
+
+
+def survival_sim(n=100, steps=15, p_stop=0.1, seed=SURVIVAL_SEED):
+    """各ステップで確率 p_stop で止まるロボット n 台。died[k] = k 歩目で止まった台の番号。"""
+    rng = np.random.default_rng(seed)
+    alive = np.ones(n, bool)
+    died, counts = [], [n]
+    for _ in range(steps):
+        stop = alive & (rng.random(n) < p_stop)
+        died.append(np.flatnonzero(stop))
+        alive &= ~stop
+        counts.append(int(alive.sum()))
+    return died, counts
+
+
+class Survival(VoiceScene):
+    def construct(self):
+        g1 = return_tex(True).to_edge(UP, buff=0.45)
+        self.add(g1)
+        died, counts = survival_sim()
+        K = len(counts)
+
+        bots = VGroup(*[Robot(height=0.26) for _ in range(100)])
+        bots.arrange_in_grid(10, 10, buff=(0.14, 0.12)).move_to(LEFT * 4.35 + DOWN * 0.45)
+        base = RIGHT * -0.9 + DOWN * 2.6
+        Wc, Hc = 7.4, 3.9
+        dx = Wc / K
+        axis = Line(base, base + RIGHT * Wc, stroke_color=GREY_C, stroke_width=2)
+        ticks = VGroup(*[mt(str(k), size=28, color=GREY_B).next_to(base + RIGHT * (k + 0.5) * dx, DOWN, buff=0.12)
+                         for k in (0, 5, 10)])
+        ylab = jt("動いている台数", size=28, color=GREY_B).next_to(axis, UP, buff=Hc + 0.15).align_to(axis, LEFT)
+        k_lab = VGroup(mt("k", "=", size=44), Integer(0, font_size=44)).arrange(RIGHT, buff=0.12)
+        k_lab.next_to(bots, UP, buff=0.3)
+
+        def bar(k, frac, color=BLUE_C, fill=0.85, stroke=0):
+            h = max(Hc * frac, 0.002)
+            r = Rectangle(width=dx * 0.7, height=h, stroke_width=stroke, stroke_color=color,
+                          fill_color=color, fill_opacity=fill)
+            r.move_to(base + RIGHT * (k + 0.5) * dx + UP * h / 2)
+            return r
+
+        with self.voice("割引率には、もう一つ、とても面白い見方があります。") as v:
+            self.play(LaggedStart(*[FadeIn(b, scale=0.5) for b in bots], lag_ratio=0.01), run_time=1.6)
+        with self.voice("ロボットが、{A}1歩進むごとに、10%の確率で電池が切れて、そこで止まってしまう、と考えてみましょう。") as v:
+            self.wait_to(v, "A")
+            demo = bots[44]
+            batt = VGroup(RoundedRectangle(width=0.9, height=0.42, corner_radius=0.06, stroke_color=GREY_A, stroke_width=2),
+                          Rectangle(width=0.08, height=0.18, stroke_width=0, fill_color=GREY_A, fill_opacity=1))
+            batt[1].next_to(batt[0], RIGHT, buff=0)
+            level = Rectangle(width=0.78, height=0.3, stroke_width=0, fill_color=GREEN, fill_opacity=0.9).move_to(batt[0])
+            batt.add(level)
+            batt.next_to(bots, RIGHT, buff=0.5).shift(1.6 * UP)
+            p_txt = mt(r"1-\gamma = 0.1", size=40).next_to(batt, DOWN, buff=0.3)
+            p_txt[0][2].set_color(style.GAMMA)
+            self.play(FadeIn(batt), Indicate(demo, scale_factor=2.0), run_time=1.0)
+            self.play(level.animate.stretch_to_fit_width(0.05, about_edge=LEFT).set_color(RED), FadeIn(p_txt), run_time=1.2)
+            self.play(FadeOut(VGroup(batt, p_txt)), run_time=0.5)
+
+        bars = VGroup(bar(0, 1.0))
+        with self.voice("100台のロボットを、同時に歩かせてみます。{A}1歩ごとに、およそ1割ずつ、止まっていきます。") as v:
+            self.play(Create(axis), FadeIn(ticks), FadeIn(ylab), FadeIn(k_lab), FadeIn(bars[0]), run_time=0.8)
+            self.wait_to(v, "A")
+            per = min(0.55, max(0.3, v.remaining() / 6))
+            for k in range(1, K):
+                idx = died[k - 1]
+                b = bar(k, counts[k] / 100)
+                bars.add(b)
+                anims = [k_lab[1].animate.set_value(k), GrowFromEdge(b, DOWN)]
+                if len(idx):
+                    anims.append(AnimationGroup(*[bots[i].animate.set_mood("sad").set_opacity(0.16) for i in idx]))
+                self.sfx("tick")
+                self.play(*anims, run_time=per)
+
+        ref = VGroup(*[bar(k, 0.9 ** k, color=style.GAMMA, fill=0.0, stroke=4) for k in range(K)])
+        ref_lab = mt(r"\gamma^k", size=48, color=style.GAMMA).next_to(ref[3], UR, buff=0.15).shift(0.6 * RIGHT)
+        with self.voice("{A}動いている台数の、この棒グラフに、{B}さっきの、ガンマのk乗の棒を重ねてみると、ほとんど、ぴったり重なります。") as v:
+            self.wait_to(v, "A")
+            self.play(Indicate(bars, color=WHITE, scale_factor=1.03), run_time=1.0)
+            self.wait_to(v, "B")
+            self.sfx("sparkle")
+            self.play(LaggedStart(*[Create(r) for r in ref], lag_ratio=0.06), FadeIn(ref_lab), run_time=1.6)
+
+        f1 = mt(r"P(\text{k歩先まで動いている})", "=", r"\gamma^k", size=44, tex_template=style.JP_TEX)
+        f1[2].set_color(style.GAMMA)
+        f2 = mt(r"\mathbb{E}\Big[\sum_k \mathbf{1}[\text{k歩先まで動いている}]\, r_{t+k+1}\Big]", "=",
+                r"\sum_k", r"\gamma^k", r"r_{t+k+1}", size=40, tex_template=style.JP_TEX)
+        f2[3].set_color(style.GAMMA)
+        f2[4].set_color(style.REWARD)
+        fs = VGroup(f1, f2).arrange(DOWN, buff=0.45).move_to(DOWN * 0.4)
+        with self.voice("k歩先の報酬を受け取れるのは、k歩先まで、動き続けられた場合だけです。"
+                        "だから、{A}いつ止まるか分からない世界で、報酬を割り引かずに足したときの期待値は、{B}割り引いたリターンと、ちょうど同じになるんです。") as v:
+            self.play(FadeOut(VGroup(bots, k_lab)), VGroup(axis, ticks, ylab, bars, ref, ref_lab).animate.scale(0.55).to_corner(DR, buff=0.4),
+                      run_time=1.2)
+            self.play(Write(f1), run_time=1.2)
+            self.wait_to(v, "A")
+            self.play(FadeIn(f2[0:2], shift=0.1 * UP), run_time=1.2)
+            self.wait_to(v, "B")
+            self.play(FadeIn(f2[2:], shift=0.1 * LEFT), run_time=1.0)
+            self.play(Circumscribe(f2[3], color=style.GAMMA))
+        with self.voice("割引率とは、{A}未来が本当に来るかどうか、分からない、という不確かさを表したもの、と見ることもできるわけです。") as v:
+            self.wait_to(v, "A")
+            self.play(Indicate(g1[4], color=style.GAMMA, scale_factor=1.4), Indicate(g1[7], color=style.GAMMA, scale_factor=1.4))
+        self.play(FadeOut(VGroup(f1, f2, axis, ticks, ylab, bars, ref, ref_lab)), g1.animate.move_to(UP * 1.8), run_time=0.9)
+
+
+# ---------------------------------------------------------------------------
+# 10c. リターンの再帰構造
+# ---------------------------------------------------------------------------
+class Recursion(VoiceScene):
+    def construct(self):
+        g1 = return_tex(True).move_to(UP * 1.8)
+        self.add(g1)
 
         # 再帰構造
         g2 = mt("G_t", "=", "r_{t+1}", "+", r"\gamma", "(", "r_{t+2}", "+", r"\gamma", "r_{t+3}", "+", r"\cdots", ")", size=56)
@@ -1240,6 +1499,112 @@ class Objective(VoiceScene):
 
 
 # ---------------------------------------------------------------------------
+# 11b. 報酬は人間が決める：ボートレースの例
+# ---------------------------------------------------------------------------
+class RewardHacking(VoiceScene):
+    def construct(self):
+        water = "#1B2A38"
+        c0 = LEFT * 1.3 + DOWN * 0.35
+        outer = RoundedRectangle(width=8.0, height=4.4, corner_radius=2.1, stroke_color=GREY_C,
+                                 stroke_width=3, fill_color=water, fill_opacity=1).move_to(c0)
+        inner = RoundedRectangle(width=4.8, height=1.3, corner_radius=0.65, stroke_color=GREY_C,
+                                 stroke_width=3, fill_color=style.BG, fill_opacity=1).move_to(c0)
+        mid = RoundedRectangle(width=6.4, height=2.85, corner_radius=1.4).move_to(c0)
+        lag_c = RIGHT * 4.7 + DOWN * 1.45
+        lagoon = Circle(radius=1.15, stroke_color=GREY_C, stroke_width=3, fill_color=water,
+                        fill_opacity=1).move_to(lag_c)
+        channel = Rectangle(width=1.6, height=0.9, stroke_width=0, fill_color=water,
+                            fill_opacity=1).move_to(RIGHT * 3.05 + DOWN * 1.45)
+        # チェッカーのゴールライン（上の直線部分）
+        sq = 0.16
+        flag = VGroup(*[Square(sq, stroke_width=0, fill_color=WHITE if (i + j) % 2 else "#111111", fill_opacity=1)
+                        for i in range(2) for j in range(9)])
+        flag.arrange_in_grid(9, 2, buff=0).move_to(c0 + UP * 1.47 + LEFT * 0.2)
+        finish = jt("ゴール", size=28, color=GREY_A).next_to(outer, UP, buff=0.12).align_to(flag, LEFT).shift(0.5 * LEFT)
+        course = VGroup(outer, channel, lagoon, inner, flag, finish)
+
+        def coin(p):
+            return VGroup(Circle(radius=0.14, stroke_color=style.REWARD, stroke_width=3, fill_color=style.REWARD,
+                                 fill_opacity=0.35), Dot(radius=0.05, color=style.REWARD)).move_to(p)
+        track_coins = VGroup(*[coin(mid.point_from_proportion(t)) for t in (0.08, 0.3, 0.55, 0.8)])
+        lag_r = 0.6
+        lag_angles = [PI / 2, PI / 2 + 2 * PI / 3, PI / 2 + 4 * PI / 3]
+        lag_coins = VGroup(*[coin(lag_c + lag_r * np.array([np.cos(a), np.sin(a), 0])) for a in lag_angles])
+
+        score_lab = jt("点数", size=32, color=GREY_B)
+        score = Integer(0, font_size=48, color=style.REWARD)
+        hud = VGroup(score_lab, score).arrange(RIGHT, buff=0.25).to_corner(UR, buff=0.5)
+        watcher = Robot(height=0.8).to_corner(DL, buff=0.5)
+
+        with self.voice("ところで、この報酬は、誰が決めるのでしょうか。{A}人間です。") as v:
+            self.play(FadeIn(watcher, shift=0.2 * UP), run_time=0.6)
+            self.play(watcher.animate.look(UR), run_time=0.4)
+            self.wait_to(v, "A")
+            self.play(watcher.blink())
+        with self.voice("そして強化学習は、報酬の合計を大きくすることに、{A}恐ろしいほど忠実です。"
+                        "たとえそれが、人間の意図と、違っていても。") as v:
+            self.play(FadeIn(course, lag_ratio=0.05), run_time=1.6)
+            self.wait_to(v, "A")
+            self.play(watcher.change("worried"))
+
+        boat = glow_dot(mid.point_from_proportion(0.0), color=ORANGE, radius=0.13, spread=2.6)
+        with self.voice("2016年に報告された、有名な例があります。ボートレースのゲームで、{A}コース上の目標物に当たると、点数がもらえる、"
+                        "という報酬で学習させたところ、エージェントは、{B}レースを完走するのを、やめてしまいました。") as v:
+            self.play(FadeIn(boat, scale=0.5), FadeIn(hud), run_time=0.6)
+            self.wait_to(v, "A")
+            self.sfx("pop")
+            self.play(LaggedStart(*[FadeIn(c, scale=0.4) for c in track_coins], lag_ratio=0.2),
+                      LaggedStart(*[FadeIn(c, scale=0.4) for c in lag_coins], lag_ratio=0.2), run_time=1.2)
+            intended = DashedVMobject(mid.copy().set_stroke(GREY_B, 2.5), num_dashes=60)
+            itext = jt("意図していた動き：コースを回ってゴール", size=26, color=GREY_B).next_to(outer, DOWN, buff=0.2)
+            self.play(Create(intended), FadeIn(itext), run_time=1.5)
+            self.wait_to(v, "B")
+            self.play(watcher.change("surprised"), FadeOut(intended), FadeOut(itext))
+
+        # 学習したエージェントの動き：入り江に入って回り続ける
+        to_lagoon = VMobject().set_points_smoothly([
+            boat.get_center(), c0 + DOWN * 1.42 + RIGHT * 1.8, RIGHT * 3.0 + DOWN * 1.45, lag_c + LEFT * lag_r])
+        circle_path = Arc(radius=lag_r, start_angle=PI, angle=-2 * PI, arc_center=lag_c)
+        trail = TracedPath(boat.get_center, stroke_color=ORANGE, stroke_width=3, dissipating_time=0.8)
+        self.add(trail)
+        with self.voice("代わりに見つけたのは、{A}入り江の中を、ぐるぐると回り続けて、何度も復活する目標物に、当たり続ける方法です。"
+                        "{B}点数は、人間のプレイヤーよりも、高くなったそうです。") as v:
+            self.play(MoveAlongPath(boat, to_lagoon), run_time=1.6, rate_func=smooth)
+            self.wait_to(v, "A")
+            total = 0
+            laps = 4
+            for lap in range(laps):
+                # 1周のあいだに3つの目標物に当たる
+                seg_t = 0.9
+                for j, ang in enumerate([PI * 5 / 6, PI / 6, -PI / 2]):
+                    part = Arc(radius=lag_r, start_angle=PI - j * 2 * PI / 3, angle=-2 * PI / 3, arc_center=lag_c)
+                    hit = lag_coins[(j + 1) % 3]
+                    total += 100
+                    self.play(MoveAlongPath(boat, part), run_time=seg_t, rate_func=linear)
+                    self.sfx("pop")
+                    self.play(hit.animate.scale(0.01).set_opacity(0), score.animate.set_value(total), run_time=0.15)
+                    hit.scale(100).set_opacity(1)
+                    self.add(hit)
+            self.wait_to(v, "B")
+            self.sfx("hit")
+            self.play(Indicate(hud, color=style.REWARD, scale_factor=1.2))
+            no_finish = VGroup(jt("完走", size=30, color=GREY_B), Cross(stroke_color=RED, stroke_width=5).scale(0.18)).arrange(RIGHT, buff=0.2)
+            no_finish.next_to(hud, DOWN, buff=0.3).align_to(hud, RIGHT)
+            self.play(FadeIn(no_finish), watcher.change("sad"))
+
+        with self.voice("報酬は、エージェントに、何をしてほしいかを伝える、ほとんど唯一の言葉です。"
+                        "{A}言葉の選び方を間違えると、望んだものとは違うものを、全力で最適化してしまう。"
+                        "{B}この問題は、最終章で、言語モデルの訓練の中に、もう一度登場します。") as v:
+            trail.clear_updaters()
+            self.play(FadeOut(trail), run_time=0.3)
+            self.wait_to(v, "A")
+            self.play(Indicate(lag_coins, color=style.REWARD), watcher.animate.look(RIGHT), run_time=1.2)
+            self.wait_to(v, "B")
+            self.play(watcher.change("determined"))
+        self.play(FadeOut(VGroup(course, track_coins, lag_coins, boat, hud, no_finish, watcher)), run_time=0.9)
+
+
+# ---------------------------------------------------------------------------
 # 12. ロードマップ
 # ---------------------------------------------------------------------------
 class Roadmap(VoiceScene):
@@ -1317,29 +1682,74 @@ class Roadmap(VoiceScene):
 # ---------------------------------------------------------------------------
 # 13. 次回予告
 # ---------------------------------------------------------------------------
-class Outro(VoiceScene):
+class Outro3D(VoiceScene3D):
+    """価値を「高さ」にした地形。第2章の予告。"""
+
     def construct(self):
-        g = GridView(WORLD, cell=1.35).move_to(0.35 * DOWN)
-        robot = Robot(height=0.66).move_to(g.center_of(WORLD.start))
+        self.set_camera_orientation(phi=0, theta=-90 * DEGREES, zoom=1.0)
+        cell = 1.25
+        W, H = WORLD.width, WORLD.height
+        origin = np.array([-(W - 1) * cell / 2, -(H - 1) * cell / 2, 0])
+
+        def pos(s):
+            return origin + np.array([s[0] * cell, s[1] * cell, 0])
+
+        tiles, tops = VGroup(), {}
+        heights = {}
+        for s in WORLD.states:
+            if s in WORLD.terminals:
+                continue
+            v = V_STAR[s]
+            h = 0.25 + 3.0 * v
+            heights[s] = h
+            p = Prism(dimensions=[cell * 0.94, cell * 0.94, 0.04])
+            p.set_fill(value_color(v), 1).set_stroke(GREY_E, 0.6)
+            p.move_to(pos(s) + 0.02 * OUT)
+            tiles.add(p)
+            tops[s] = p
+        walls = VGroup(*[Prism(dimensions=[cell * 0.94, cell * 0.94, 0.3]).set_fill("#3A3A40", 1).set_stroke(GREY_E, 0.6)
+                         .move_to(pos(s) + 0.15 * OUT) for s in WORLD.walls])
+        goal = Sphere(radius=0.28, resolution=(12, 24)).set_color(style.REWARD).move_to(pos(GOAL) + 0.3 * OUT)
+        pit = Circle(radius=0.42, stroke_color=RED, stroke_width=4, fill_color="#050506", fill_opacity=1).move_to(pos(PIT))
+        board = VGroup(*[Square(cell, stroke_color=GREY_D, stroke_width=1.5).move_to(pos((x, y)))
+                         for x in range(W) for y in range(H)])
+
         with self.voice("次回のテーマは、価値です。") as v:
-            self.play(FadeIn(g), FadeIn(robot), run_time=1.0)
-        labs = g.value_labels(V_STAR, size=34)
-        with self.voice("もしロボットが、{A}すべてのマスの良さを、こんなふうに数字で知っていたら、どう動けばいいかは、一目瞭然ですよね。") as v:
+            self.play(FadeIn(board), FadeIn(tiles), FadeIn(walls), FadeIn(goal), FadeIn(pit), run_time=1.2)
+
+        title = jt("価値　＝　高さ", size=40, color=WHITE).to_corner(UL, buff=0.5)
+        with self.voice("もしロボットが、すべてのマスの良さを、{A}こんなふうに、高さとして知っていたら、どう動けばいいかは、一目瞭然ですよね。"
+                        "{B}ほとんどの場所では、ただ、坂を登っていけばいい。") as v:
             self.wait_to(v, "A")
-            self.play(*[g.cells[s].animate.set_fill(value_color(V_STAR[s]), 1) for s in labs],
-                      *[FadeIn(l) for l in labs.values()], robot.animate.set_opacity(0.0), run_time=1.5)
-            path = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (2, 3), (3, 3), (4, 3)]
-            robot.set_opacity(1).move_to(g.center_of((0, 0))).scale(0.8)
-            self.add(robot)
-            for s, n in zip(path[:-1], path[1:]):
-                self.play(robot.animate.move_to(g.center_of(n) + 0.3 * g.cell * UP).look(n_vec(s, n)), run_time=0.3)
+            self.sfx("whoosh")
+            self.move_camera(phi=62 * DEGREES, theta=-62 * DEGREES, zoom=0.95, run_time=2.0,
+                             added_anims=[p.animate.stretch_to_fit_depth(heights[s]).move_to(pos(s) + heights[s] / 2 * OUT)
+                                          for s, p in tops.items()])
+            self.add_fixed_in_frame_mobjects(title)
+            self.play(FadeIn(title), run_time=0.6)
+            self.wait_to(v, "B")
+            route = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (2, 3), (3, 3)]
+            ball = Sphere(radius=0.16, resolution=(10, 20)).set_color(BLUE_C)
+            ball.move_to(pos(route[0]) + (heights[route[0]] + 0.16) * OUT)
+            self.play(FadeIn(ball), run_time=0.4)
+            for s in route[1:]:
+                self.play(ball.animate.move_to(pos(s) + (heights[s] + 0.16) * OUT), run_time=0.45)
+            self.sfx("chime")
+            self.play(ball.animate.move_to(pos(GOAL) + 0.45 * OUT), run_time=0.5)
+            self.begin_ambient_camera_rotation(rate=0.08)
+
         rec = mt("G_t", "=", "r_{t+1}", "+", r"\gamma", "G_{t+1}", size=56)
         rec[2].set_color(style.REWARD)
         rec[4].set_color(style.GAMMA)
-        rec.to_edge(UP, buff=0.3)
-        with self.voice("では、この数字は、どうすれば求められるのでしょうか。その鍵を握るのが、{A}さっき見た、リターンの再帰的な関係です。") as v:
-            self.play(FadeOut(robot), run_time=0.5)
+        rec.to_corner(UR, buff=0.5)
+        with self.voice("では、この地形は、どうすれば求められるのでしょうか。その鍵を握るのが、{A}さっき見た、リターンの再帰的な関係です。") as v:
             self.wait_to(v, "A")
-            self.play(VGroup(g, *labs.values()).animate.scale(0.9).shift(0.3 * DOWN), Write(rec))
-        self.play(FadeOut(VGroup(g, rec, *labs.values())), run_time=1.0)
+            self.add_fixed_in_frame_mobjects(rec)
+            self.play(Write(rec), run_time=1.2)
+        self.stop_ambient_camera_rotation()
+        self.play(FadeOut(VGroup(board, tiles, walls, goal, pit, ball)), FadeOut(title), FadeOut(rec), run_time=1.0)
+
+
+class End(VoiceScene):
+    def construct(self):
         play_end_card(self, next_title="第2章　価値という考え方")

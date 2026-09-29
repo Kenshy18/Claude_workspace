@@ -4,6 +4,7 @@
 
     [表示|よみ]   字幕には「表示」を出し、音声では「よみ」を読ませる
     {name}        ブックマーク。その位置が音声の何秒目かを Narration.marks で引ける
+    《語》         強調。少し高く、少しゆっくり読む（字幕には括弧を出さない）
 
 文（。！？ で区切る）ごとに合成してつなぐので、字幕のタイミングは文単位で正確。
 文の途中のブックマークは「先頭からその位置までのモーラ数」を数え、
@@ -25,7 +26,7 @@ import numpy as np
 
 from . import config, lexicon
 
-_FORMAT_VERSION = 3
+_FORMAT_VERSION = 4
 _TOKEN_RE = re.compile(r"\[([^\]|]*)\|([^\]]*)\]|\{([A-Za-z0-9_]+)\}")
 _SENTENCE_END = "。！？!?"
 _SILENT = "「」『』"  # 字幕には出すが読み上げない（余計な間が入るため）
@@ -38,6 +39,7 @@ class Sentence:
     display: str
     spoken: str
     marks: list  # [(name, spoken_offset)]
+    emph: list = dataclasses.field(default_factory=list)  # [(start, end)] spoken の範囲
 
 
 @dataclasses.dataclass
@@ -58,6 +60,7 @@ def parse(markup: str) -> list[Sentence]:
     text = _normalize(markup)
     sentences: list[Sentence] = []
     cur = Sentence("", "", [])
+    emph_start = None
 
     def close():
         nonlocal cur
@@ -66,7 +69,16 @@ def parse(markup: str) -> list[Sentence]:
         cur = Sentence("", "", [])
 
     def add_plain(chunk: str):
+        nonlocal emph_start
         for ch in chunk:
+            if ch == "《":
+                emph_start = len(cur.spoken)
+                continue
+            if ch == "》":
+                if emph_start is not None:
+                    cur.emph.append((emph_start, len(cur.spoken)))
+                emph_start = None
+                continue
             cur.display += ch
             if ch not in _SILENT:
                 cur.spoken += ch
@@ -130,6 +142,20 @@ def _style_query(syn, spoken: str):
     return aq
 
 
+def _apply_emphasis(syn, aq, spoken: str, spans):
+    """《》で囲まれた範囲のモーラを少し高く・長くする。"""
+    if not spans:
+        return
+    moras = [m for ap in aq.accent_phrases for m in ap.moras]
+    for a, b in spans:
+        n0 = _count_moras(syn, spoken[:a])
+        n1 = _count_moras(syn, spoken[:b])
+        for m in moras[n0:n1]:
+            if m.pitch > 0:
+                m.pitch += config.EMPH_PITCH
+            m.vowel_length *= config.EMPH_LENGTH
+
+
 def _mora_starts(aq):
     """各モーラの開始時刻（話速適用前）と全体長を返す。"""
     t = aq.pre_phoneme_length
@@ -170,7 +196,8 @@ def _cache_key(markup: str) -> str:
     payload = json.dumps([
         _FORMAT_VERSION, config.NARRATOR_STYLE, config.SPEED, config.PITCH,
         config.INTONATION, config.PRE_PHONEME, config.POST_PHONEME,
-        config.SENTENCE_GAP, config.COMMA_PAUSE_SCALE, lexicon.WORDS,
+        config.SENTENCE_GAP, config.COMMA_PAUSE_SCALE, config.EMPH_PITCH, config.EMPH_LENGTH,
+        lexicon.WORDS,
         _normalize(markup),
     ], ensure_ascii=False)
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:20]
@@ -203,6 +230,7 @@ def synthesize(markup: str) -> Narration:
                 chunks.append(gap)
                 t += len(gap) / sr
             aq = _style_query(syn, s.spoken)
+            _apply_emphasis(syn, aq, s.spoken, s.emph)
             sr, audio = _wav_to_array(syn.synthesis(aq, config.NARRATOR_STYLE))
             dur = len(audio) / sr
             starts, total = _mora_starts(aq)
