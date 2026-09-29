@@ -28,6 +28,7 @@ SCENES = [
 ]
 
 S21 = (2, 1)  # 前回の「でたらめな方策」の例と同じマス
+BANG = "！"    # 吹き出しの文字（robot.say("…") と直接書くと、台本の抽出にナレーションとして拾われる）
 
 
 # ---------------------------------------------------------------------------
@@ -350,7 +351,7 @@ class MonteCarlo(VoiceScene):
             self.wait_to(v, "C")
             self.play(FadeIn(marker, shift=0.2 * DOWN), run_time=0.5)
             self.wait_to(v, "D")
-            mc_lab = jt("モンテカルロ法", size=46, color=WHITE, weight="MEDIUM").move_to(RIGHT * 2.5 + UP * 3.0)
+            mc_lab = jt("モンテカルロ法", size=46, color=WHITE, weight="MEDIUM").move_to(RIGHT * 1.9 + UP * 3.0)
             self.sfx("hit")
             # ロボットは「見物役」として右上の隅へ
             self.play(FadeIn(mc_lab, shift=0.1 * DOWN), FadeOut(trail),
@@ -369,14 +370,14 @@ class MonteCarlo(VoiceScene):
             self.wait_to(v, "B")
             G2, V_old, V_new = Gs[1], state["V"], float(np.mean(Gs[:2]))
             cx = (nx(V_old) + nx(G2)) / 2
-            cam = Dot([cx, NY + 0.5, 0], radius=0.01).set_opacity(0)
+            cam = Dot([cx + 0.5, NY + 0.95, 0], radius=0.01).set_opacity(0)
             self.sfx("whoosh")
-            self.play(self.focus_on(cam, height=3.9), run_time=1.1)
+            self.play(self.focus_on(cam, height=4.4), run_time=1.1)
             d = sample_dot(G2)
             dots.add(d)
             self.sfx("pop")
             self.play(FadeIn(d, shift=0.5 * DOWN), run_time=0.5)
-            yA = NY + 1.45
+            yA = NY + 1.95
             red = Arrow([nx(V_old), yA, 0], [nx(G2), yA, 0], buff=0, color=RED, stroke_width=6,
                         max_tip_length_to_length_ratio=0.1)
             lab_r = mt("G", "-", *v_parts(), size=34).next_to(red, UP, buff=0.1)
@@ -396,7 +397,7 @@ class MonteCarlo(VoiceScene):
         cnt_lab = jt("エピソード", size=28, color=GREY_B)
         cnt = Integer(2, font_size=38, color=WHITE)
         counter = VGroup(cnt_lab, cnt).arrange(RIGHT, buff=0.2).move_to([4.7, NY + 0.95, 0])
-        a_note = mt(r"\alpha", "=", r"\tfrac{1}{2}", size=40).next_to(lab_t, RIGHT, buff=0.35)
+        a_note = mt(r"\alpha", "=", r"\tfrac{1}{2}", size=40).next_to(lab_t, RIGHT, buff=0.3)
         mean_note = jt("平均なら α = 1/n", size=30, color=GREY_B).next_to(upd, DOWN, buff=0.3).align_to(upd, RIGHT)
         with self.voice("動かす割合の、{AL}アルファは、学習率です。{A}この式、どこかで見覚えがありませんか。") as v:
             self.wait_to(v, "AL")
@@ -432,7 +433,7 @@ class MonteCarlo(VoiceScene):
         label_note = jt("正解ラベル", size=30, color=style.REWARD)
         with self.voice("そう。これは、{A}推定値と、観測したリターンとの二乗誤差を、{B}勾配降下で小さくする更新、そのものです。"
                         "{C}リターンを正解ラベルとみなした、《回帰》なんです。") as v:
-            bang = robot.say("！", direction=LEFT)
+            bang = robot.say(BANG, direction=LEFT)
             self.play(FadeOut(VGroup(g, focus, mc_lab, mean_note)), upd.animate.move_to(UP * 2.55),
                       ReplacementTransform(bubble, bang), robot.change("surprised"), run_time=0.9)
             self.wait_to(v, "A")
@@ -758,7 +759,7 @@ class TD(VoiceScene):
             self.play(Create(px), run_time=0.5)
             self.play(FadeOut(VGroup(p_lab, px)), bot.change("happy"), run_time=0.6)
         # 式だけを残す（次のシーンの冒頭と同じ位置）
-        self.play(FadeOut(VGroup(tree, leaf_lab, bot)), run_time=0.9)
+        self.play(FadeOut(VGroup(tree, leaf_lab, bot, pi_lab)), run_time=0.9)
 
 
 # ---------------------------------------------------------------------------
@@ -812,9 +813,9 @@ class Dopamine(VoiceScene):
             return COLS[col][0] + t * step
 
         # ---- N1: TD 誤差に注目 ----
-        robot = Robot(height=0.8).move_to([5.75, -0.2, 0])
+        robot = Robot(height=0.8).move_to([5.9, -0.2, 0])
         with self.voice("[TD|ティーディー]誤差には、驚くような後日談があります。") as v:
-            self.play(td_eq.animate.become(eq(TD_EQ, size=66).move_to(UP * 0.6)), run_time=1.0)
+            self.play(td_eq.animate.become(eq(TD_EQ, size=60).move_to(UP * 0.6 + LEFT * 0.4)), run_time=1.0)
             b = Brace(VGroup(*td_eq[12:24]), DOWN, color=RED)
             dl = mt(r"\delta", size=72, color=RED).next_to(b, DOWN, buff=0.15)
             self.sfx("pop")
@@ -823,7 +824,7 @@ class Dopamine(VoiceScene):
 
         # ---- N2: 1997年、サルのドーパミン神経細胞 ----
         neuron = neuron_icon(1.1).move_to([2.2, 0.2, 0])
-        electrode = Line([2.55, 2.4, 0], neuron[3].get_center() + 0.3 * UR, stroke_color=GREY_B, stroke_width=3)
+        electrode = Line([3.3, 2.6, 0], neuron[3].get_center() + 0.25 * UR, stroke_color=GREY_B, stroke_width=3)
         trace = VMobject(stroke_color=WHITE, stroke_width=2)
         trng = np.random.default_rng(4)
         pts, x = [], 0.0
@@ -835,11 +836,11 @@ class Dopamine(VoiceScene):
                 pts.append([x, trng.uniform(-0.03, 0.03), 0])
                 x += 0.06
         trace.set_points_as_corners(np.array(pts))
-        trace.next_to(neuron, DOWN, buff=0.55)
+        trace.next_to(neuron, DOWN, buff=0.35)
         cite = VGroup(Text("Schultz, Dayan & Montague (1997)", font_size=28, color=GREY_B),
                       Text("Science", font_size=28, color=GREY_B, slant=ITALIC)).arrange(RIGHT, buff=0.2)
         cite.to_edge(DOWN, buff=0.45)
-        who = jt("サルの中脳の、ドーパミン神経細胞", size=32, color=GREY_A).next_to(neuron, UP, buff=0.55)
+        who = jt("サルの中脳の、ドーパミン神経細胞", size=32, color=GREY_A).move_to([2.2, -2.72, 0])
         with self.voice("1997年、サルの脳の、ドーパミンを出す神経細胞の記録が、{A}[TD|ティーディー]誤差と、そっくりの振る舞いをすることが報告されました。") as v:
             eq_grp = VGroup(td_eq, b)
             self.play(eq_grp.animate.scale(0.55).move_to([-3.6, 2.6, 0]), dl.animate.scale(1.2).move_to([-3.6, 0.2, 0]),
@@ -857,9 +858,9 @@ class Dopamine(VoiceScene):
         head_l = VGroup(jt("TD誤差", size=32, color=WHITE), mt(r"\delta_t", size=48, color=RED),
                         jt("（計算）", size=28, color=GREY_B)).arrange(RIGHT, buff=0.15)
         head_l.move_to([(COLS[0][0] + COLS[0][1]) / 2, 3.42, 0])
-        head_r = jt("ドーパミン神経の発火（模式図）", size=30, color=WHITE)
+        head_r = jt("ドーパミン神経の発火（模式図）", size=28, color=WHITE)
         head_r.move_to([(COLS[1][0] + COLS[1][1]) / 2, 3.42, 0])
-        mini = neuron_icon(0.28).next_to(head_r, LEFT, buff=0.2)
+        mini = neuron_icon(0.26).next_to(head_r, RIGHT, buff=0.2)
         ev = VGroup()
         lamps, cups = [], []
         for col in (0, 1):
@@ -898,7 +899,7 @@ class Dopamine(VoiceScene):
             for i, lane in enumerate(sp):
                 yy = y - 0.46 + i * 0.155
                 for tt in lane:
-                    g.add(Line([tx(1, tt), yy, 0], [tx(1, tt), yy + 0.12, 0], stroke_color=WHITE, stroke_width=1.6))
+                    g.add(Line([tx(1, tt), yy, 0], [tx(1, tt), yy + 0.13, 0], stroke_color=WHITE, stroke_width=2.2))
             return g
 
         # ---- N3: 1回目：ジュースが来た瞬間に反応 ----
@@ -921,7 +922,7 @@ class Dopamine(VoiceScene):
             self.play(*[Flash(cp, color=style.REWARD, flash_radius=0.4, line_length=0.14) for cp in cups],
                       robot.animate.look(UP), run_time=0.6)
             self.wait_to(v, "A")
-            bang = robot.say("！", direction=UP)
+            bang = robot.say(BANG, direction=UP)
             self.play(FadeIn(bars0, lag_ratio=0.05), FadeIn(ras0, lag_ratio=0.002), robot.change("surprised"),
                       FadeIn(bang, scale=0.7), run_time=1.3)
             self.play(robot.change("happy"), run_time=0.4)
@@ -1051,6 +1052,7 @@ class BiasVariance(VoiceScene):
         with self.voice("{A}モンテカルロの目標、つまり実際のリターンは、こんなふうに、大きくばらつきます。"
                         "{B}星にたどり着く回もあれば、穴に落ちる回もあるからです。") as v:
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(LaggedStart(*[FadeIn(d, shift=0.6 * DOWN) for d in mc_dots[:30]], lag_ratio=0.12),
                       run_time=1.6)
             self.play(LaggedStart(*[FadeIn(d, shift=0.6 * DOWN) for d in mc_dots[30:]], lag_ratio=0.01),
@@ -1058,13 +1060,16 @@ class BiasVariance(VoiceScene):
             self.wait_to(v, "B")
             pos = VGroup(*[d for d, e in zip(mc_dots, ends) if e == GOAL])
             neg = VGroup(*[d for d, e in zip(mc_dots, ends) if e != GOAL])
-            self.play(FadeIn(star_i, scale=0.5), Indicate(pos, color=style.REWARD, scale_factor=1.4), run_time=1.0)
-            self.play(FadeIn(pit_i, scale=0.5), Indicate(neg, color=RED, scale_factor=1.4), run_time=1.0)
+            self.play(FadeIn(star_i, scale=0.5), Indicate(pos, color=style.REWARD, scale_factor=1.4),
+                      robot.change("happy"), run_time=1.0)
+            self.play(FadeIn(pit_i, scale=0.5), Indicate(neg, color=RED, scale_factor=1.4),
+                      robot.change("worried"), run_time=1.0)
 
         with self.voice("{A}[TD|ティーディー]の目標は、一歩分のばらつきしか含まないので、ずっと狭い範囲に収まります。") as v:
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(LaggedStart(*[FadeIn(d, shift=0.6 * DOWN) for d in td_dots[:30]], lag_ratio=0.12),
-                      run_time=1.4)
+                      robot.change("normal"), run_time=1.4)
             self.play(LaggedStart(*[FadeIn(d, shift=0.6 * DOWN) for d in td_dots[30:]], lag_ratio=0.01),
                       run_time=1.6)
             w_mc = DoubleArrow([nx(G.min()), MC_Y + HB + 0.15, 0], [nx(G.max()), MC_Y + HB + 0.15, 0], buff=0,
@@ -1080,7 +1085,7 @@ class BiasVariance(VoiceScene):
         bias_line = DashedLine([nx(m_hat), TD_Y - HB - 0.12, 0], [nx(m_hat), TD_Y + HB + 0.1, 0], color=style.VALUE,
                                stroke_width=3, dash_length=0.08)
         with self.voice("その代わり、[TD|ティーディー]の目標は、{A}今の推定値が間違っていると、そのぶん、ずれてしまいます。"
-                        "{B}偏り、つまりバイアスがあるわけです。") as v:
+                        "{B}偏り、つまり《バイアス》があるわけです。") as v:
             self.play(FadeOut(w_td), run_time=0.4)
             self.wait_to(v, "A")
             self.play(TransformMatchingTex(td_f, td_f_hat), FadeIn(hat_note), run_time=0.8)
@@ -1089,7 +1094,8 @@ class BiasVariance(VoiceScene):
             barr = DoubleArrow([nx(vt), TD_Y + HB + 0.28, 0], [nx(m_hat), TD_Y + HB + 0.28, 0], buff=0, color=RED,
                                stroke_width=5, tip_length=0.16)
             b_lab = jt("バイアス", size=32, color=RED).next_to(barr, RIGHT, buff=0.2)
-            self.play(Create(bias_line), GrowFromCenter(barr), FadeIn(b_lab), run_time=0.9)
+            self.sfx("hit")
+            self.play(Create(bias_line), GrowFromCenter(barr), FadeIn(b_lab), robot.change("worried"), run_time=0.9)
 
         # --- まとめと、中間の方法 ---
         rows = VGroup()
@@ -1119,11 +1125,16 @@ class BiasVariance(VoiceScene):
             self.wait_to(v, "T")
             self.play(Indicate(td_dots, scale_factor=1.3, color=WHITE), Indicate(barr, color=RED), run_time=1.3)
             self.wait_to(v, "A")
-            self.play(FadeOut(VGroup(g, focus, robot, pol_lab, mc_axis, td_axis, mc_lab, td_lab[0], td_f_hat, hat_note,
+            self.play(FadeOut(VGroup(g, focus, robot, pol_lab, mc_axis, td_axis, hat_note,
                                      true_mc, true_td, true_lab, mc_dots, td_dots, star_i, pit_i, w_mc, bias_line,
-                                     barr, b_lab)), run_time=0.8)
-            self.play(LaggedStart(*[FadeIn(r, shift=0.15 * RIGHT) for r in rows], lag_ratio=0.35), run_time=2.0)
+                                     barr, b_lab)),
+                      ReplacementTransform(td_lab[0], rows[0][0]), ReplacementTransform(td_f_hat, rows[0][1]),
+                      ReplacementTransform(mc_lab[0], rows[3][0]), ReplacementTransform(mc_lab[1], rows[3][1]),
+                      run_time=1.2)
+            self.sfx("pop")
+            self.play(LaggedStart(*[FadeIn(r, shift=0.15 * RIGHT) for r in rows[1:3]], lag_ratio=0.35), run_time=1.3)
             self.wait_to(v, "B")
+            self.sfx("hit")
             self.play(Indicate(VGroup(rows[1], rows[2]), color=WHITE, scale_factor=1.04), FadeIn(final), run_time=1.0)
         self.play(FadeOut(VGroup(rows, final)), run_time=0.8)
 
@@ -1138,9 +1149,10 @@ class Control(VoiceScene):
                         for s in g.nonterminal_states()])
         labs = g.value_labels(V_STAR, size=30)
         focus = SurroundingRectangle(g.cells[S21], color=style.STATE, stroke_width=6, buff=0)
-        cands = VGroup(*[g.arrow(S21, a, color=GREY_A, length=0.62, stroke_width=5).shift(
-            ACTION_VEC[a] * 0.18 * g.cell) for a in ACTIONS])
-        qmark = jt("?", size=48, color=WHITE).next_to(g.cells[S21], UR, buff=-0.05)
+        cands = VGroup(*[g.arrow(S21, a, color=GREY_A, length=0.4, stroke_width=5).shift(
+            ACTION_VEC[a] * 0.3 * g.cell) for a in ACTIONS])
+        bot = Robot(height=0.44).move_to(g.center_of(S21))
+        qmark = bot.think("どっち？", direction=UL, size=30)
         calc1 = mt(*q_parts(), "=", size=50)
         calc2 = mt(r"\sum_{s'}", "P", "(", "s'", r"\mid", "s", ",", "a", ")", r"\big[", "r", "+",
                    r"\gamma", *v_parts("s'"), r"\big]", size=50)
@@ -1152,14 +1164,17 @@ class Control(VoiceScene):
                         "{C}でも、今は、その遷移確率がありません。") as v:
             self.play(FadeIn(g), FadeIn(heat), FadeIn(VGroup(*labs.values())), run_time=1.0)
             self.wait_to(v, "A")
-            self.play(Create(focus), FadeOut(labs[S21]), LaggedStart(*[GrowArrow(a) for a in cands], lag_ratio=0.1),
-                      FadeIn(qmark, scale=0.6), run_time=1.0)
+            self.sfx("pop")
+            self.play(Create(focus), FadeOut(labs[S21]), FadeIn(bot, scale=0.6), run_time=0.6)
+            self.play(LaggedStart(*[GrowArrow(a) for a in cands], lag_ratio=0.1), FadeIn(qmark, scale=0.7),
+                      bot.animate.set_mood("worried").look(UP), run_time=1.0)
             self.wait_to(v, "B")
             self.play(Write(calc), run_time=1.4)
             self.play(Indicate(calc_P, color=WHITE), run_time=0.8)
             self.wait_to(v, "C")
             px = cross_mark(calc_P, width=6)
-            self.play(Create(px), calc.animate.set_opacity(0.5), run_time=0.7)
+            self.sfx("hit")
+            self.play(Create(px), calc2.animate.set_opacity(0.5), run_time=0.7)
 
         tris = QTriangles(g, Q_STAR)
         q_big = mt(*q_parts(), size=80).move_to(RIGHT * 3.3 + UP * 1.3)
@@ -1169,14 +1184,24 @@ class Control(VoiceScene):
         best = tris.tris[S21, PI_STAR[S21]]
         with self.voice("そこで、{A}最初から、行動価値[Q|キュー]を学ぶことにします。"
                         "[Q|キュー]なら、遷移確率がなくても、{B}一番大きな[値|あたい]の行動を選ぶだけで済みます。") as v:
-            self.play(FadeOut(VGroup(calc, px)), run_time=0.5)
+            self.play(FadeOut(VGroup(calc2, px, calc1[6])), FadeOut(qmark), run_time=0.5)
             self.wait_to(v, "A")
-            self.play(FadeOut(VGroup(*[l for s, l in labs.items() if s != S21])), FadeOut(cands), FadeOut(qmark),
-                      FadeIn(tris), FadeOut(heat), Write(q_big), FadeIn(q_name, shift=0.1 * DOWN), run_time=1.4)
-            self.add(focus)
+            # V のマス目が、4つの三角形（行動ごとの Q）に割れる
+            self.sfx("whoosh")
+            cell_of = {s: sq for s, sq in zip(g.nonterminal_states(), heat)}
+            self.play(FadeOut(VGroup(*[l for s, l in labs.items() if s != S21])), FadeOut(cands),
+                      *[ReplacementTransform(cell_of[s], VGroup(*[tris.tris[s, a] for a in ACTIONS]))
+                        for s in g.nonterminal_states()],
+                      ReplacementTransform(VGroup(*calc1[:6]), q_big), FadeIn(q_name, shift=0.1 * DOWN),
+                      bot.animate.set_mood("normal"), run_time=1.5)
+            self.remove(*tris.get_family())
+            self.add(tris, focus, bot)
             self.wait_to(v, "B")
-            self.play(Indicate(best, color=WHITE, scale_factor=1.25), FadeIn(amax, shift=0.1 * DOWN), run_time=1.0)
-            self.play(LaggedStart(*[GrowArrow(a) for a in arrows], lag_ratio=0.05), run_time=1.3)
+            self.sfx("hit")
+            self.play(Indicate(best, color=WHITE, scale_factor=1.25), FadeIn(amax, shift=0.1 * DOWN),
+                      bot.animate.set_mood("happy"), run_time=1.0)
+            self.play(LaggedStart(*[GrowArrow(a) for a in arrows], lag_ratio=0.05),
+                      bot.animate.scale(0.75).move_to(g.cells[S21].get_corner(DR) + 0.26 * UL), run_time=1.3)
 
         # --- SARSA ---
         s_eq = eq(SARSA_EQ, size=50).move_to(UP * 2.1)
@@ -1188,16 +1213,21 @@ class Control(VoiceScene):
         letters.arrange(RIGHT, buff=0.5).move_to(DOWN * 0.3)
         with self.voice("[TD|ティーディー]学習を[Q|キュー]に当てはめると、{A}こうなります。{N}次の状態で、実際に選んだ次の行動の[Q|キュー]を使う。"
                         "{S}状態、行動、報酬、状態、行動の頭文字をとって、{B}[SARSA|サルサ]と呼ばれます。") as v:
-            self.play(FadeOut(VGroup(g, tris, focus, arrows, q_big, q_name, amax)), run_time=0.8)
+            self.play(FadeOut(VGroup(g, tris, focus, arrows, q_name, amax, bot)),
+                      q_big.animate.move_to(s_eq[0:6]).set(height=s_eq[0:6].height), run_time=0.9)
             self.wait_to(v, "A")
-            self.play(Write(s_eq), run_time=1.6)
+            self.play(ReplacementTransform(q_big, VGroup(*s_eq[0:6])), Write(VGroup(*s_eq[6:])), run_time=1.6)
+            self.remove(*s_eq.get_family())
+            self.add(s_eq)
             self.wait_to(v, "N")
             self.play(Create(nxt_box), Indicate(s_eq[23], color=style.ACTION, scale_factor=1.5), run_time=0.9)
             self.wait_to(v, "S")
             copies = [s_eq[i].copy() for i in letters_src]
+            self.sfx("pop")
             self.play(*[c.animate.move_to(l).scale(1.6) for c, l in zip(copies, letters)], run_time=0.9)
             self.play(*[ReplacementTransform(c, l) for c, l in zip(copies, letters)], run_time=0.8)
             self.wait_to(v, "B")
+            self.sfx("hit")
             self.play(ReplacementTransform(letters, s_name), FadeOut(nxt_box), run_time=1.0)
 
         # --- Q 学習 ---
@@ -1207,10 +1237,12 @@ class Control(VoiceScene):
             src = s_eq.copy()
             self.play(src.animate.move_to(DOWN * 0.3), run_time=0.9)
             self.wait_to(v, "A")
+            self.sfx("whoosh")
             morph(self, src, q_eq, SARSA_TO_QL, run_time=1.3)
             mx_box = SurroundingRectangle(VGroup(*q_eq[19:26]), color=style.VALUE, buff=0.08, corner_radius=0.06)
             self.play(Create(mx_box), run_time=0.6)
             self.wait_to(v, "B")
+            self.sfx("hit")
             self.play(FadeIn(q_name_l, shift=0.1 * RIGHT), run_time=0.7)
 
         # --- 方策オン／オフ ---
@@ -1232,7 +1264,7 @@ class Control(VoiceScene):
         legend = VGroup(leg_a, leg_b).arrange(DOWN, aligned_edge=LEFT, buff=0.35).move_to(LEFT * 4.2 + DOWN * 2.3)
         rb = Robot(height=0.38).move_to(gm.center_of((0, 0)))
         detours = VGroup(*[dice(4, size=0.3).move_to(gm.center_of(x[0]) + 0.25 * UR) for x in traj if x[4]])
-        with self.voice("違いは、たったこれだけ。でも、意味は大きく違います。{A}[SARSA|サルサ]は、自分が実際に取る行動の、価値を学びます。"
+        with self.voice("違いは、《たった》これだけ。でも、意味は大きく違います。{A}[SARSA|サルサ]は、自分が実際に取る行動の、価値を学びます。"
                         "{B}[Q|キュー]学習は、次からは最善の行動を取る、と仮定した価値、つまり、最適な行動価値を学びます。"
                         "{C}実際の行動が、ときどき寄り道していたとしても、です。") as v:
             self.play(Create(sa_box), Indicate(VGroup(*s_eq[19:25]), color=style.POLICY),
@@ -1249,6 +1281,7 @@ class Control(VoiceScene):
             self.play(FadeIn(leg_b), Create(ideal_line), run_time=1.2)
             self.play(Indicate(VGroup(*q_eq[19:26]), color=style.VALUE), run_time=0.8)
             self.wait_to(v, "C")
+            self.sfx("pop")
             self.play(LaggedStart(*[FadeIn(d, scale=0.5) for d in detours], lag_ratio=0.3), run_time=0.8)
             self.play(Indicate(act_line, color=style.POLICY), run_time=1.0)
 
@@ -1269,8 +1302,13 @@ class Control(VoiceScene):
             self.wait_to(v, "A1")
             self.play(FadeIn(off, shift=0.1 * LEFT), run_time=0.6)
             self.wait_to(v, "A")
+            # Q 学習の目標が、そのままベルマン最適方程式の [ ] の中身になる
             self.play(FadeOut(VGroup(gm, rb, act_line, ideal_line, legend, leg_a, leg_b, detours, mx_box)),
-                      FadeIn(bell_lab), Write(bell), run_time=1.4)
+                      FadeIn(bell_lab), TransformFromCopy(VGroup(*q_eq[16:26]), VGroup(*bell[10:20])),
+                      FadeIn(VGroup(*bell[:10], bell[20]), shift=0.1 * UP), run_time=1.5)
+            self.remove(*bell.get_family())
+            self.add(bell)
+            self.sfx("sparkle")
             self.play(Create(tgt_q), Create(tgt_b), run_time=0.8)
             self.play(GrowFromCenter(sum_b), FadeIn(sum_l), run_time=0.8)
         self.play(FadeOut(VGroup(s_eq, s_name, sa_box, q_eq, q_name_l, on, off, bell, bell_lab, tgt_q, tgt_b,
@@ -1320,18 +1358,24 @@ class Exploration(VoiceScene):
             return jt("×", size=72, color=GREY_C).move_to(machines[i].window)
 
         def pull_one(h, rt=0.5, show_dice=False):
+            """1回回す。ロボットは台を見て、当たりなら喜び、はずれならしょんぼりする。"""
             a, r, ex, e, c = h
             icon = result_icon(a, r)
-            anims = [machines[a].pull(run_time=rt * 0.6), FadeOut(wins[a], run_time=rt * 0.3)]
+            anims = [machines[a].pull(run_time=rt * 0.6), FadeOut(wins[a], run_time=rt * 0.3),
+                     robot.animate(run_time=rt * 0.3).look(machines[a].window.get_center() - robot.get_center())]
             extra = []
             if show_dice and ex:
                 dc = dice(3, size=0.55).next_to(machines[a], UP, buff=0.2)
                 extra.append(dc)
                 anims.append(FadeIn(dc, scale=0.5, run_time=rt * 0.4))
+                self.sfx("pop")
             self.play(*anims, run_time=rt * 0.6)
-            self.play(FadeIn(icon, scale=0.6), run_time=rt * 0.3)
+            if r:
+                self.sfx("chime", gain=-16)
+            self.play(FadeIn(icon, scale=0.6), robot.animate.set_mood("happy" if r else "sad"), run_time=rt * 0.3)
             show((e, c), rt * 0.4)
-            self.play(FadeOut(icon), FadeIn(wins[a]), *[FadeOut(x) for x in extra], run_time=rt * 0.25)
+            self.play(FadeOut(icon), FadeIn(wins[a]), *[FadeOut(x) for x in extra],
+                      robot.animate.set_mood("normal"), run_time=rt * 0.25)
 
         # --- N1 ---
         w1 = jt("探索", size=72, color=WHITE, weight="MEDIUM")
@@ -1349,10 +1393,13 @@ class Exploration(VoiceScene):
 
         # --- N2 ---
         with self.voice("単純な例で考えましょう。{A}当たる確率の違う、スロットマシンが三台あります。確率は、ロボットには分かりません。") as v:
-            self.play(FadeOut(words), FadeOut(robot), run_time=0.7)
+            # ロボットは、そのまま左端の「席」へ
+            self.play(FadeOut(words), robot.animate.scale(0.82 / 1.1).move_to([-6.15, 1.55, 0]).look(RIGHT), run_time=0.9)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(LaggedStart(*[FadeIn(m, shift=0.3 * UP) for m in machines], lag_ratio=0.2), run_time=1.2)
-            self.play(LaggedStart(*[FadeIn(w, scale=0.6) for w in wins], lag_ratio=0.2), run_time=0.8)
+            self.play(LaggedStart(*[FadeIn(w, scale=0.6) for w in wins], lag_ratio=0.2),
+                      robot.animate.set_mood("worried"), run_time=0.8)
             self.play(Create(base_line), FadeIn(est_lab), FadeIn(cnt_lab), FadeIn(cnts), FadeIn(bars), FadeIn(est),
                       run_time=0.8)
 
@@ -1371,12 +1418,18 @@ class Exploration(VoiceScene):
             self.wait_to(v, "B")
             batches = [greedy[i:i + 11] for i in range(1, 100, 11)]
             per = max(0.3, (v.until("C") - 0.3) / len(batches))
+            self.play(robot.animate.set_mood("determined").look(machines[1].window.get_center() - robot.get_center()),
+                      run_time=0.3)
             for b in batches:
                 a, r, ex, e, c = b[-1]
+                self.sfx("tick")
                 self.play(machines[1].pull(run_time=per * 0.6), run_time=per * 0.6)
                 show((e, c), per * 0.4)
             self.wait_to(v, "C")
-            self.play(*[ReplacementTransform(w, t) for w, t in zip(wins, truth)], Create(tlines), run_time=1.0)
+            self.sfx("hit")
+            self.play(*[ReplacementTransform(w, t) for w, t in zip(wins, truth)], Create(tlines),
+                      robot.animate.set_mood("surprised").look(machines[2].window.get_center() - robot.get_center()),
+                      run_time=1.0)
             self.play(Circumscribe(machines[2], color=style.REWARD, buff=0.15), run_time=1.2)
 
         # --- N4: ε-greedy ---
@@ -1389,16 +1442,18 @@ class Exploration(VoiceScene):
         lab_g = VGroup(mt(r"1-\varepsilon", size=52), jt("一番良い台", size=36, color=GREY_A)).arrange(RIGHT, buff=0.3)
         lab_g.next_to(seg_g, DOWN, buff=0.22)
         name = jt("イプシロン・グリーディ法", size=34, color=WHITE, weight="MEDIUM").to_corner(UL, buff=0.4)
-        with self.voice("そこで、{A}ときどき、わざと、でたらめに選ぶことにします。確率イプシロンでランダムに、それ以外は、一番良い台を選ぶ。"
+        with self.voice("そこで、{A}《ときどき、わざと》、でたらめに選ぶことにします。確率イプシロンでランダムに、それ以外は、一番良い台を選ぶ。"
                         "{B}[イプシロン・グリーディ法|イプシロングリーディほう]です。") as v:
             self.play(*[ReplacementTransform(t, w) for t, w in zip(truth, wins)], FadeOut(tag),
-                      tlines.animate.set_stroke(opacity=0.5), run_time=0.8)
+                      tlines.animate.set_stroke(opacity=0.5), robot.animate.set_mood("normal").look(RIGHT), run_time=0.8)
             show((np.zeros(3), np.zeros(3, dtype=int)), 0.8)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(FadeIn(rule), FadeIn(lab_e), FadeIn(lab_g), run_time=0.9)
             self.play(Indicate(lab_e, scale_factor=1.3), run_time=0.9)
             self.play(Indicate(lab_g, scale_factor=1.15), run_time=0.9)
             self.wait_to(v, "B")
+            self.sfx("hit")
             self.play(FadeIn(name, shift=0.1 * DOWN), run_time=0.7)
 
         # --- N5: ε-greedy で回す ---
@@ -1410,26 +1465,38 @@ class Exploration(VoiceScene):
             rest = hist[5:]
             batches = [rest[i:i + 15] for i in range(0, len(rest), 15)]
             per = max(0.25, (v.remaining() + 1.2) / len(batches))
-            for b in batches:
+            for k, b in enumerate(batches):
                 arms = [x[0] for x in b]
                 top = max(set(arms), key=arms.count)
                 a, r, ex, e, c = b[-1]
-                self.play(machines[top].pull(run_time=per * 0.6), run_time=per * 0.6)
+                if k % 3 == 0:
+                    self.sfx("tick")
+                self.play(machines[top].pull(run_time=per * 0.6),
+                          robot.animate(run_time=per * 0.3).look(machines[top].window.get_center() - robot.get_center()),
+                          run_time=per * 0.6)
                 show((e, c), per * 0.4)
+            self.sfx("sparkle")
+            self.play(robot.animate.set_mood("happy"), Indicate(bars[2], color=WHITE), run_time=0.6)
+            self.play(robot.hop(), run_time=0.45)
 
         exploit = jt("活用", size=44, color=style.REWARD, weight="MEDIUM").next_to(machines[2], UP, buff=0.08)
         explore = VGroup(jt("探索", size=44, color=style.ACTION, weight="MEDIUM"), dice(2, size=0.46)).arrange(RIGHT, buff=0.2)
         explore.next_to(VGroup(machines[0], machines[1]), UP, buff=0.08)
         with self.voice("知っていることを使って稼ぐか、{B}知らないことを調べに行くか。{C}強化学習のエージェントは、いつも、このジレンマの中で行動しています。") as v:
+            self.sfx("hit")
             self.play(FadeOut(name), FadeIn(exploit, shift=0.2 * DOWN), Indicate(machines[2], color=style.REWARD),
+                      robot.animate.set_mood("normal").look(machines[2].window.get_center() - robot.get_center()),
                       run_time=1.0)
             self.wait_to(v, "B")
-            self.play(FadeIn(explore, shift=0.2 * DOWN), run_time=0.8)
+            self.sfx("pop")
+            self.play(FadeIn(explore, shift=0.2 * DOWN),
+                      robot.animate.set_mood("worried").look(machines[0].window.get_center() - robot.get_center()),
+                      run_time=0.8)
             self.play(Wiggle(explore), run_time=1.0)
         for d in est:
             d.clear_updaters()
         self.play(FadeOut(VGroup(machines, *wins, base_line, bars, est, cnts, est_lab, cnt_lab, tlines, exploit,
-                                 explore)), run_time=0.9)
+                                 explore, robot)), run_time=0.9)
 
 
 # ---------------------------------------------------------------------------
@@ -1444,10 +1511,12 @@ class Cliff(VoiceScene):
         vs = jt("vs", size=40, color=GREY_B)
         head = VGroup(l_s, vs, l_q).arrange(RIGHT, buff=0.8)
         with self.voice("探索が入ると、[SARSA|サルサ]と[Q|キュー]学習の違いが、はっきり表れます。有名な、{A}崖歩きの問題を見てみましょう。") as v:
+            self.sfx("pop")
             self.play(FadeIn(l_s, shift=0.2 * RIGHT), FadeIn(l_q, shift=0.2 * LEFT), FadeIn(vs), run_time=1.0)
             self.wait_to(v, "A")
             self.play(head.animate.scale(0.6).to_edge(UP, buff=0.4), run_time=0.7)
-            self.play(FadeIn(cv), run_time=0.7)
+            self.sfx("whoosh")
+            self.play(FadeIn(cv, shift=0.2 * UP), run_time=0.7)
 
         robot = Robot(height=0.55).move_to(cv.center_of(CliffEnv.start))
         st_lab = jt("スタート", size=28, color=GREY_B).next_to(cv.cells[CliffEnv.start], DOWN, buff=0.15)
@@ -1456,22 +1525,28 @@ class Cliff(VoiceScene):
         with self.voice("{S}左下から、{G}右下へ行きたいのですが、{A}その[間|あいだ]は崖です。"
                         "{B}一歩ごとにマイナス1、{C}崖に落ちるとマイナス100で、スタートに戻されます。") as v:
             self.wait_to(v, "S")
+            self.sfx("pop")
             self.play(GrowFromCenter(robot), FadeIn(st_lab), run_time=0.6)
             self.wait_to(v, "G")
-            self.play(Indicate(cv.goal, color=style.REWARD, scale_factor=1.4), FadeIn(gl_lab), run_time=0.8)
+            self.play(Indicate(cv.goal, color=style.REWARD, scale_factor=1.4), FadeIn(gl_lab),
+                      robot.animate.look(RIGHT), run_time=0.8)
             self.wait_to(v, "A")
-            self.play(LaggedStart(*cv.paint_cliff(), lag_ratio=0.06), FadeIn(cliff_lab), run_time=1.0)
+            self.play(LaggedStart(*cv.paint_cliff(), lag_ratio=0.06), FadeIn(cliff_lab),
+                      robot.animate.set_mood("worried").look(DR), run_time=1.0)
             self.wait_to(v, "B")
             m1 = mt("-1", size=44, color=style.REWARD).next_to(cv.cells[(0, 1)], UP, buff=0.1)
             self.play(robot.animate.move_to(cv.center_of((0, 1))).look(UP), run_time=0.5)
             self.play(FadeIn(m1, shift=0.2 * UP), run_time=0.3)
             self.play(robot.animate.move_to(cv.center_of((1, 1))).look(RIGHT), FadeOut(m1, shift=0.2 * UP), run_time=0.5)
             self.wait_to(v, "C")
+            self.play(robot.change("surprised"), run_time=0.2)
+            self.sfx("fall")
             self.play(robot.animate.move_to(cv.center_of((1, 0))).scale(0.1).set_opacity(0), rate_func=rush_into,
                       run_time=0.6)
             m100 = mt("-100", size=56, color=RED).move_to(cv.center_of((2, 1)) + 0.3 * RIGHT)
+            self.sfx("thud")
             self.play(FadeIn(m100, shift=0.2 * UP), Flash(cv.center_of((1, 0)), color=RED, flash_radius=0.5), run_time=0.5)
-            robot = Robot(height=0.55).move_to(cv.center_of(CliffEnv.start))
+            robot = Robot(height=0.55).move_to(cv.center_of(CliffEnv.start)).set_mood("sad")
             self.play(FadeIn(robot, scale=0.5), FadeOut(m100), run_time=0.6)
 
         # 2枚に分けて、学習後の経路
@@ -1482,20 +1557,24 @@ class Cliff(VoiceScene):
         q_path, s_path = res["q"]["paths"][0], res["sarsa"]["paths"][0]
         with self.voice("どちらも、[イプシロン・グリーディ|イプシロングリーディ]で学習させてみました。{A}[Q|キュー]学習が見つけたのは、崖のふちを行く、最短ルート。"
                         "{B}[SARSA|サルサ]が見つけたのは、崖から離れた、遠回りのルートです。") as v:
-            self.play(FadeOut(VGroup(head, st_lab, gl_lab, cliff_lab, robot)), run_time=0.5)
+            self.play(FadeOut(VGroup(st_lab, gl_lab, cliff_lab, robot, vs)), run_time=0.5)
             self.add(cv2)
+            # 見出しの「Q学習」「SARSA」が、そのまま2枚のグリッドの名札になる
+            self.sfx("whoosh")
             self.play(cv.animate.scale(0.8).move_to(top_pos), cv2.animate.scale(0.8).move_to(bot_pos),
-                      FadeIn(lq), FadeIn(ls), run_time=1.2)
+                      ReplacementTransform(l_q, lq), ReplacementTransform(l_s, ls), run_time=1.2)
             ql = path_line(cv, q_path, color=style.VALUE, width=7)
             sl = path_line(cv2, s_path, color=style.POLICY, width=7)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(Create(ql), run_time=1.8)
             self.wait_to(v, "B")
+            self.sfx("pop")
             self.play(Create(sl), run_time=2.0)
 
-        rq = Robot(height=0.44).move_to(cv.center_of(CliffEnv.start))
+        rq = Robot(height=0.44).move_to(cv.center_of(CliffEnv.start)).set_mood("determined")
         rs = Robot(height=0.44).move_to(cv2.center_of(CliffEnv.start))
-        with self.voice("どちらが正しいのでしょう。{A}[Q|キュー]学習は、この先は最善の行動しか取らない、という前提で考えるので、崖っぷちでも平気です。"
+        with self.voice("どちらが正しいのでしょう。{A}[Q|キュー]学習は、この先は最善の行動しか取らない、という前提で考えるので、《崖っぷち》でも平気です。"
                         "{B}でも実際には、イプシロンの確率で、でたらめに動いてしまう。"
                         "{C}[SARSA|サルサ]は、自分がときどき、よろけることまで込みで、価値を学ぶので、崖から距離を取るんです。") as v:
             self.play(FadeIn(rq), FadeIn(rs), run_time=0.6)
@@ -1504,25 +1583,32 @@ class Cliff(VoiceScene):
                 self.play(rq.animate.move_to(cv.center_of(n)).look(n_vec(s, n)), run_time=0.35)
             self.wait_to(v, "B")
             here = q_path[5]
-            dc = dice(6, size=0.4).next_to(rq, UP, buff=0.12)
-            self.play(FadeIn(dc, scale=0.5), rq.animate.look(DOWN), run_time=0.5)
             down = (here[0], 0)
+            # 崖っぷちのロボットに寄る
+            self.sfx("whoosh")
+            self.play(self.focus_on(cv.cells[(here[0], 1)], height=3.4), run_time=0.9)
+            dc = dice(6, size=0.4).next_to(rq, UP, buff=0.12)
+            self.sfx("pop")
+            self.play(FadeIn(dc, scale=0.5), rq.animate.set_mood("surprised").look(DOWN), run_time=0.5)
+            self.sfx("fall")
             self.play(rq.animate.move_to(cv.center_of(down)).scale(0.1).set_opacity(0), FadeOut(dc),
                       rate_func=rush_into, run_time=0.6)
             m100 = mt("-100", size=48, color=RED).next_to(cv.cells[down], RIGHT, buff=0.08)
+            self.sfx("thud")
             self.play(Flash(cv.center_of(down), color=RED, flash_radius=0.4), FadeIn(m100, shift=0.2 * UP), run_time=0.5)
-            rq = Robot(height=0.44).move_to(cv.center_of(CliffEnv.start))
-            self.play(FadeIn(rq, scale=0.5), FadeOut(m100), run_time=0.6)
+            rq = Robot(height=0.44).move_to(cv.center_of(CliffEnv.start)).set_mood("sad")
+            self.play(self.reset_frame(), FadeIn(rq, scale=0.5), FadeOut(m100), run_time=0.9)
             self.wait_to(v, "C")
             for s, n in zip(s_path[:6], s_path[1:7]):
                 self.play(rs.animate.move_to(cv2.center_of(n)).look(n_vec(s, n)), run_time=0.3)
             here = s_path[6]
             dc = dice(2, size=0.4).next_to(rs, UP, buff=0.12)
+            self.sfx("pop")
             self.play(FadeIn(dc, scale=0.5), run_time=0.3)
             below = (here[0], here[1] - 1)
-            self.play(rs.animate.move_to(cv2.center_of(below)).look(DOWN), FadeOut(dc), run_time=0.4)
+            self.play(rs.animate.move_to(cv2.center_of(below)).set_mood("worried").look(DOWN), FadeOut(dc), run_time=0.4)
             self.play(Indicate(cv2.cells[below], color=style.POLICY), run_time=0.6)
-            self.play(rs.animate.move_to(cv2.center_of(here)).look(UP), run_time=0.4)
+            self.play(rs.animate.move_to(cv2.center_of(here)).set_mood("happy").look(UP), run_time=0.4)
             for s, n in zip(s_path[6:9], s_path[7:10]):
                 self.play(rs.animate.move_to(cv2.center_of(n)).look(n_vec(s, n)), run_time=0.3)
 
@@ -1574,6 +1660,7 @@ class Cliff(VoiceScene):
             self.play(Create(cs), Create(cq), run_time=2.2)
             self.play(FadeIn(leg), run_time=0.7)
             self.wait_to(v, "B")
+            self.sfx("hit")
             self.play(Create(dq), Create(ds), FadeIn(after), run_time=1.2)
             self.play(Indicate(r3, color=style.VALUE, scale_factor=1.08), run_time=0.9)
             self.wait_to(v, "C")
@@ -1647,7 +1734,8 @@ class QLearningDemo(VoiceScene):
             s, a, r, n, qv = t1[-1]
             self.wait_to(v, "B")
             curQ[s, a] = qv
-            self.play(rb.animate.move_to(g.center_of(n)), run_time=0.35)
+            self.sfx("chime")
+            self.play(rb.animate.move_to(g.center_of(n)).set_mood("happy"), run_time=0.35)
             self.play(tris.tris[s, a].animate.set_fill(value_color(qv), 1),
                       Flash(tris.centroid(s, a), color=style.VALUE, flash_radius=0.4),
                       Flash(g.center_of(n), color=style.REWARD, flash_radius=0.5),
@@ -1665,14 +1753,17 @@ class QLearningDemo(VoiceScene):
             self.wait_to(v, "B")
             per = max(0.5, (v.remaining() - 0.2) / len(QL_SNAPS))
             prev = dict(curQ)
-            for ep in QL_SNAPS:
+            for k, ep in enumerate(QL_SNAPS):
+                if k % 2 == 0:
+                    self.sfx("tick")
                 self.play(*tris.anims(snaps[ep], prev), ChangeDecimalToValue(cnt, ep), run_time=per)
                 prev = snaps[ep]
 
         arrows = g.policy_arrows(pi_q, color=WHITE, length=0.5, stroke_width=5)
         with self.voice("{A}十分に学習したあと、各マスで一番大きな[Q|キュー]に矢印を引いてみると、"
-                        "{B}前回、遷移確率を使って計算した最適方策と、同じ矢印が並びました。{C}穴の下の、あの下向きの矢印もです。") as v:
+                        "{B}前回、遷移確率を使って計算した最適方策と、《同じ矢印》が並びました。{C}穴の下の、あの下向きの矢印もです。") as v:
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(LaggedStart(*[GrowArrow(a) for a in arrows], lag_ratio=0.06), run_time=1.5)
             self.wait_to(v, "B")
             left = VGroup(g, tris, arrows)
@@ -1688,12 +1779,16 @@ class QLearningDemo(VoiceScene):
             self.play(LaggedStart(*[GrowArrow(a) for a in arr2], lag_ratio=0.04), run_time=1.0)
             checks = VGroup(*[check_mark(0.28).move_to(g.cells[s].get_corner(UR) + np.array([-0.2, -0.18, 0]))
                               for s in same])
+            self.sfx("sparkle")
             self.play(LaggedStart(*[Create(c) for c in checks], lag_ratio=0.06), run_time=1.2)
             self.wait_to(v, "C")
-            self.play(Circumscribe(g.cells[(4, 1)], color=style.REWARD, buff=0.02),
-                      Circumscribe(g2.cells[(4, 1)], color=style.REWARD, buff=0.02), run_time=1.3)
-            self.play(Indicate(arrows[NONTERM_INDEX[(4, 1)]], color=style.REWARD, scale_factor=1.4),
-                      Indicate(arr2[NONTERM_INDEX[(4, 1)]], color=style.REWARD, scale_factor=1.4), run_time=1.0)
+            # 穴の真下のマスに寄る
+            self.sfx("whoosh")
+            self.play(self.focus_on(VGroup(g.cells[(4, 1)], g.cells[PIT]), height=3.2),
+                      Circumscribe(g.cells[(4, 1)], color=style.REWARD, buff=0.02), run_time=1.1)
+            self.play(Indicate(arrows[NONTERM_INDEX[(4, 1)]], color=style.REWARD, scale_factor=1.5), run_time=0.9)
+            self.play(self.reset_frame(), Indicate(arr2[NONTERM_INDEX[(4, 1)]], color=style.REWARD, scale_factor=1.4),
+                      run_time=1.0)
 
         _, run = find_seed(lambda t: t[-1][3] == GOAL and len(t) <= 9,
                            lambda sd: WORLD.rollout(pi_q, np.random.default_rng(sd)))
@@ -1702,11 +1797,26 @@ class QLearningDemo(VoiceScene):
             self.play(FadeIn(rb, scale=0.6), run_time=0.4)
             for s, a, r, n in run[:-1]:
                 self.play(*step_anims(rb, g, s, a, n, run_time=0.32))
+            self.sfx("chime")
             reach_goal(self, rb, g, run_time=0.3, plus=False)
-        self.play(FadeOut(VGroup(left, g2, heat2, arr2, lab1, lab2, checks, rb)), run_time=0.9)
+            self.play(rb.animate.set_mood("happy"), run_time=0.3)
+        # 学習した Q のグリッドだけを残して、次のシーン（Outro）の冒頭と同じ位置へ
+        tgt_scale = (OUTRO_CELL / 1.35) / 0.76
+        self.play(FadeOut(VGroup(arrows, g2, heat2, arr2, lab1, lab2, checks, rb)),
+                  VGroup(g, tris).animate.scale(tgt_scale).move_to(OUTRO_GRID_POS), run_time=1.1)
 
 
 NONTERM_INDEX = {s: i for i, s in enumerate([s for s in WORLD.states if not WORLD.is_terminal(s)])}
+OUTRO_CELL = 1.1
+OUTRO_GRID_POS = LEFT * 3.7 + DOWN * 0.2
+
+
+def outro_grid(Q):
+    """QLearningDemo の最後と Outro の最初で同じになる、学習した Q の三角形グリッド。"""
+    g = GridView(WORLD, cell=1.35)
+    tris = QTriangles(g, Q)
+    VGroup(g, tris).scale(OUTRO_CELL / 1.35).move_to(OUTRO_GRID_POS)
+    return g, tris
 
 
 # ---------------------------------------------------------------------------
@@ -1728,23 +1838,6 @@ def tiny_network(layers=(5, 7, 3), width=2.4, height=2.6, color=GREY_B):
     return VGroup(edges, cols)
 
 
-def end_card(scene, next_title, hold=3.0, max_width=12.6):
-    """common.titles.play_end_card と同じ見た目。長い章題は画面幅に収まるように縮める。"""
-    from common import config as rconf
-    lines = [jt("次回", size=32, color=GREY_C), jt(next_title, size=54, color=WHITE, weight="MEDIUM")]
-    if lines[1].width > max_width:
-        lines[1].scale_to_fit_width(max_width)
-    credit = jt(f"ナレーション　{rconf.narrator_credit()}", size=28, color=GREY_C)
-    tools = jt("アニメーション　Manim Community", size=28, color=GREY_C)
-    g_top = VGroup(*lines).arrange(DOWN, buff=0.3)
-    g_bot = VGroup(credit, tools).arrange(DOWN, buff=0.18)
-    VGroup(g_top, g_bot).arrange(DOWN, buff=1.4)
-    scene.play(LaggedStart(*[FadeIn(m, shift=0.1 * UP) for m in [*lines, credit, tools]], lag_ratio=0.2),
-               run_time=1.6)
-    scene.wait(hold)
-    scene.play(*[FadeOut(m) for m in [*lines, credit, tools]], run_time=1.0)
-
-
 def pixel_frame(height=3.6, **kw):
     im = ImageMobject(breakout_pixels(**kw))
     im.set_resampling_algorithm(RESAMPLING_ALGORITHMS["nearest"])
@@ -1756,8 +1849,8 @@ def pixel_frame(height=3.6, **kw):
 class Outro(VoiceScene):
     def construct(self):
         Q, _, _ = q_learning_es(QL_SNAPS[-1], seed=QL_SEED)
-        g = GridView(WORLD, cell=1.1).move_to(LEFT * 3.7 + DOWN * 0.2)
-        tris = QTriangles(g, Q)
+        g, tris = outro_grid(Q)
+        self.add(g, tris)  # 前のシーンの最後と同じ位置・同じ色
         states = [s for s in WORLD.states if not WORLD.is_terminal(s)]
         xs = [1.35, 2.75, 3.95, 5.15, 6.35]
         head = VGroup(jt("状態", size=30, color=style.STATE), *[arrow_glyph(a, length=0.4) for a in ACTIONS])
@@ -1773,10 +1866,14 @@ class Outro(VoiceScene):
             rows.add(r)
         rule = Line([0.7, 2.9, 0], [6.8, 2.9, 0], stroke_color=GREY_D, stroke_width=2)
         with self.voice("ただ、この方法は、{A}状態ごと、行動ごとに、数字を一つずつ、表に持っています。") as v:
-            self.play(FadeIn(g), FadeIn(tris), run_time=1.0)
+            self.play(Indicate(tris, color=WHITE, scale_factor=1.02), run_time=1.0)
             self.wait_to(v, "A")
             self.play(FadeIn(head), Create(rule), run_time=0.5)
-            self.play(LaggedStart(*[FadeIn(r, shift=0.1 * LEFT) for r in rows], lag_ratio=0.08), run_time=2.0)
+            # 三角形の一つ一つが、表の数字になる
+            self.sfx("whoosh")
+            self.play(LaggedStart(*[AnimationGroup(FadeIn(r[0]), *[TransformFromCopy(tris.tris[s, a], r[k + 1])
+                                                                   for k, a in enumerate(ACTIONS)])
+                                    for s, r in zip(states, rows)], lag_ratio=0.1), run_time=2.4)
 
         frame = pixel_frame(height=4.2).move_to(LEFT * 3.4 + UP * 0.2)
         cap = jt("84×84 画素・256 階調", size=30, color=GREY_B).next_to(frame, DOWN, buff=0.3)
@@ -1795,22 +1892,28 @@ class Outro(VoiceScene):
                                   fill_opacity=1) for _ in range(4)]).arrange(RIGHT, buff=0.05)
             big.add(row)
         big.arrange(DOWN, buff=0.05).move_to(RIGHT * 3.0, aligned_edge=UP).shift(UP * 3.7)
+        robot = Robot(height=0.8).move_to([5.75, -2.75, 0])
+        drop = robot.sweat()
         with self.voice("テレビゲームの画面を、そのまま状態にすると、{A}状態の数は、宇宙の原子の数よりも、はるかに多くなります。"
                         "{B}表では、とても持ちきれませんし、{C}一度も訪れない状態の方が、ほとんどです。") as v:
             self.play(FadeOut(VGroup(g, tris, head, rule, rows)), run_time=0.7)
-            self.play(FadeIn(frame), FadeIn(cap, shift=0.1 * UP), run_time=1.0)
+            self.sfx("pop")
+            self.play(FadeIn(frame), FadeIn(cap, shift=0.1 * UP), FadeIn(robot), run_time=1.0)
             self.wait_to(v, "A")
-            self.play(FadeIn(c1, shift=0.1 * DOWN), run_time=0.9)
-            self.play(FadeIn(cmp[1]), FadeIn(c2, shift=0.1 * DOWN), run_time=0.9)
+            self.sfx("hit")
+            self.play(FadeIn(c1, shift=0.1 * DOWN), robot.animate.set_mood("surprised").look(UL), run_time=0.9)
+            self.play(FadeIn(cmp[1]), FadeIn(c2, shift=0.1 * DOWN), FadeIn(drop, shift=0.1 * DOWN), run_time=0.9)
             self.wait_to(v, "B")
-            self.play(FadeOut(cmp), run_time=0.5)
+            self.play(FadeOut(cmp), FadeOut(drop), robot.animate.set_mood("worried"), run_time=0.5)
             self.add(big)
+            self.sfx("whoosh")
             self.play(big.animate.shift(UP * (big.height - 7.2)), run_time=max(1.5, v.until("C") - 0.2),
                       rate_func=rate_functions.ease_in_quad)
             self.wait_to(v, "C")
             grey = VGroup(*[sq for row in big for sq in row if sq.get_fill_color().to_hex().upper() == "#141418"])
             qs = VGroup(*[jt("?", size=30, color=GREY_C).move_to(sq) for sq in grey
                           if -3.6 < sq.get_center()[1] < 3.6])
+            self.sfx("pop")
             self.play(FadeIn(qs, lag_ratio=0.01), run_time=1.2)
 
         f1 = pixel_frame(height=2.5, ball=(46, 52)).move_to(LEFT * 4.9 + UP * 1.45)
@@ -1831,17 +1934,19 @@ class Outro(VoiceScene):
         outs.arrange(DOWN, buff=0.35).next_to(net, RIGHT, buff=0.6)
         a_out = VGroup(*[Line(net[1][-1][i].get_right(), o.get_left() + 0.1 * LEFT, stroke_color=GREY_C, stroke_width=2)
                          for i, o in enumerate(outs)])
-        with self.voice("見たことのない状態でも、似た状態の経験から、価値を推測したい。{A}そう、ニューラルネットの出番です。") as v:
-            self.play(FadeOut(VGroup(big, qs)), FadeOut(cap), frame.animate.scale(2.4 / 4.2).move_to(f1), run_time=0.9)
+        with self.voice("見たことのない状態でも、似た状態の経験から、価値を推測したい。{A}そう、《ニューラルネット》の出番です。") as v:
+            self.play(FadeOut(VGroup(big, qs)), FadeOut(cap), frame.animate.scale(2.5 / 4.2).move_to(f1),
+                      robot.animate.set_mood("normal"), run_time=0.9)
             self.remove(frame)
             self.add(f1)
             self.play(FadeIn(l1), FadeIn(f2, shift=0.2 * DOWN), FadeIn(l2), run_time=1.0)
             self.play(GrowFromCenter(sim_arrow), FadeIn(sim), run_time=0.7)
             self.wait_to(v, "A")
-            self.play(GrowArrow(a_in), FadeIn(net), run_time=0.7)
+            self.sfx("sparkle")
+            self.play(GrowArrow(a_in), FadeIn(net), robot.animate.set_mood("happy").look(LEFT), run_time=0.7)
             self.play(Create(a_out), LaggedStart(*[FadeIn(o, shift=0.1 * RIGHT) for o in outs], lag_ratio=0.15),
                       run_time=0.8)
-        self.play(Indicate(outs, color=style.VALUE, scale_factor=1.1), run_time=1.0)
+        self.play(Indicate(outs, color=style.VALUE, scale_factor=1.1), robot.hop(), run_time=1.0)
         self.wait(0.8)
-        self.play(FadeOut(Group(f1, f2, l1, l2, sim, sim_arrow, net, a_in, a_out, outs)), run_time=0.9)
-        end_card(self, next_title="第4章　価値をニューラルネットで近似する")
+        self.play(FadeOut(Group(f1, f2, l1, l2, sim, sim_arrow, net, a_in, a_out, outs, robot)), run_time=0.9)
+        play_end_card(self, next_title="第4章　価値をニューラルネットで近似する")

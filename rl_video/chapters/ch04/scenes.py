@@ -20,7 +20,7 @@ from chapters.ch04.helpers import (ACT_LEFT, ACT_NOOP, ACT_RIGHT, GAME_ACTIONS, 
                                    digit_image,
                                    forgetting_run, gen_true, generalization_fit, interp_state, lock_icon,
                                    mc_q_values, mlp, moving_target_fixed_point, moving_target_run,
-                                   overestimation_samples, pixel_image, play_title_card_fit, raster,
+                                   overestimation_samples, pixel_image, raster,
                                    replay_true, section_tag, tiny_network, triad_run, action_glyph)
 
 CHAPTER_TITLE = "第4章 価値をニューラルネットで近似する"
@@ -688,7 +688,7 @@ class Loss(VoiceScene):
         paint_theta(sl[5], 1)
         sl[3].set_color(style.REWARD)
         stag = jt("教師あり学習", size=30, color=GREY_B)
-        watcher = Robot(height=0.85).move_to(RIGHT * 6.0 + DOWN * 3.0)
+        watcher = Robot(height=0.75).move_to(RIGHT * 6.3 + DOWN * 3.25)
         with self.voice("教師あり学習の、見慣れた形と{A}そっくりですね。{B}ただし、決定的に違うところがあります。") as v:
             self.play(FadeOut(VGroup(qupd, qtag)), FadeIn(watcher, shift=0.2 * UP), run_time=0.5)
             ygrp = VGroup(yt, ybox, ylab)
@@ -712,7 +712,7 @@ class Loss(VoiceScene):
                            color=style.THETA, stroke_width=4)
         same = VGroup(jt("同じ", size=34, color=style.THETA), mt(r"\theta", size=48, color=style.THETA)).arrange(RIGHT, buff=0.1)
         same.next_to(link, RIGHT, buff=0.1)
-        bang = watcher.say("！", direction=UL, size=40)
+        bang = watcher.say(jt("！", size=40, color=WHITE), direction=LEFT)   # 文字列を直接渡すと台本ツールがナレーションと誤認する
         with self.voice("{A}ラベルの中に、学習しているネットワーク《自身》が、入っているんです。") as v:
             self.sfx("hit")
             self.play(Create(inner), Indicate(yt[6][1], color=style.THETA, scale_factor=1.6),

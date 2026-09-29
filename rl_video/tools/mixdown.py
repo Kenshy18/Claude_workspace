@@ -23,7 +23,7 @@ def duration(path) -> float:
 
 
 def mix(voice: str | pathlib.Path, out: str | pathlib.Path, seed: int = 0, bgm_lufs: float = -27.0,
-        bitrate: str = "96k") -> str:
+        bitrate: str = "64k") -> str:
     voice = pathlib.Path(voice)
     out = pathlib.Path(out)
     dur = duration(voice)

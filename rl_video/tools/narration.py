@@ -15,7 +15,9 @@ def extract(path: str | pathlib.Path) -> list[tuple[str, list[str]]]:
         texts = []
         for sub in ast.walk(node):
             if (isinstance(sub, ast.Call) and isinstance(sub.func, ast.Attribute)
-                    and sub.func.attr in ("voice", "say") and sub.args
+                    and sub.func.attr in ("voice", "say")
+                    and isinstance(sub.func.value, ast.Name) and sub.func.value.id == "self"
+                    and sub.args
                     and isinstance(sub.args[0], ast.Constant)
                     and isinstance(sub.args[0].value, str)):
                 texts.append((sub.lineno, sub.args[0].value))

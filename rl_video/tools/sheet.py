@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory() as d:
     for i, t in enumerate(times):
         f = f"{d}/{i:04d}.png"
         subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t:.3f}", "-i", a.video, "-frames:v", "1",
-                        "-vf", f"scale={a.width}:-1,drawtext=text='{t:.1f}s':x=6:y=6:fontsize=16:fontcolor=white:box=1:boxcolor=black@0.6",
+                        "-vf", f"scale={a.width}:-1,drawtext=text='{t:.1f}s':x=w-tw-4:y=h-th-4:fontsize=14:fontcolor=white:box=1:boxcolor=black@0.6",
                         f], check=True)
         files.append(f)
     rows = (len(files) + a.cols - 1) // a.cols

@@ -727,6 +727,8 @@ class Clip(VoiceScene):
         # 目的関数とグラフ
         L = mt(r"L^{\rm CLIP}(\theta)", "=", r"\mathbb{E}_t\Big[", r"\min", r"\big(", r"r_t(\theta)\,\hat{A}_t", ",",
                r"\ \mathrm{clip}(r_t(\theta),\,1-\epsilon,\,1+\epsilon)\,\hat{A}_t", r"\big)", r"\Big]", size=44)
+        if L.width > 13:
+            L.scale_to_fit_width(13)
         L.move_to(UP * 3.15)
         left = clip_plot(+1, LEFT * 3.5 + DOWN * 0.85)
         right = clip_plot(-1, RIGHT * 3.5 + DOWN * 0.7)
@@ -929,7 +931,7 @@ class GAE(VoiceScene):
         F = mt(r"\hat{A}_t", "=", r"\sum_{l\ge 0}", r"(\gamma\lambda)^l", r"\,\delta_{t+l}", size=52)
         F[0].set_color(style.ADV)
         F[3].set_color(style.GAMMA)
-        F.to_corner(UL, buff=0.4)
+        F.to_corner(UL, buff=0.55)
         dd = mt(r"\delta_t", "=", r"r_{t+1}", "+", r"\gamma", r"V(s_{t+1})", "-", r"V(s_t)", size=36)
         dd[2].set_color(style.REWARD)
         dd[4].set_color(style.GAMMA)
@@ -1819,7 +1821,7 @@ class GRPO(VoiceScene):
         # GRPO：8つの回答を比べる
         title = jt("GRPO", size=52, color=WHITE, weight="BOLD")
         sub = jt("DeepSeekMath（2024）で提案", size=26, color=GREY_C)
-        head = VGroup(title, sub).arrange(DOWN, buff=0.08, aligned_edge=LEFT).to_corner(UL, buff=0.35)
+        head = VGroup(title, sub).arrange(DOWN, buff=0.08, aligned_edge=LEFT).to_corner(UL, buff=0.5)
         robot = Robot(height=0.8).move_to(LEFT * 6.0 + UP * 1.2)
         cards = VGroup(*[answer_card(a) for a in GRPO_ANS]).arrange(RIGHT, buff=0.12)
         cards.move_to(UP * 1.75).align_to(RIGHT * 6.4, RIGHT)
@@ -1862,7 +1864,7 @@ class GRPO(VoiceScene):
         stats[3].next_to(stats[2], RIGHT, buff=0.15)
         stats.move_to([cards.get_x(), -0.62, 0])
         F = mt(r"\hat{A}_i = \frac{r_i - \mathrm{mean}(r)}{\mathrm{std}(r)}", size=44)
-        F.to_corner(UL, buff=0.4)
+        F.to_corner(UL, buff=0.55)
         base_a, sc_a = -2.5, 0.8
         a_axis = Line([cards.get_left()[0], base_a, 0], [cards.get_right()[0], base_a, 0], stroke_color=GREY_C, stroke_width=2)
         abars = VGroup()
@@ -2123,7 +2125,7 @@ class Map(VoiceScene):
             self.wait_to(v, "D")
             self.sfx("chime")
             self.play(Indicate(c6.labs[1], color=style.REWARD, scale_factor=1.15),
-                      Flash(c6.get_center(), color=style.REWARD, flash_radius=1.9, line_length=0.3), run_time=1.0)
+                      Flash(c6.get_center(), color=style.REWARD, flash_radius=1.6, line_length=0.25), run_time=1.0)
 
         everything = VGroup(*cards, e12, e15, e23, e34, e56, e35, e36, td_lab, gae_lab)
         parts = [c2.labs[1], td_lab, c5.labs[0], c5.labs[1]]

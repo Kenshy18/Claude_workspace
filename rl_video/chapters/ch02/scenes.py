@@ -186,7 +186,7 @@ class StateValue(VoiceScene):
         focus = cell_box(g, SV_START)
         eps, G, avg = sv_episodes()
 
-        bub = robot.think("良さ？", direction=UR, size=30)
+        bub = robot.think("良さ？", direction=UL, size=30)
         with self.voice("あるマスの「良さ」を測る、いちばん素直な方法は何でしょう。") as v:
             self.play(FadeIn(g), run_time=1.0)
             self.sfx("pop")
@@ -468,7 +468,7 @@ class Bellman(VoiceScene):
             self.play(Indicate(VGroup(eq5[5:7], eq5[18]), color=style.POLICY, scale_factor=1.2), run_time=0.9)
             self.wait_to(v, "E")
             self.sfx("sparkle")
-            b_ex = buddy.say("！", direction=UL, size=40)
+            b_ex = buddy.say(content="！", direction=UL, size=40)
             self.play(Create(box5), FadeIn(bname, shift=0.15 * UP), FadeOut(b_q), FadeIn(b_ex, scale=0.8),
                       buddy.change("happy"), run_time=1.0)
             self.play(buddy.hop())
@@ -732,8 +732,9 @@ class Contraction(VoiceScene):
         g = GridView(WORLD, cell=1.25).move_to(LEFT * 2.5 + 0.55 * DOWN)
         set_heat(g, PE_HIST[60])
         labs = value_labels(g, PE_HIST[60], size=30)
-        counter = VGroup(mt("k", "=", size=56), Integer(60, font_size=56)).arrange(RIGHT, buff=0.2)
+        counter = VGroup(mt("k", "=", size=56), Integer(0, font_size=56)).arrange(RIGHT, buff=0.2)
         counter.move_to(RIGHT * 4.0 + UP * 1.1)
+        counter[1].set_value(60)  # Evaluation の最後と同じ位置になるように
         name = jt("反復方策評価", size=42, color=style.VALUE).next_to(counter, DOWN, buff=0.7)
         self.add(upd, g, *labs.values(), counter, name)
 
@@ -857,8 +858,7 @@ class Contraction(VoiceScene):
                         "{C}ガンマ倍された、次のマスの[値|あたい]の部分の和になります。{D}間違っているのは後ろの部分だけで、"
                         "{E}それは毎回ガンマ倍に縮められる。だから、最初に置いたでたらめな[値|あたい]の影響は、"
                         "{F}ガンマの[k|ケー]乗で消えていくんです。") as v:
-            self.play(FadeOut(plot), FadeOut(VGroup(gA, gB, capA2, capB2, kc)), run_time=0.8)
-            self.play(Write(eqi), run_time=1.0)
+            self.play(FadeOut(plot), FadeOut(VGroup(gA, gB, capA2, capB2, kc)), Write(eqi), run_time=1.2)
             self.wait_to(v, "A")
             self.play(Indicate(eqi, color=WHITE, scale_factor=1.05), run_time=0.9)
             self.wait_to(v, "B")
@@ -1220,6 +1220,18 @@ class Improvement(VoiceScene):
 # ---------------------------------------------------------------------------
 # 8. ベルマン最適方程式と価値反復
 # ---------------------------------------------------------------------------
+def vi_panel():
+    """価値反復の場面の、上の更新式と左の表示（2D と 3D のシーンで同じ位置に置く）。"""
+    upd = fx(*bellman_pieces(v=r"V^{*}", policy=False, lhs=[r"V_{k+1}", "(", "s", ")"], arrow=r"\leftarrow",
+                             vnext=r"V_k"), size=46).move_to(UP * 3.2)
+    k_num = Integer(0, font_size=56)
+    counter = VGroup(mt("k", "=", size=56), k_num).arrange(RIGHT, buff=0.2).move_to(LEFT * 5.35 + UP * 1.7)
+    vname = jt("価値反復", size=44, color=style.VALUE).next_to(counter, DOWN, buff=0.55)
+    merge = VGroup(jt("評価", size=34, color=style.VALUE), jt("＋", size=34, color=GREY_B),
+                   jt("改善", size=34, color=style.POLICY)).arrange(RIGHT, buff=0.3).next_to(vname, DOWN, buff=0.4)
+    return upd, counter, k_num, vname, merge
+
+
 class Optimality(VoiceScene):
     def construct(self):
         eq = bellman(size=54).move_to(UP * 0.9)
@@ -1228,9 +1240,10 @@ class Optimality(VoiceScene):
         eq_o = fx(*opt_p, size=54).move_to(UP * 0.9)
         with self.voice("最適な方策の価値を、{A}[V*|ブイスター]と書きます。{B}最適な方策は、どのマスでも、"
                         "一番良い行動を選ぶはずです。だから、ベルマン方程式の、{C}方策による平均が、"
-                        "{D}最大値に置き換わります。") as v:
+                        "{D}《最大値》に置き換わります。") as v:
             self.play(Write(eq), run_time=1.5)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(ReplacementTransform(eq[0], eq_s[0]), ReplacementTransform(eq[25], eq_s[25]),
                       *[ReplacementTransform(eq[i], eq_s[i]) for i in range(len(eq)) if i not in (0, 25)],
                       run_time=1.0)
@@ -1239,6 +1252,7 @@ class Optimality(VoiceScene):
             hl = SurroundingRectangle(eq_s[5:12], color=style.POLICY, buff=0.1)
             self.play(Create(hl), run_time=0.7)
             self.wait_to(v, "D")
+            self.sfx("whoosh")
             self.play(ReplacementTransform(eq_s[5:12], eq_o[5]), ReplacementTransform(eq_s[0:5], eq_o[0:5]),
                       ReplacementTransform(eq_s[12:], eq_o[6:]),
                       hl.animate.become(SurroundingRectangle(eq_o[5], color=style.ACTION, buff=0.1)), run_time=1.3)
@@ -1248,74 +1262,111 @@ class Optimality(VoiceScene):
         with self.voice("これを、{A}ベルマン最適方程式と呼びます。") as v:
             self.play(FadeOut(hl), run_time=0.4)
             self.wait_to(v, "A")
+            self.sfx("hit")
             self.play(Create(box), FadeIn(name, shift=0.15 * UP), run_time=1.0)
 
-        upd = fx(*bellman_pieces(v=r"V^{*}", policy=False, lhs=[r"V_{k+1}", "(", "s", ")"], arrow=r"\leftarrow",
-                                 vnext=r"V_k"), size=46).move_to(UP * 3.15)
-        g = GridView(WORLD, cell=1.25).move_to(LEFT * 2.4 + 0.55 * DOWN)
-        labs = value_labels(g, VI_HIST[0], size=30)
-        k_num = Integer(0, font_size=56)
-        counter = VGroup(mt("k", "=", size=56), k_num).arrange(RIGHT, buff=0.2).move_to(RIGHT * 4.1 + UP * 1.2)
-        vname = jt("価値反復", size=44, color=style.VALUE).next_to(counter, DOWN, buff=0.7)
-        merge = VGroup(jt("評価", size=34, color=style.VALUE), jt("＋", size=34, color=GREY_B),
-                       jt("改善", size=34, color=style.POLICY)).arrange(RIGHT, buff=0.2).next_to(vname, DOWN, buff=0.5)
+        upd, counter, k_num, vname, merge = vi_panel()
+        g = GridView(WORLD, cell=TERRAIN_CELL).move_to(ORIGIN)
         with self.voice("この右辺を、さっきと同じように、{A}何度も繰り返し当てはめていくのが、{B}価値反復です。"
                         "{C}評価と改善を、一度にまとめてやってしまうわけです。") as v:
             self.play(Indicate(eq_o[5:], color=WHITE, scale_factor=1.05), run_time=1.0)
             self.wait_to(v, "A")
             self.play(FadeOut(VGroup(box, name)), ReplacementTransform(eq_o, upd), run_time=1.2)
-            self.play(FadeIn(g), LaggedStart(*[FadeIn(l) for l in labs.values()], lag_ratio=0.03), FadeIn(counter),
-                      run_time=1.0)
+            self.play(FadeIn(g), FadeIn(counter), run_time=1.0)
             self.wait_to(v, "B")
+            self.sfx("hit")
             self.play(FadeIn(vname, shift=0.1 * UP), run_time=0.7)
             self.wait_to(v, "C")
-            self.play(FadeIn(merge[0]), FadeIn(merge[2]), run_time=0.6)
-            self.play(FadeIn(merge[1]), merge[0].animate.shift(0.1 * RIGHT), merge[2].animate.shift(0.1 * LEFT),
-                      run_time=0.6)
+            self.play(FadeIn(merge[0], shift=0.3 * RIGHT), FadeIn(merge[2], shift=0.3 * LEFT), run_time=0.6)
+            self.play(FadeIn(merge[1], scale=0.5), run_time=0.4)
+        # 次のシーン（ValueIteration3D）はこの画面から始まる
+
+
+class ValueIteration3D(VoiceScene3D):
+    """価値反復を3Dで: 柱の高さが、星のそばから波のように立ち上がる。"""
+
+    def construct(self):
+        self.set_camera_orientation(phi=0, theta=-90 * DEGREES, zoom=1.0)
+        upd, counter, k_num, vname, merge = vi_panel()
+        g = GridView(WORLD, cell=TERRAIN_CELL).move_to(ORIGIN)
+        self.add(g)
+        self.add_fixed_in_frame_mobjects(upd, counter, vname, merge)
+        tiles = {s: terrain_tile(s, 0.0, depth=0.02) for s in NONTERM}
+        walls = terrain_walls()
+        robot = Robot(height=0.8).move_to(LEFT * 5.6 + DOWN * 2.8)
+
+        # 3D シーンでは固定表示の Integer を set_value すると中身が固定表示から外れるので、毎回作り直す
+        num = [k_num]
+
+        def set_k(k):
+            new = Integer(k, font_size=56).move_to(num[0], aligned_edge=LEFT)
+            self.remove(num[0])
+            self.add_fixed_in_frame_mobjects(new)
+            num[0] = new
 
         def it(k, rt):
-            self.play(*heat_anims(g, VI_HIST[k], labs), k_num.animate.set_value(k), run_time=rt)
+            set_k(k)
+            self.play(*[tile_anim(tiles[s], s, VI_HIST[k][s]) for s in NONTERM], run_time=rt)
 
         with self.voice("0から始めると、{A}まず、星のとなりのマスだけに、価値が生まれます。{B}次の回には、そのまたとなりへ。"
                         "{C}星から、価値が波のように広がっていきます。") as v:
+            self.sfx("whoosh")
+            self.add(*tiles.values())
+            self.move_camera(phi=55 * DEGREES, theta=-62 * DEGREES, zoom=0.78,
+                             run_time=min(2.2, max(1.0, v.until("A") - 0.2)),
+                             added_anims=[FadeIn(walls), *[tile_anim(tiles[s], s, 0.0) for s in NONTERM]])
+            self.add_fixed_in_frame_mobjects(robot)
+            self.play(FadeIn(robot, shift=0.3 * UP), run_time=0.4)
+            self.begin_ambient_camera_rotation(rate=0.035)
             self.wait_to(v, "A")
-            it(1, 0.9)
-            self.play(Indicate(labs[(3, 3)], color=WHITE, scale_factor=1.5), run_time=0.7)
+            self.sfx("pop")
+            it(1, 1.0)
+            self.play(Indicate(tiles[(3, 3)], color=WHITE, scale_factor=1.06), robot.animate.look(UR), run_time=0.7)
             self.wait_to(v, "B")
-            it(2, 0.9)
-            self.play(Indicate(labs[(2, 3)], color=WHITE, scale_factor=1.5), run_time=0.7)
+            self.sfx("pop")
+            it(2, 1.0)
             self.wait_to(v, "C")
             for k in (3, 4, 5):
+                self.sfx("tick")
                 it(k, 0.9)
 
-        far = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (2, 3), (3, 3), (4, 3)]
-        far_line = path_line(g, far, color=WHITE, width=4, offset=0.34 * g.cell * DL)
-        far_line = DashedVMobject(far_line, num_dashes=40)
         assert VI_HIST[6][(0, 0)] == 0 and VI_HIST[7][(0, 0)] > 0
         with self.voice("[k|ケー]回目の[値|あたい]は、あと[k歩|ケーほ]のうちに得られる、最善の結果、と読むことができます。"
                         "{A}遠いマスほど、価値が届くのに時間がかかるのは、そのためです。") as v:
-            it(6, 1.0)
-            self.play(Create(far_line), run_time=1.5)
+            self.sfx("tick")
+            it(6, 1.2)
+            self.play(robot.animate.look(LEFT + 0.3 * UP), run_time=0.5)
             self.wait_to(v, "A")
             it(7, 1.0)
-            self.play(Flash(g.center_of((0, 0)), color=WHITE, flash_radius=0.6),
-                      Indicate(labs[(0, 0)], color=WHITE, scale_factor=1.6), run_time=0.9)
+            top00 = terrain_pos((0, 0)) + terrain_height(VI_HIST[7][(0, 0)]) * OUT
+            self.sfx("sparkle")
+            self.play(Flash(top00, color=WHITE, flash_radius=0.7, num_lines=14),
+                      Indicate(tiles[(0, 0)], color=WHITE, scale_factor=1.08), robot.change("surprised"), run_time=0.9)
 
-        arrows = policy_arrow_map(g, PI_STAR, length=0.62, shift=0.26 * g.cell * UP)
+        arrows = policy_arrow_map(g, PI_STAR, length=0.6)
         pname = VGroup(jt("最適方策", size=40, color=style.POLICY), fx(r"\pi^{*}", size=52)).arrange(RIGHT, buff=0.25)
-        pname.move_to(merge.get_center() + 1.3 * DOWN)
+        pname.next_to(merge, DOWN, buff=0.6)
         last = len(VI_HIST) - 1
         with self.voice("{A}やがて、[値|あたい]は落ち着きます。{B}最後に、各マスで一番良い行動に矢印を引けば、それが最適方策です。") as v:
-            self.play(FadeOut(far_line), run_time=0.4)
-            for k in range(8, last + 1):
-                it(k, 0.3 if k < 14 else 0.1)
+            self.play(robot.change("happy"), run_time=0.3)
+            ks = list(range(8, last + 1))
+            for k in ks:
+                it(k, 0.3 if k < 14 else 0.08)
             self.wait_to(v, "B")
-            for s in NONTERM:
-                labs[s].generate_target()
-                labs[s].target.scale(0.9).move_to(g.center_of(s) + 0.27 * g.cell * DOWN)
-            self.play(*[MoveToTarget(labs[s]) for s in NONTERM], run_time=0.6)
-            self.play(LaggedStart(*[GrowArrow(arrows[s]) for s in NONTERM], lag_ratio=0.05), FadeIn(pname), run_time=1.5)
-        self.play(FadeOut(VGroup(g, *labs.values(), *arrows.values(), upd, counter, vname, merge, pname)), run_time=0.9)
+            self.stop_ambient_camera_rotation()
+            # 真上から見る地図に戻す（次のシーンの盤面と同じ位置・同じ見た目になる）
+            self.sfx("whoosh")
+            flat = [tiles[s].animate.stretch_to_fit_depth(0.02).move_to(terrain_pos(s) + 0.01 * OUT) for s in NONTERM]
+            self.move_camera(phi=0, theta=-90 * DEGREES, zoom=1.0, run_time=1.6,
+                             added_anims=[*flat, FadeOut(walls)])
+            set_heat(g, V_STAR)
+            self.remove(*tiles.values())
+            self.sfx("sparkle")
+            self.add_fixed_in_frame_mobjects(pname)
+            self.play(LaggedStart(*[GrowArrow(arrows[s]) for s in NONTERM], lag_ratio=0.05), FadeIn(pname),
+                      robot.animate.look(RIGHT), run_time=1.5)
+        self.play(FadeOut(VGroup(upd, counter[0], num[0], vname, merge, pname, robot)), run_time=0.8)
+        # 次のシーン（RiskAverse）は、この盤面（ヒートマップ＋矢印）から始まる
 
 
 # ---------------------------------------------------------------------------
@@ -1323,25 +1374,58 @@ class Optimality(VoiceScene):
 # ---------------------------------------------------------------------------
 class RiskAverse(VoiceScene):
     def construct(self):
-        g = GridView(WORLD, cell=1.3).move_to(0.3 * DOWN)
+        # ValueIteration3D の最後の盤面（ヒートマップ＋最適方策の矢印）から続ける
+        g = GridView(WORLD, cell=TERRAIN_CELL).move_to(ORIGIN)
         set_heat(g, V_STAR)
         arrows = policy_arrow_map(g, PI_STAR, length=0.6)
+        self.add(g, *arrows.values())
         s41 = (4, 1)
-        with self.voice("ところで、この矢印を、よく見てください。{A}穴のすぐ下のマスで、矢印が、[下|した]を向いています。"
+        c41 = g.center_of(s41)
+        with self.voice("ところで、この矢印を、よく見てください。{A}穴のすぐ[下|した]のマスで、矢印が、[下|した]を向いています。"
                         "{B}星とは、反対の方向です。") as v:
-            self.play(FadeIn(g), LaggedStart(*[GrowArrow(a) for a in arrows.values()], lag_ratio=0.03), run_time=1.5)
+            self.play(LaggedStart(*[Indicate(a, color=WHITE, scale_factor=1.15) for a in arrows.values()], lag_ratio=0.04),
+                      run_time=1.4)
             self.wait_to(v, "A")
-            self.play(Circumscribe(g.cells[s41], color=WHITE), run_time=1.0)
-            self.play(Indicate(arrows[s41], color=WHITE, scale_factor=1.5), run_time=0.9)
+            self.sfx("whoosh")
+            zoom_box = VGroup(g.cells[(3, 1)], g.cells[GOAL], g.cells[(4, 0)])
+            self.play(self.focus_on(zoom_box, height=5.2), run_time=1.3)
+            self.play(Circumscribe(g.cells[s41], color=WHITE), Indicate(arrows[s41], color=WHITE, scale_factor=1.4),
+                      run_time=1.0)
             self.wait_to(v, "B")
-            ghost = DashedLine(g.center_of(s41) + 0.2 * UP, g.center_of(GOAL) + 0.35 * DOWN, color=GREY_B,
-                               stroke_width=4)
+            ghost = DashedLine(c41 + 0.2 * UP, g.center_of(GOAL) + 0.35 * DOWN, color=GREY_B, stroke_width=4)
             self.play(Create(ghost), Indicate(g.icons[GOAL], color=style.REWARD, scale_factor=1.3), run_time=1.0)
+
+        # 冒頭の予告の回収: 「隣で一番高いマス」＝左なのに、最適は下
+        rob = Robot(height=0.4).move_to(c41 + 0.3 * g.cell * RIGHT + 0.24 * g.cell * UP)
+        n_left = DecimalNumber(V_STAR[(3, 1)], num_decimal_places=2, font_size=36, color=WHITE)
+        n_left.move_to(g.center_of((3, 1)) + 0.3 * g.cell * DOWN)
+        n_down = DecimalNumber(V_STAR[(4, 0)], num_decimal_places=2, font_size=36, color=WHITE)
+        n_down.move_to(g.center_of((4, 0)) + 0.3 * g.cell * DOWN)
+        uphill = DashedLine(c41 + 0.25 * g.cell * UP, g.center_of((3, 1)) + 0.25 * g.cell * UP + 0.1 * RIGHT,
+                            color=WHITE, stroke_width=5)
+        uphill.add_tip(tip_length=0.18)
+        up_lab = jt("登り坂", size=28, color=WHITE).next_to(uphill, UP, buff=0.08).shift(0.35 * LEFT)
+        assert max(neighbours(s41), key=lambda n: V_STAR.get(n, -1) if n not in WORLD.terminals else -1) == (3, 1)
+        with self.voice("冒頭で予告した、{A}坂を登るのが正解ではない場所。それが、《ここ》です。"
+                        "{B}となりで一番高いのは、左のマスで、0.56。それなのに、最適な行動は、[下|した]なんです。") as v:
+            self.play(FadeOut(ghost), run_time=0.4)
+            self.wait_to(v, "A")
+            self.sfx("hit")
+            self.play(FadeIn(rob, scale=0.6), Flash(c41, color=WHITE, flash_radius=0.8, num_lines=14), run_time=0.8)
+            self.wait_to(v, "B")
+            self.sfx("pop")
+            self.play(FadeIn(n_left), FadeIn(n_down), rob.animate.look(LEFT), run_time=0.6)
+            self.play(Create(uphill), FadeIn(up_lab), run_time=0.8)
+            self.play(Indicate(arrows[s41], color=WHITE, scale_factor=1.5), rob.change("surprised"),
+                      rob.animate.look(DOWN), run_time=0.9)
+            q = rob.think("？", direction=UR, size=30)
+            self.play(FadeIn(q, scale=0.7), run_time=0.4)
+        self.play(FadeOut(VGroup(q, uphill, up_lab, n_left, n_down)), self.reset_frame(), run_time=1.0)
 
         # 左右に並べて比べる
         left_route = [(4, 1), (3, 1), (2, 1), (2, 2), (2, 3), (3, 3), (4, 3)]
         down_route = [(4, 1), (4, 0), (3, 0), (2, 0), (2, 1), (2, 2), (2, 3), (3, 3), (4, 3)]
-        board = VGroup(g, *arrows.values())
+        board = VGroup(g, *arrows.values(), rob)
         k_small = 0.6
         crop_states = [(3, 2), (4, 2), (3, 1), (4, 1), (3, 0), (4, 0)]
         cc = 1.5
@@ -1380,7 +1464,7 @@ class RiskAverse(VoiceScene):
         fanB, flabB = fan(posB, A_DOWN)
         with self.voice("{A}左に進めば、近道に見えます。でも、左に進もうとすると、{B}10%の確率で、[上|うえ]に滑ってしまう。"
                         "{C}[上|うえ]は、穴です。") as v:
-            self.play(FadeOut(ghost), board.animate.scale(k_small).move_to(LEFT * 4.75 + 0.2 * DOWN), run_time=1.0)
+            self.play(board.animate.scale(k_small).move_to(LEFT * 4.75 + 0.2 * DOWN), run_time=1.0)
             l_left = path_line(g, left_route, color=GREY_A, width=4)
             l_down = path_line(g, down_route, color=style.REWARD, width=4)
             steps_l = VGroup(Line(ORIGIN, RIGHT * 0.4, stroke_color=GREY_A, stroke_width=4),
@@ -1390,117 +1474,141 @@ class RiskAverse(VoiceScene):
             steps_l.next_to(g, DOWN, buff=0.35).align_to(g, LEFT)
             steps_d.next_to(g, DOWN, buff=0.35).align_to(g, RIGHT)
             self.wait_to(v, "A")
-            self.play(FadeIn(cropA), FadeIn(hA), Create(l_left), FadeIn(steps_l), run_time=1.2)
+            self.play(FadeIn(cropA), FadeIn(hA), Create(l_left), FadeIn(steps_l), rob.change("normal"), run_time=1.2)
+            board.add(l_left)
             self.wait_to(v, "B")
             self.play(GrowArrow(fanA[0]), FadeIn(flabA[0]), run_time=0.6)
             self.play(*[GrowArrow(x) if isinstance(x, Arrow) else GrowFromCenter(x) for x in fanA[1:]],
                       FadeIn(flabA[1:]), run_time=0.8)
             self.wait_to(v, "C")
             pit_i = [i for i, aa in enumerate([A_LEFT, A_UP, A_DOWN]) if WORLD.move(s41, aa) == PIT][0]
+            self.sfx("fall")
+            drop = rob.sweat()
             self.play(Flash(posA(PIT), color=RED, flash_radius=0.7, num_lines=12),
                       Indicate(fanA[pit_i], color=RED, scale_factor=1.3), Indicate(flabA[pit_i], color=RED, scale_factor=1.5),
-                      run_time=1.0)
+                      rob.change("worried"), FadeIn(drop, shift=0.05 * DOWN), run_time=1.0)
 
         with self.voice("{A}[下|した]に進む場合は、{B}横に滑っても、左か右。{C}穴に落ちる心配はありません。"
                         "{D}遠回りにはなりますが、そのぶん安全なんです。") as v:
             self.wait_to(v, "A")
-            self.play(FadeIn(cropB), FadeIn(hB), GrowArrow(fanB[0]), FadeIn(flabB[0]), run_time=1.0)
+            self.play(FadeIn(cropB), FadeIn(hB), GrowArrow(fanB[0]), FadeIn(flabB[0]), FadeOut(drop), run_time=1.0)
             self.wait_to(v, "B")
             self.play(*[GrowArrow(x) if isinstance(x, Arrow) else GrowFromCenter(x) for x in fanB[1:]],
                       FadeIn(flabB[1:]), run_time=0.9)
             self.wait_to(v, "C")
             safe = SurroundingRectangle(cellsB[PIT], color=style.ACTION, buff=0.0, stroke_width=6)
-            self.play(Create(safe), run_time=0.7)
+            self.sfx("pop")
+            self.play(Create(safe), rob.change("normal"), run_time=0.7)
             self.wait_to(v, "D")
             self.play(Create(l_down), FadeIn(steps_d), run_time=1.5)
+            board.add(l_down)
 
-        # 行動価値で比べる
-        qv = [Q_STAR[s41, a] for a in ACTIONS]
-        base = RIGHT * 2.1 + UP * 0.9
-        sc, slot = 2.3, 1.7
-        bars = VGroup()
-        for i, q in enumerate(qv):
-            b = Rectangle(width=1.0, height=abs(q) * sc, stroke_width=0,
-                          fill_color=style.VALUE if q >= 0 else RED, fill_opacity=0.85)
-            b.move_to(base + RIGHT * (i - 1.5) * slot + UP * q * sc / 2)
-            bars.add(b)
-        baseline = Line(base + LEFT * 3.3, base + RIGHT * 3.3, stroke_color=GREY_C, stroke_width=2)
-        glyphs = VGroup()
-        vals = VGroup()
-        for i, (a, q, b) in enumerate(zip(ACTIONS, qv, bars)):
-            gl = arrow_glyph(a, color=GREY_A, length=0.42)
-            gl.next_to(base + RIGHT * (i - 1.5) * slot, DOWN if q >= 0 else UP, buff=0.15)
-            glyphs.add(gl)
-            val = mt(f"{q:+.2f}", size=36, color=WHITE)
-            val.next_to(b, UP if q >= 0 else DOWN, buff=0.12)
-            vals.add(val)
-        qhead = fx(r"Q^{*}", "(", "s", ",", "a", ")", size=50).move_to(RIGHT * 2.1 + UP * 3.15)
-        ibest = int(np.argmax(qv))
-        assert ACTIONS[ibest] == A_DOWN == PI_STAR[s41]
-        best_box = SurroundingRectangle(VGroup(bars[ibest], vals[ibest]), color=WHITE, buff=0.1)
+        # 行動の価値＝滑った先まで含めた平均（実際の V* と Q* で分解する）
+        v31, v40, v41 = (V_STAR[(3, 1)], V_STAR[(4, 0)], V_STAR[s41])
+        f2 = lambda x: f"{x:.2f}"
+        rowL = fx("0.8", r"\cdot", r"\gamma", r"\cdot", f2(v31), "+", "0.1", r"\cdot", "(-1)", "+",
+                  "0.1", r"\cdot", r"\gamma", r"\cdot", f2(v40), size=40)
+        rowD = fx("0.8", r"\cdot", r"\gamma", r"\cdot", f2(v40), "+", "0.1", r"\cdot", r"\gamma", r"\cdot", f2(v31), "+",
+                  "0.1", r"\cdot", r"\gamma", r"\cdot", f2(v41), size=40)
+        for r, idx in ((rowL, (4, 14)), (rowD, (4, 10, 16))):
+            for i in idx:
+                r[i].set_color(style.VALUE)
+        rowL[8].set_color(RED)
+        qL, qD = Q_STAR[s41, A_LEFT], Q_STAR[s41, A_DOWN]
+        assert abs(0.8 * GAMMA * v31 - 0.1 + 0.1 * GAMMA * v40 - qL) < 1e-9
+        assert abs(0.8 * GAMMA * v40 + 0.1 * GAMMA * v31 + 0.1 * GAMMA * v41 - qD) < 1e-9
+        totL = fx("=", f2(qL), size=44)
+        totD = fx("=", f2(qD), size=44)
+        gL_ = arrow_glyph(A_LEFT, length=0.55)
+        gD_ = arrow_glyph(A_DOWN, length=0.55)
+        lineL = VGroup(gL_, rowL, totL).arrange(RIGHT, buff=0.35)
+        lineD = VGroup(gD_, rowD, totD).arrange(RIGHT, buff=0.35)
+        lines = VGroup(lineL, lineD).arrange(DOWN, buff=1.35, aligned_edge=LEFT)
+        if lines.width > 12.8:
+            lines.scale_to_fit_width(12.8)
+        lines.move_to(RIGHT * 0.0 + DOWN * 1.0)
+        x_tot = max(rowL.get_right()[0], rowD.get_right()[0]) + 0.35
+        totL.move_to(RIGHT * (x_tot - totL.get_left()[0]) + totL.get_center(), coor_mask=np.array([1, 0, 0]))
+        totD.move_to(RIGHT * (x_tot - totD.get_left()[0]) + totD.get_center(), coor_mask=np.array([1, 0, 0]))
+        capsL = VGroup(*[jt(t, size=26, color=GREY_B).next_to(rowL[a:b], DOWN, buff=0.15)
+                         for t, (a, b) in [("左へ", (0, 5)), ("穴へ", (6, 9)), ("下へ", (10, 15))]])
+        capsD = VGroup(*[jt(t, size=26, color=GREY_B).next_to(rowD[a:b], DOWN, buff=0.15)
+                         for t, (a, b) in [("下へ", (0, 5)), ("左へ", (6, 11)), ("その場", (12, 17))]])
+        others = VGroup(arrow_glyph(A_UP, color=GREY_B, length=0.45), mt(f"{Q_STAR[s41, A_UP]:+.2f}", size=36, color=GREY_B),
+                        arrow_glyph(A_RIGHT, color=GREY_B, length=0.45), mt(f"{Q_STAR[s41, A_RIGHT]:+.2f}", size=36, color=GREY_B))
+        others.arrange(RIGHT, buff=0.3)
+        others[2].shift(0.5 * RIGHT)
+        others[3].shift(0.5 * RIGHT)
+        others.next_to(lines, DOWN, buff=0.75).align_to(lines, LEFT)
+        corner = RIGHT * 6.0 + DOWN * 3.1
+        crops = VGroup(cropA, cropB, fanA, fanB, flabA, flabB, safe)
+        with self.voice("ここで大事なのは、{A}行動の価値は、行きたいマスの高さではなく、"
+                        "{B}《滑った先》まで含めた、平均で決まる、ということです。") as v:
+            board.remove(rob)
+            self.play(FadeOut(VGroup(hA, hB)), crops.animate.scale(0.62).move_to(RIGHT * 2.1 + UP * 2.05),
+                      board.animate.scale(0.75).move_to(LEFT * 4.6 + UP * 2.2),
+                      VGroup(steps_l, steps_d).animate.scale(0.75).move_to(LEFT * 4.6 + UP * 0.55),
+                      rob.animate.scale(2.2).move_to(corner), run_time=1.1)
+            self.wait_to(v, "A")
+            self.sfx("pop")
+            self.play(FadeIn(gL_), FadeIn(gD_), TransformFromCopy(flabA[0], rowL[0]), TransformFromCopy(flabB[0], rowD[0]),
+                      FadeIn(rowL[1:5]), FadeIn(rowD[1:5]), FadeIn(capsL[0]), FadeIn(capsD[0]), run_time=1.1)
+            self.wait_to(v, "B")
+            self.sfx("sparkle")
+            self.play(TransformFromCopy(flabA[1], rowL[6]), TransformFromCopy(flabA[2], rowL[10]),
+                      TransformFromCopy(flabB[1], rowD[6]), TransformFromCopy(flabB[2], rowD[12]),
+                      FadeIn(VGroup(rowL[5], rowL[7:10], rowL[11:])), FadeIn(VGroup(rowD[5], rowD[7:12], rowD[13:])),
+                      FadeIn(capsL[1:]), FadeIn(capsD[1:]), rob.animate.look(UL), run_time=1.3)
 
-        pivot = RIGHT * 2.1 + DOWN * 2.45
-        fulcrum = Triangle(color=GREY_B, fill_opacity=1, fill_color=GREY_D).scale(0.3).move_to(pivot + 0.28 * DOWN)
-        half = 2.4
-        beam = Line(pivot + LEFT * half, pivot + RIGHT * half, stroke_color=GREY_A, stroke_width=6)
-        w_time = jt("時間のコスト", size=32, color=style.GAMMA)
-        w_risk = jt("穴のリスク", size=32, color=RED)
-
-        def place_weights(angle):
-            lp = pivot + half * np.array([-np.cos(angle), -np.sin(angle), 0])
-            rp = pivot + half * np.array([np.cos(angle), np.sin(angle), 0])
-            return lp + 0.35 * UP, rp + 0.35 * UP
-
+        best_box = SurroundingRectangle(totD, color=WHITE, buff=0.12)
+        t_box = SurroundingRectangle(rowD[0:5], color=style.GAMMA, buff=0.08)
+        t_lab = jt("遠回り", size=30, color=style.GAMMA).next_to(t_box, UP, buff=0.12)
+        r_box = SurroundingRectangle(rowL[6:9], color=RED, buff=0.08)
+        r_lab = jt("穴のリスク", size=30, color=RED).next_to(r_box, UP, buff=0.12)
+        bub = rob.say(content="なるほど！", direction=LEFT, size=32)
         with self.voice("実際に、{A}このマスの行動価値を比べてみると、{B}[下|した]が一番大きい。"
                         "{C}割引による時間のコストと、{D}10%で穴に落ちるリスク。{E}この二つを、ベルマン方程式が、"
                         "自動的に天秤にかけてくれたわけです。") as v:
-            self.play(FadeOut(VGroup(cropA, cropB, hA, hB, fanA, fanB, flabA, flabB, safe)), run_time=0.7)
             self.wait_to(v, "A")
-            self.play(FadeIn(qhead), Create(baseline), FadeIn(glyphs), Circumscribe(g.cells[s41], color=WHITE), run_time=0.9)
-            self.play(LaggedStart(*[GrowFromEdge(b, DOWN if q >= 0 else UP) for b, q in zip(bars, qv)], lag_ratio=0.15),
-                      FadeIn(vals), run_time=1.2)
+            self.play(FadeIn(totL, shift=0.2 * LEFT), FadeIn(totD, shift=0.2 * LEFT), FadeIn(others), run_time=0.9)
             self.wait_to(v, "B")
-            self.play(Create(best_box), Indicate(arrows[s41], color=WHITE, scale_factor=1.5), run_time=0.9)
+            self.sfx("hit")
+            self.play(Create(best_box), Indicate(arrows[s41], color=WHITE, scale_factor=1.6), run_time=0.9)
             self.wait_to(v, "C")
-            lp, rp = place_weights(0)
-            w_time.move_to(lp)
-            w_risk.move_to(rp)
-            self.play(FadeIn(fulcrum), Create(beam), FadeIn(w_time, shift=0.2 * DOWN), run_time=0.8)
-            self.play(Rotate(beam, 0.12, about_point=pivot), w_time.animate.move_to(place_weights(0.12)[0]),
-                      run_time=0.6)
+            self.play(Create(t_box), FadeIn(t_lab, shift=0.1 * DOWN), Indicate(steps_d, color=style.REWARD), run_time=0.9)
             self.wait_to(v, "D")
-            ang = -0.16
-            w_risk.move_to(place_weights(0.12)[1])
-            self.play(FadeIn(w_risk, shift=0.2 * DOWN), run_time=0.5)
-            self.play(Rotate(beam, ang - 0.12, about_point=pivot), w_time.animate.move_to(place_weights(ang)[0]),
-                      w_risk.animate.move_to(place_weights(ang)[1]), run_time=0.8)
+            self.sfx("thud")
+            self.play(Create(r_box), FadeIn(r_lab, shift=0.1 * DOWN), run_time=0.9)
             self.wait_to(v, "E")
-            self.play(Rotate(beam, 0.06, about_point=pivot), w_time.animate.move_to(place_weights(ang + 0.06)[0]),
-                      w_risk.animate.move_to(place_weights(ang + 0.06)[1]), rate_func=there_and_back, run_time=0.8)
-            self.play(Indicate(bars[ibest], color=WHITE), Circumscribe(l_down, color=style.REWARD), run_time=1.2)
+            self.sfx("sparkle")
+            self.play(Indicate(totL, scale_factor=1.15), Indicate(totD, color=WHITE, scale_factor=1.2),
+                      rob.change("happy"), FadeIn(bub, scale=0.8), run_time=1.0)
+            self.play(rob.hop())
 
-        balance = VGroup(fulcrum, beam, w_time, w_risk)
         opt = fx(*bellman_pieces(v=r"V^{*}", policy=False), size=44).move_to(UP * 3.2)
-        rob = Robot(height=0.5)
+        rob2 = Robot(height=0.5).set_mood("determined")
         with self.voice("{A}危ない場所では慎重に。そんなルールを、誰も書いていないのに、{B}方程式から自然に出てくる。"
                         "これが、価値で考えることの力です。") as v:
-            self.play(FadeOut(VGroup(bars, baseline, glyphs, vals, qhead, best_box, balance, l_left, steps_l, steps_d,
-                                     l_down)),
-                      board.animate.scale(1.0 / k_small * 0.95).move_to(0.55 * DOWN), run_time=1.0)
-            rob.move_to(top_of(g, s41, 0.3))
+            board.remove(l_left, l_down)
+            self.play(FadeOut(VGroup(lines, capsL, capsD, others, best_box, t_box, t_lab, r_box, r_lab, bub,
+                                     steps_l, steps_d, l_left, l_down, crops)),
+                      board.animate.scale(1.0 / (k_small * 0.75) * 0.95).move_to(0.55 * DOWN), run_time=1.1)
+            rob2.move_to(top_of(g, s41, 0.3))
             self.wait_to(v, "A")
-            self.play(FadeIn(rob, scale=0.8), run_time=0.4)
+            self.play(ReplacementTransform(rob, rob2), run_time=0.5)
             trail = VGroup()
             for s, n in zip(down_route[:-1], down_route[1:]):
                 seg = Line(g.center_of(s), g.center_of(n), stroke_color=style.REWARD, stroke_width=5)
                 trail.add(seg)
-                self.add(seg, rob)
-                self.play(rob.animate.move_to(top_of(g, n, 0.3) if n != GOAL else g.center_of(n)).look(n_vec(s, n)),
+                self.add(seg, rob2)
+                self.play(rob2.animate.move_to(top_of(g, n, 0.3) if n != GOAL else g.center_of(n)).look(n_vec(s, n)),
                           Create(seg), run_time=0.38)
-            self.play(Flash(g.center_of(GOAL), color=style.REWARD, flash_radius=0.6), run_time=0.5)
+            self.sfx("chime")
+            self.play(Flash(g.center_of(GOAL), color=style.REWARD, flash_radius=0.6), rob2.change("happy"), run_time=0.5)
+            self.play(rob2.hop())
             self.wait_to(v, "B")
             self.play(Write(opt), run_time=1.4)
-        self.play(FadeOut(VGroup(board, trail, rob, opt)), run_time=0.9)
+        self.play(FadeOut(VGroup(g, *arrows.values(), trail, rob2, opt)), run_time=0.9)
 
 
 # ---------------------------------------------------------------------------
@@ -1517,6 +1625,7 @@ class Limits(VoiceScene):
             b2 = SurroundingRectangle(eq[16], color=style.REWARD, buff=0.1)
             t1 = jt("遷移確率", size=34, color=WHITE).next_to(b1, DOWN, buff=0.3)
             t2 = jt("報酬", size=34, color=style.REWARD).next_to(b2, DOWN, buff=0.3)
+            self.sfx("hit")
             self.play(Create(b1), FadeIn(t1), run_time=0.8)
             self.play(Create(b2), FadeIn(t2), run_time=0.8)
 
@@ -1558,7 +1667,7 @@ class Limits(VoiceScene):
         lens.set_z_index(8)
         qmark = jt("？", size=120, color=GREY_A).set_z_index(9)
         with self.voice("ベルマン方程式の右辺を計算するには、どの行動で、どこへ、どれくらいの確率で行くのか、"
-                        "{A}その表が、丸ごと必要でした。{B}現実の問題では、こんな表は、まず手に入りません。") as v:
+                        "{A}その表が、《丸ごと》必要でした。{B}現実の問題では、こんな表は、まず手に入りません。") as v:
             self.play(FadeOut(VGroup(b1, b2, t1, t2)), eq.animate.scale(0.78).move_to(UP * 3.25), run_time=0.9)
             eq.set_z_index(7)
             self.add(mask)
@@ -1566,11 +1675,13 @@ class Limits(VoiceScene):
                       run_time=1.2)
             self.wait_to(v, "A")
             shift = 7.0
+            self.sfx("whoosh")
             self.play(table.animate.shift(UP * shift), run_time=max(2.0, v.until("B") - 1.4), rate_func=smooth)
             row_rect = SurroundingRectangle(VGroup(*table[ex_i * len(cols):(ex_i + 1) * len(cols)]), color=WHITE,
                                             buff=0.03, stroke_width=3)
             self.play(Create(row_rect), FadeIn(lens_grp, shift=0.2 * UP), run_time=0.9)
             self.wait_to(v, "B")
+            self.sfx("thud")
             self.play(table.animate.set_opacity(0.25), row_rect.animate.set_stroke(opacity=0.3), FadeIn(qmark, scale=0.6),
                       run_time=1.0)
 
@@ -1604,14 +1715,18 @@ class Limits(VoiceScene):
             self.wait_to(v, "A")
             self.play(Indicate(head, color=style.STATE, scale_factor=1.15), run_time=0.8)
             self.wait_to(v, "B")
+            self.sfx("pop")
             self.play(FadeIn(row1, shift=0.2 * RIGHT), run_time=0.8)
             self.wait_to(v, "C")
+            self.sfx("pop")
             self.play(FadeIn(lab_c), Write(digits_c), run_time=1.2)
             self.play(FadeIn(n_c), run_time=0.4)
             self.wait_to(v, "D")
+            self.sfx("whoosh")
             self.play(FadeIn(lab_go), LaggedStart(*[Write(l) for l in go_lines], lag_ratio=0.3), run_time=2.0)
             self.play(FadeIn(n_go), run_time=0.4)
             self.wait_to(v, "E")
+            self.sfx("thud")
             self.play(Indicate(go_lines, color=RED, scale_factor=1.03), run_time=1.2)
 
         rob = Robot(height=1.1).move_to(DOWN * 0.3)
@@ -1637,9 +1752,11 @@ class Limits(VoiceScene):
             self.play(tbl_icon.animate.set_opacity(0.15), FadeIn(tbl_q, scale=0.7), rob.animate.look(LEFT), run_time=0.8)
             self.wait_to(v, "B")
             self.play(FadeIn(big_n, shift=0.2 * LEFT), FadeIn(n_lab), rob.animate.look(RIGHT), run_time=0.8)
-            self.play(FadeIn(qm, shift=0.2 * UP), rob.animate.look(UP), run_time=0.7)
+            self.sfx("pop")
+            drop = rob.sweat()
+            self.play(FadeIn(qm, shift=0.2 * UP), rob.change("worried"), FadeIn(drop), run_time=0.7)
             self.play(rob.blink())
-        self.play(FadeOut(VGroup(rob, qm, tbl_icon, tbl_lab, tbl_q, big_n, n_lab)), run_time=0.9)
+        self.play(FadeOut(VGroup(rob, qm, drop, tbl_icon, tbl_lab, tbl_q, big_n, n_lab)), run_time=0.9)
 
 
 # ---------------------------------------------------------------------------
@@ -1654,9 +1771,10 @@ class Outro(VoiceScene):
         robot = Robot(height=0.55).move_to(g.center_of(WORLD.start))
         # 手探りで動き回る（一様ランダムの実際のロールアウト。いろいろなマスを通って星に着く系列）
         traj = WORLD.rollout(UNIFORM, np.random.default_rng(38), max_steps=40)
-        with self.voice("次回は、ロボットに世界のルールを教えないまま、{A}実際に動いて得た経験だけから、価値を学ばせます。"
+        with self.voice("次回は、ロボットに世界のルールを教えないまま、{A}実際に動いて得た《経験》だけから、価値を学ばせます。"
                         "そこで登場するのが、{B}[TD学習|ティーディーがくしゅう]と、{C}[Q学習|キューがくしゅう]です。") as v:
             self.play(FadeIn(g), FadeIn(VGroup(*fog.values())), FadeIn(VGroup(*qms.values())), run_time=1.0)
+            self.sfx("pop")
             self.play(FadeIn(robot, scale=0.8), FadeOut(fog[WORLD.start]), FadeOut(qms[WORLD.start]), run_time=0.6)
             seen = {WORLD.start}
             self.wait_to(v, "A")
@@ -1675,13 +1793,17 @@ class Outro(VoiceScene):
                     anims += [FadeOut(fog[n]), FadeOut(qms[n])]
                 if "B" not in shown and self.time >= t_b:
                     shown.add("B")
+                    self.sfx("hit")
                     anims.append(FadeIn(td, shift=0.2 * DOWN))
                 if "C" not in shown and self.time >= t_c:
                     shown.add("C")
+                    self.sfx("hit")
                     anims.append(FadeIn(ql, shift=0.2 * DOWN))
                 self.play(*anims, run_time=0.26)
                 if n == GOAL:
-                    self.play(Flash(g.center_of(GOAL), color=style.REWARD, flash_radius=0.6), run_time=0.5)
+                    self.sfx("chime")
+                    self.play(Flash(g.center_of(GOAL), color=style.REWARD, flash_radius=0.6), robot.change("happy"),
+                              run_time=0.5)
             if "B" not in shown:
                 self.play(FadeIn(td, shift=0.2 * DOWN), run_time=0.5)
             if "C" not in shown:
