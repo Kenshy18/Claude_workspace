@@ -914,11 +914,15 @@ class GAE(VoiceScene):
                 self.play(*anims, run_time=0.3)
             self.play(FadeIn(s_labs[1]), FadeIn(end_lab), run_time=0.4)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(Create(td_arc), FadeIn(td_t), run_time=0.7)
+            self.sfx("pop")
             self.play(Create(mc_arc), FadeIn(mc_t), run_time=0.9)
+            self.sfx("pop")
             self.play(Create(mid_arc), FadeIn(mid_t), run_time=0.7)
-        self.play(FadeOut(VGroup(g, trail, robot, pts, s_labs, end_lab, segs, td_arc, mc_arc, mid_arc, td_t, mc_t,
-                                 mid_t)), run_time=0.7)
+        # 時間軸の線分（1ステップずつ）は、そのまま TD 誤差の棒になる
+        self.play(FadeOut(VGroup(g, trail, robot, pts, s_labs, end_lab, td_arc, mc_arc, mid_arc, td_t, mc_t, mid_t)),
+                  segs.animate.set_stroke(GREY_B, 5), run_time=0.7)
 
         # δ の棒に (γλ)^l を掛けて足す
         F = mt(r"\hat{A}_t", "=", r"\sum_{l\ge 0}", r"(\gamma\lambda)^l", r"\,\delta_{t+l}", size=52)
@@ -1011,11 +1015,13 @@ class GAE(VoiceScene):
 
         with self.voice("一歩ごとのTD誤差を、{A}先の方ほど、ガンマ・ラムダ倍ずつ小さくして、足し合わせます。"
                         "{B}ラムダが0なら、最初の一歩だけ。つまりTD。{C}ラムダが1なら、最後まで全部。つまりモンテカルロ。"
-                        "{D}[その間|そのあいだ]で、ばらつきと偏りのバランスを取ります。") as v:
+                        "{D}[その間|そのあいだ]で、《ばらつき》と《偏り》のバランスを取ります。") as v:
             dbars = make_dbars()
-            self.play(Write(F), FadeIn(dd), Create(d_axis), FadeIn(row_d), run_time=0.9)
-            self.play(LaggedStart(*[GrowFromEdge(b, UP if d < 0 else DOWN) for b, d in zip(dbars, deltas)],
-                                  lag_ratio=0.1), FadeIn(d_labs), run_time=max(0.6, v.until("A") - 0.9))
+            self.sfx("whoosh")
+            self.play(Write(F), FadeIn(dd), Create(d_axis), FadeIn(row_d),
+                      LaggedStart(*[ReplacementTransform(sg, b) for sg, b in zip(segs, dbars)], lag_ratio=0.08),
+                      run_time=1.4)
+            self.play(FadeIn(d_labs), run_time=max(0.4, v.until("A") - 0.5))
             self.wait_to(v, "A")
             self.add(outlines)
             wbars = make_wbars()
@@ -1033,10 +1039,13 @@ class GAE(VoiceScene):
                       FadeIn(mc_end), run_time=0.8)
             knob.add_updater(lambda m: m.become(make_knob()))
             self.wait_to(v, "B")
+            self.sfx("whoosh")
             self.play(lam.animate.set_value(0.0), run_time=1.5)
             self.play(Indicate(td_end, color=style.VALUE), FadeIn(h_td, shift=0.1 * UP), run_time=0.8)
             self.wait_to(v, "C")
+            self.sfx("whoosh")
             self.play(lam.animate.set_value(1.0), run_time=1.8)
+            self.sfx("sparkle")
             gv = mt(r"= G_t - V(s_t)", size=40, color=GREY_A).next_to(readout, DOWN, buff=0.25)
             self.play(Indicate(mc_end, color=style.REWARD), FadeIn(h_mc, shift=0.1 * UP), FadeIn(gv), run_time=0.8)
             self.wait_to(v, "D")
@@ -1055,6 +1064,7 @@ class GAE(VoiceScene):
             self.play(FadeOut(chart), Transform(F, F2), run_time=0.9)
             self.play(Create(box), run_time=0.6)
             self.wait_to(v, "A")
+            self.sfx("hit")
             self.play(FadeIn(name, shift=0.1 * RIGHT), run_time=0.7)
             self.play(FadeIn(combo, shift=0.1 * UP), run_time=0.7)
         fade_all(self)
