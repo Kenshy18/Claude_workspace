@@ -170,14 +170,15 @@
     const s = ART.caustic.width;
     const grow = 1 + seg(T, 13.4, 14.1) * 0.35;
     ctx.save(); ctx.translate(W / 2 + 20, H / 2 + 10); ctx.rotate(T * 0.35); ctx.scale(1.05 * grow, 0.95 * grow); ctx.drawImage(ART.caustic, -s / 2, -s / 2); ctx.restore();
-    withAlpha(ctx, 0.55, () => { ctx.save(); ctx.translate(W / 2 + 20, H / 2 + 10); ctx.rotate(-T * 0.5 + 1.3); ctx.scale(0.8 * grow, 0.9 * grow); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(ART.caustic, -s / 2, -s / 2); ctx.restore(); });
+    withAlpha(ctx, 0.3, () => { ctx.save(); ctx.translate(W / 2 + 20, H / 2 + 10); ctx.rotate(-T * 0.5 + 1.3); ctx.scale(0.8 * grow, 0.9 * grow); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(ART.caustic, -s / 2, -s / 2); ctx.restore(); });
     const a = cAlpha(T, 10.45, 13.95, 3, 3);
     if (a > 0) {
-      mincho(ctx, '企画', 370, 360, 88, { align: 'center', alpha: a, sx: 0.9 });
-      ctx.save(); ctx.globalAlpha = a; ctx.font = `400 142px ${ROMAN}`; ctx.fillStyle = CW; ctx.translate(556, 378); ctx.scale(0.62, 1); ctx.fillText('Project Attn.', 0, 0); ctx.restore();
-      mincho(ctx, '掲載', 370, 632, 88, { align: 'center', alpha: a, sx: 0.9 });
-      ctx.save(); ctx.globalAlpha = a; ctx.font = `400 150px ${ROMAN}`; ctx.fillStyle = CW; ctx.translate(556, 648); ctx.scale(0.66, 1); ctx.fillText('arXiv', 0, 0); ctx.restore();
-      mincho(ctx, 'NIPS 2017 予稿集', 556, 808, 128, { alpha: a, sx: 0.7 });
+      const HALO = { halo: 'rgba(6,26,110,0.85)', haloB: 14 };   // the soft dark fringe white titles get on a video master
+      mincho(ctx, '企画', 370, 360, 88, { align: 'center', alpha: a, sx: 0.9, ...HALO });
+      ctx.save(); ctx.globalAlpha = a; ctx.shadowColor = HALO.halo; ctx.shadowBlur = 14; ctx.font = `400 142px ${ROMAN}`; ctx.fillStyle = CW; ctx.translate(556, 378); ctx.scale(0.62, 1); ctx.fillText('Project Attn.', 0, 0); ctx.restore();
+      mincho(ctx, '掲載', 370, 632, 88, { align: 'center', alpha: a, sx: 0.9, ...HALO });
+      ctx.save(); ctx.globalAlpha = a; ctx.shadowColor = HALO.halo; ctx.shadowBlur = 14; ctx.font = `400 150px ${ROMAN}`; ctx.fillStyle = CW; ctx.translate(556, 648); ctx.scale(0.66, 1); ctx.fillText('arXiv', 0, 0); ctx.restore();
+      mincho(ctx, 'NIPS 2017 予稿集', 556, 808, 128, { alpha: a, sx: 0.7, ...HALO });
     }
     // brightening into the band hit
     const b = seg(T, 13.75, 14.1);

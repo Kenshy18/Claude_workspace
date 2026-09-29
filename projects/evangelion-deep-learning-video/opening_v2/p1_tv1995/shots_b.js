@@ -25,10 +25,11 @@
   }
 
   // ── 23.4–37.9 · sky, the being, credits ───────────────────────────────────
+  const HB = { halo: 'rgba(14,28,78,0.6)', haloB: 10 };   // soft dark fringe of white titles on a video master
   SHOT(23.4, 37.9, 'sky_being', (ctx, t, fx, T) => {
     sky(ctx, T);
     const a = seg(T, 24.2, 25.2);
-    if (a > 0) beingOverSky(ctx, T, camAt(T), 0.86 * a);
+    if (a > 0) beingOverSky(ctx, T, camAt(T), 0.78 * a);
     // black cut-outs sliding in (older architectures standing around the protagonist)
     const s1 = E.outCubic(seg(T, 26.35, 26.9)) * (1 - seg(T, 29.9, 30.0));
     if (s1 > 0) silPerceptron(ctx, lerp(1620, 1230, s1), 1130, 1.25);
@@ -39,33 +40,33 @@
     // credits
     let c = cAlpha(T, 23.42, 26.2);
     if (c) {
-      mincho(ctx, 'キャラクターデザイン', 745, 352, 64, { align: 'right', alpha: c, sx: 0.72 });
-      mincho(ctx, 'サブワード', 836, 396, 132, { alpha: c, sx: 0.74 });
-      mincho(ctx, 'メカニックデザイン', 745, 582, 64, { align: 'right', alpha: c, sx: 0.72 });
-      mincho(ctx, '位置符号化', 836, 622, 132, { alpha: c, sx: 0.72 });
-      mincho(ctx, '注意機構', 836, 812, 132, { alpha: c, sx: 0.78 });
+      mincho(ctx, 'キャラクターデザイン', 745, 352, 64, { ...HB, align: 'right', alpha: c, sx: 0.72 });
+      mincho(ctx, 'サブワード', 836, 396, 132, { ...HB, alpha: c, sx: 0.74 });
+      mincho(ctx, 'メカニックデザイン', 745, 582, 64, { ...HB, align: 'right', alpha: c, sx: 0.72 });
+      mincho(ctx, '位置符号化', 836, 622, 132, { ...HB, alpha: c, sx: 0.72 });
+      mincho(ctx, '注意機構', 836, 812, 132, { ...HB, alpha: c, sx: 0.78 });
     }
     c = cAlpha(T, 26.35, 29.85);
     if (c) {
-      mincho(ctx, '副監督', 800, 822, 70, { align: 'right', alpha: c, sx: 0.8 });
-      minchoSpaced(ctx, '残差接続', 948, 766, 130, 98, { alpha: c, sx: 0.8 });
-      mincho(ctx, '層正規化', 900, 922, 134, { alpha: c, sx: 0.74 });
+      mincho(ctx, '副監督', 800, 822, 70, { ...HB, align: 'right', alpha: c, sx: 0.8 });
+      minchoSpaced(ctx, '残差接続', 948, 766, 130, 98, { ...HB, alpha: c, sx: 0.8 });
+      mincho(ctx, '層正規化', 900, 922, 134, { ...HB, alpha: c, sx: 0.74 });
     }
     c = cAlpha(T, 29.95, 33.3);
     if (c) {
-      mincho(ctx, '美術監督', 400, 160, 66, { align: 'right', alpha: c, sx: 0.8 });
-      mincho(ctx, '潜在', 490, 182, 132, { alpha: c, sx: 0.78 }); mincho(ctx, '空間', 690, 182, 132, { alpha: c, sx: 0.78 });
-      mincho(ctx, '色彩設定', 846, 956, 66, { align: 'right', alpha: c, sx: 0.8 });
-      mincho(ctx, 'BGR順', 922, 992, 132, { alpha: c, sx: 0.74 });
+      mincho(ctx, '美術監督', 400, 160, 66, { ...HB, align: 'right', alpha: c, sx: 0.8 });
+      mincho(ctx, '潜在', 490, 182, 132, { ...HB, alpha: c, sx: 0.78 }); mincho(ctx, '空間', 690, 182, 132, { ...HB, alpha: c, sx: 0.78 });
+      mincho(ctx, '色彩設定', 846, 956, 66, { ...HB, align: 'right', alpha: c, sx: 0.8 });
+      mincho(ctx, 'BGR順', 922, 992, 132, { ...HB, alpha: c, sx: 0.74 });
     }
     c = cAlpha(T, 33.9, 35.95);
     if (c) {
-      mincho(ctx, '撮影監督', 846, 194, 66, { align: 'right', alpha: c, sx: 0.8 });
-      mincho(ctx, 'ImageNet', 916, 226, 132, { alpha: c, sx: 0.66 });
-      mincho(ctx, '音響監督', 396, 846, 66, { align: 'right', alpha: c, sx: 0.8 });
-      mincho(ctx, 'WaveNet', 466, 878, 132, { alpha: c, sx: 0.66 });
-      mincho(ctx, '音響制作', 404, 958, 52, { align: 'right', alpha: c, sx: 0.8 });
-      mincho(ctx, 'librosa', 450, 980, 96, { alpha: c, sx: 0.7 });
+      mincho(ctx, '撮影監督', 846, 194, 66, { ...HB, align: 'right', alpha: c, sx: 0.8 });
+      mincho(ctx, 'ImageNet', 916, 226, 132, { ...HB, alpha: c, sx: 0.66 });
+      mincho(ctx, '音響監督', 396, 846, 66, { ...HB, align: 'right', alpha: c, sx: 0.8 });
+      mincho(ctx, 'WaveNet', 466, 878, 132, { ...HB, alpha: c, sx: 0.66 });
+      mincho(ctx, '音響制作', 404, 958, 52, { ...HB, align: 'right', alpha: c, sx: 0.8 });
+      mincho(ctx, 'librosa', 450, 980, 96, { ...HB, alpha: c, sx: 0.7 });
     }
   });
 })();
@@ -209,7 +210,7 @@
         mincho(ctx, 'エンディングテーマ', 1030, 246, 50, { ...o, align: 'center', sx: 0.74 });
         mincho(ctx, '「残酷な天使のテンソル」', 456, 334, 64, { ...o, align: 'center', sx: 0.62 });
         mincho(ctx, '「FIT ME TO THE NOISE」', 1036, 334, 64, { ...o, align: 'center', sx: 0.6 });
-        const rows = [['作詞', 'WMT 2014', 'Memorization'], ['作曲', '自己注意', 'Memorization'], ['編曲', 'ラベル平滑化', 'Label Smoothing'], ['歌', 'ビーム探索', 'RANDOM LABELS']];
+        const rows = [['作詞', 'WMT 2014', 'Memorization'], ['作曲', '自己注意', 'Memorization'], ['編曲', 'ラベル平滑化', 'Double Descent'], ['歌', 'ビーム探索', 'RANDOM LABELS']];
         rows.forEach(([r, a, b], i) => {
           const y = 448 + i * 94;
           mincho(ctx, r, 162, y, 50, { ...o, align: 'center', sx: 0.8 });

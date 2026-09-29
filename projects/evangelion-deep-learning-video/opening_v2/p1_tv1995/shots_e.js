@@ -75,20 +75,26 @@
     ctx.strokeStyle = '#6a6a78'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(722, 380); ctx.lineTo(640, 0); ctx.moveTo(722, 380); ctx.lineTo(800, 0); ctx.stroke();
   });
   CUT(2391, 2394, 'card_second_impact', (ctx) => wordCard(ctx, [['SECOND', 0.5, 0.375, 0.28, 0.9], ['IMPACT', 0.5, 0.93, 0.29, 0.8]], { color: '#ec1c24' }));
-  // the white giant → AlexNet (2012), its famous figure cropped at the top
+  // the white giant → AlexNet (2012) in crucifix pose: the 224×224×3 input slab is the torso and the
+  // two GPU towers (conv1–5 → fc6/fc7, one per GTX 580) are the outstretched arms. Framed so the top
+  // is cut off, like the paper's famously cropped Figure 2.
   function alexGiant(ctx, t) {
     bands(ctx, [[0, '#06080e'], [0.6, '#141a26'], [1, '#262c38']], 8, 43);
     withAlpha(ctx, 0.5, () => { ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(ART.smoke, -300, 200, 2400, 1800); });
-    const WHITE = ['#fff8fb', '#f4dde8', '#dcbccb'];
-    const hole = (g, w, h) => { g.fillStyle = '#1a1420'; g.fillRect(w * 0.28, h * 0.36, w * 0.2, h * 0.2); g.fillStyle = '#3a2a3a'; g.fillRect(w * 0.62, h * 0.62, w * 0.12, h * 0.12); };
+    const WHITE = ['#fff8fb', '#f0d8e4', '#d4b2c4'];
+    const spot = (seed) => (g, w, h) => { const R = rngFor(seed); g.fillStyle = '#2a1e2c'; for (let i = 0; i < 2; i++) { g.beginPath(); g.ellipse(w * (0.25 + R() * 0.5), h * (0.25 + R() * 0.5), w * (0.06 + R() * 0.08), h * (0.05 + R() * 0.06), R() * 3, 0, Math.PI * 2); g.fill(); } };
+    const lab = (str, seed) => (g, w, h) => { spot(seed)(g, w, h); g.fillStyle = 'rgba(60,40,60,0.8)'; g.font = `italic 400 ${Math.min(w, h) * 0.26}px ${ROMAN}`; g.textAlign = 'center'; g.fillText(str, w / 2, h * 0.9); };
     const B = [];
-    const L = [[-980, 30, 700, 700, 0], [-640, 120, 330, 330, 110], [-340, 160, 170, 170, 170], [-60, 190, 96, 96, 220], [190, 190, 96, 96, 220], [420, 190, 96, 96, 160]];
-    for (const [x, sp, hh, dd, ww] of L) {
-      if (!ww) { B.push({ c: [x, 0, 0], s: [26, hh, dd], col: WHITE, side: hole }); continue; }
-      for (const y of [-sp * 1.15, sp * 0.85]) B.push({ c: [x, y, 0], s: [ww, hh, dd], col: WHITE, side: hole, decal: hole });
+    B.push({ c: [0, 150, 0], s: [300, 620, 40], col: WHITE, decal: lab('224', 3) });                        // torso: input 224×224×3
+    B.push({ c: [0, -250, 0], s: [150, 170, 110], col: WHITE, decal: spot(5) });                             // head: the 1000-way softmax
+    // one arm = one GPU's half: [channels/2, spatial] for conv1..conv5, then fc6, fc7 (2048 each)
+    const L = [[48, 55], [128, 27], [192, 13], [192, 13], [128, 13]];
+    for (const sd of [-1, 1]) {
+      let x = 190;
+      L.forEach(([ch, sp], i) => { const w = 26 + ch * 0.32, hh = 70 + sp * 2.6; B.push({ c: [sd * (x + w / 2), -60 - i * 6, 0], s: [w, hh, hh], col: WHITE, decal: lab(String(sp), 11 + i + (sd > 0 ? 7 : 0)) }); x += w + 34; });
+      for (let j = 0; j < 2; j++) { B.push({ c: [sd * (x + 110), -96 - j * 4, 0], s: [220, 34, 34], col: WHITE }); x += 250; }
     }
-    for (const [x, hh] of [[640, 420], [760, 420], [880, 220]]) for (const y of [-260, 200]) B.push({ c: [x, y * (hh / 420), 0], s: [22, hh, 22], col: WHITE });
-    const cam = { yaw: 0.62, pitch: -0.12, roll: -0.04, cx: 700, cy: 380 + t * 40, f: 1500, dist: 2000, scale: 1.05 + t * 0.2 };
+    const cam = { yaw: 0.28, pitch: -0.3, roll: -0.05, cx: 700 + t * 20, cy: 500 + t * 30, f: 1500, dist: 2000, scale: 0.98 + t * 0.12 };
     drawBoxes(ctx, B, cam, { line: '#ffe8f2', lw: 2, light: [0.2, 0.3, 0.9] });
   }
   CUT(2394, 2404, 'alexnet_giant', (ctx, t, fx) => { alexGiant(ctx, t); fx.bloom = 0.7; fx.thr = 0.72; });
@@ -173,7 +179,7 @@
     fill(ctx, '#020503');
     const G = window.GROK;
     const mono = (s, x, y, sz, c, al = 'left') => { ctx.save(); ctx.font = `400 ${sz}px "Share Tech Mono"`; ctx.fillStyle = c; ctx.textAlign = al; ctx.fillText(s, x, y); ctx.restore(); };
-    mono('97th PRIME   pattern  (a+b) mod 97   WD 1.0 · 30% TRAIN', 330, 50, 30, '#ffb020');
+    mono('PATTERN (a+b) mod 97   p=97   AdamW wd=1.0   TRAIN 30%', 330, 50, 30, '#ffb020');
     mono((97).toString(2), 1400, 50, 30, '#ff5a20', 'right');
     mono((30000).toString(2), 30, 1062, 28, '#ff5a20');
     const cols = 6, rows = 4, pw = 220, ph = 238;
@@ -244,7 +250,7 @@
   function barsBg(ctx, T, dx = 0) { ctx.drawImage(ART.bars, -200 + dx - (T - 83.7) * 20, -60, 1840, 1200); }
   function crossClose(ctx, T) {
     const f = Math.round(T * 30);
-    const st = f < 2519 ? 1 : f < 2524 ? 2 : f < 2529 ? 3 : 4;
+    const st = f < 2516 ? 0 : f < 2519 ? 1 : f < 2524 ? 2 : f < 2529 ? 3 : 4;
     barsBg(ctx, T);
     const sc = [4.4, 3.7, 3.1, 2.6, 2.2][st];
     crossCard(ctx, aimCam(0.08 * (st % 2 ? -1 : 1), -0.16, 0, sc, 0, -380, 720, [560, 600, 620, 640, 660][st]), { fanRot: T * 0.6 });

@@ -86,17 +86,17 @@ shot(66.8, 67.37, 'grok_valacc', (ctx, lt, t, fx) => {
   const px = 100, py = 250, pw = 800, ph = 640;
   const M = plotMap(px, py, pw, ph, { x0: 0, x1: 16000, y0: 0, y1: 1 });
   gridLines(ctx, px, py, pw, ph, 8, 4, GD, 1.5);
-  for (let i = 0; i <= 8; i += 2) monoText(ctx, fmtInt(i * 2000), M.X(i * 2000), py + ph + 34, 22, G, { align: 'center' });
-  for (let j = 0; j <= 4; j++) monoText(ctx, j * 25 + '%', px - 14, M.Y(j / 4) + 8, 22, G, { align: 'right' });
+  for (let i = 0; i <= 8; i += 2) monoText(ctx, fmtInt(i * 2000), M.X(i * 2000), py + ph + 38, 28, G, { align: 'center' });
+  for (let j = 0; j <= 4; j++) monoText(ctx, j * 25 + '%', px - 14, M.Y(j / 4) + 10, 28, G, { align: 'right' });
   plotMetric(ctx, M, 'train_acc', 0, 16000, GD, 4);
-  monoText(ctx, 'TRAIN', M.X(15800), M.Y(1) - 12, 22, GD, { align: 'right' });
+  monoText(ctx, 'TRAIN', M.X(15800), M.Y(1) - 14, 30, '#1f8a40', { align: 'right' });
   plotMetric(ctx, M, 'val_acc', 0, step, G, 7);
   const va = mAt('val_acc', step);
   dot(ctx, M.X(step), M.Y(va), 10, '#eaffef');
   jpText(ctx, '検証正解率', px, 120, 56, G, { weight: 900 });
   monoText(ctx, 'VAL ACC', px + 300, 116, 30, G);
   seg7(ctx, (va * 100).toFixed(1).padStart(5, ' '), 560, 170, 110, G, { thick: 0.14 });
-  monoText(ctx, `STEP ${fmtInt(step)}   L_val ${mAt('val_loss', step, true).toFixed(3)} < ln 97`, px, py + ph + 90, 26, G);
+  monoText(ctx, `STEP ${fmtInt(step)}   L_val ${mAt('val_loss', step, true).toFixed(3)} < ln 97`, px, py + ph + 96, 34, G);
   // MAGI warning banner
   const on = Math.floor(lt * 15) % 3 !== 2 || lt > 0.35;
   ctx.save(); ctx.translate(1010, 330);
@@ -118,7 +118,7 @@ shot(67.37, 68.12, 'grok_scope', (ctx, lt, t, fx) => {
   const hot = lt < 0.07;                 // the eyes-flash frames of the original: the 97 points burn white, the tube stays dark
   if (hot) { fx.bloom = 1.6; fx.thr = 0.3; }
   scope(ctx, cx, cy, R, e, hot ? '#f4fff6' : '#3cff78', '#0f5a26', { starP: clamp(0.25 + lt * 1.6), starAlpha: hot ? 0.8 : 0.55, rot: -lt * 0.3, dot: hot ? 11 : 8 });
-  monoText(ctx, `EMBEDDING ON FOURIER PLANE k=${e.k}   r-CV ${e.cv.toFixed(3)}   STEP ${fmtInt(step)}`, cx, 1030, 26, '#3cff78', { align: 'center' });
+  monoText(ctx, `EMBEDDING ON FOURIER PLANE k=${e.k}   r-CV ${e.cv.toFixed(3)}   STEP ${fmtInt(step)}`, cx, 1040, 32, '#3cff78', { align: 'center' });
   if (lt > 0.23) monoText(ctx, `n → n+1 : THE NUMBER LINE WINDS ${e.k}× AROUND  {97/${e.k}}`, cx, 70, 28, '#3cff78', { align: 'center' });
 });
 shot(68.12, 68.25, 'card_grokking', (ctx) => card(ctx, [{ s: 'GROKKING', y: 610, size: 250 }]));
@@ -147,7 +147,7 @@ shot(69.0, 69.25, 'cu_losses', (ctx, lt, t, fx) => {
   plotMetric(ctx, M, 'val_loss', 0, step, '#ffae1a', 7, true, 1e-4);
   plotMetric(ctx, M, 'train_loss', 0, step, '#c87a1a', 4, true, 1e-4);
   monoText(ctx, 'VAL LOSS', M.X(step) - 20, M.Y(mAt('val_loss', step, true)) - 20, 34, '#ffae1a', { align: 'right' });
-  monoText(ctx, 'TRAIN / VAL LOSS  log scale, floor 1e-4 (logged to 5 decimals)', 100, 1010, 26, '#c87a1a');
+  monoText(ctx, 'TRAIN / VAL LOSS  (log)', 100, 1030, 34, '#c87a1a');
 });
 shot(69.25, 69.5, 'cu_bars', (ctx, lt, t, fx) => {
   const F_ = fourierAt(stepAt(t));
@@ -155,7 +155,7 @@ shot(69.25, 69.5, 'cu_bars', (ctx, lt, t, fx) => {
   for (let k = 0; k < 48; k++) {
     const h = F_[k] * 5200, x = 60 + k * 27.5;
     boxFill(ctx, x, 1000 - h, 21, h, RUN.key.includes(k + 1) ? '#8affb0' : '#1f9a4a');
-    if (RUN.key.includes(k + 1)) monoText(ctx, String(k + 1), x + 10, 1000 - h - 14, 24, '#8affb0', { align: 'center' });
+    if (RUN.key.includes(k + 1)) monoText(ctx, String(k + 1), x + 10, 1000 - h - 16, 32, '#8affb0', { align: 'center' });
   }
 });
 shot(69.5, 69.75, 'paper_mask', (ctx, lt, t) => {
@@ -289,7 +289,7 @@ shot(75.62, 76.0, 'memorizer_red', (ctx, lt, t) => {
   fill(ctx, '#c8140c');
   const ink = '#1a0202';
   text(ctx, 'STEP 1,000', 110, 250, { size: 150, family: COND, weight: 700, color: ink, sx: 0.84 });
-  [['TRAIN ACC', pct(RUN.train_acc[20])], ['VAL ACC', pct(RUN.val_acc[20])], ['VAL LOSS', RUN.val_loss[20].toFixed(2) + ' nats'], ['‖W‖', RUN.wnorm[20].toFixed(1)]]
+  [['TRAIN ACC', pct(RUN.train_acc[20])], ['VAL ACC', pct(RUN.val_acc[20])], ['VAL LOSS', RUN.val_loss[20].toFixed(2) + ' nats'], ['WEIGHT NORM', RUN.wnorm[20].toFixed(1)]]
     .forEach(([k, v], i) => { monoText(ctx, k, 120, 430 + i * 140, 64, ink, { family: '"Liberation Mono"', weight: 700 }); monoText(ctx, v, 1330, 430 + i * 140, 90, ink, { align: 'right', family: '"Liberation Mono"', weight: 700 }); });
 });
 shot(76.0, 76.12, 'card_prod', (ctx) => card(ctx, [{ s: 'PRODUCTION MODEL', y: 330, size: 130 }, { s: 'CKPT-30k', y: 760, size: 330 }]));
@@ -380,9 +380,12 @@ shot(80.5, 80.75, 'pencil_grok', (ctx) => {
   for (let s = 0; s <= 30000; s += 250) { va.push([M.X(s), M.Y(mAt('val_acc', s))]); tr.push([M.X(s), M.Y(mAt('train_acc', s))]); }
   pencilLine(ctx, [[140, 180], [140, 860], [1300, 860]], 13, '#6a6a70', 2.5);
   pencilLine(ctx, tr, 15, '#8a8a90', 2); pencilLine(ctx, va, 17, '#3a3a42', 4);
-  text(ctx, 'grokking!', M.X(RUN.G0) + 40, M.Y(0.5), { size: 70, family: '"Klee One"', weight: 600, color: '#3a3a42' });
-  pencilLine(ctx, [[M.X(RUN.G0) + 30, M.Y(0.5) - 20], [M.X(RUN.G50) + 6, M.Y(0.5)]], 19, '#3a3a42', 3);
-  text(ctx, `step ≈ ${fmtInt(Math.round(RUN.G50 / 10) * 10)}`, M.X(RUN.G0) + 40, M.Y(0.5) + 70, { size: 44, family: '"Klee One"', weight: 600, color: '#5a5a62' });
+  // note to the right of the jump, with a pencil arrow pointing at val acc = 50 %
+  const nx = M.X(RUN.G50) + 150;
+  text(ctx, 'grokking!', nx, M.Y(0.5) + 16, { size: 70, family: '"Klee One"', weight: 600, color: '#3a3a42' });
+  pencilLine(ctx, [[nx - 16, M.Y(0.5) - 4], [M.X(RUN.G50) + 14, M.Y(0.5)]], 19, '#3a3a42', 3);
+  pencilLine(ctx, [[M.X(RUN.G50) + 34, M.Y(0.5) - 14], [M.X(RUN.G50) + 14, M.Y(0.5)], [M.X(RUN.G50) + 34, M.Y(0.5) + 14]], 23, '#3a3a42', 3);
+  text(ctx, `step ≈ ${fmtInt(Math.round(RUN.G50 / 10) * 10)}`, nx, M.Y(0.5) + 84, { size: 44, family: '"Klee One"', weight: 600, color: '#5a5a62' });
 });
 shot(80.75, 81.0, 'purple_eye', (ctx, lt, t, fx) => {
   fill(ctx, '#3a1a5a'); fx.bloom = 0.9; fx.thr = 0.5;
@@ -407,15 +410,15 @@ shot(81.37, 81.62, 'green_grid', (ctx, lt, t, fx) => {
     const cx = 60 + (k % 8) * 170, cy = 110 + Math.floor(k / 8) * 158;
     ctx.save(); ctx.strokeStyle = G; ctx.lineWidth = 1.5;
     ctx.strokeRect(cx + 0.5, cy + 0.5, 130, 120); ctx.beginPath(); ctx.moveTo(cx + 40, cy); ctx.lineTo(cx + 40, cy + 120); ctx.moveTo(cx + 130, cy + 60); ctx.lineTo(cx + 150, cy + 60); ctx.lineTo(cx + 150, cy + 90); ctx.stroke(); ctx.restore();
-    monoText(ctx, 'k' + String(k + 1).padStart(2, '0'), cx + 4, cy + 20, 16, G);
+    monoText(ctx, 'k' + String(k + 1).padStart(2, '0'), cx + 4, cy + 24, 22, G);
     for (let j = 0; j < 10; j++) {   // power of this frequency at 10 snapshots (every 3,000 steps)
       const v = RUN.fourier[j * 12][k], lvl = clamp(Math.floor(Math.sqrt(v / 0.17) * 5), 0, 4);
       boxFill(ctx, cx + 46 + j * 8, cy + 116 - 10 - lvl * 20, 6, 10 + lvl * 20, cols[lvl]);
     }
   }
-  monoText(ctx, `${RUN.key.length} KEY FREQUENCIES   pattern BLOOD TYPE : BLUE`, 400, 60, 26, '#ff8a1a');
-  monoText(ctx, '1100001', 1380, 60, 26, '#ff8a1a', { align: 'right' });
-  monoText(ctx, '111010100110000', 60, 1060, 22, '#ff8a1a');
+  monoText(ctx, `${RUN.key.length} KEY FREQUENCIES   pattern BLOOD TYPE : BLUE`, 360, 66, 32, '#ff8a1a');
+  monoText(ctx, '1100001', 1380, 66, 32, '#ff8a1a', { align: 'right' });
+  monoText(ctx, '111010100110000', 60, 1062, 28, '#ff8a1a');
 });
 shot(81.62, 82.62, 'director_turn', (ctx, lt, t, fx) => {
   fill(ctx, '#0a1830'); fx.bloom = 0.4; fx.thr = 0.7;

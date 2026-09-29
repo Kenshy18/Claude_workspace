@@ -16,6 +16,15 @@
 3. low contrast -> darker graphite, visible paper tooth, "photographed" sheet
 4. priority: all 90.5 s drafted first
 
+## Done since restart (21:25-22:10)
+- engine: marker modes (wash / graphite / accent / solid), cluster hatch tiles, darker graphite,
+  stronger paper tooth; credits = black 写植 on pasted paper strips (INK); fraction-bar cache fixed
+- film.js: auto rostrum camera keys (CAM_P panel push-in, camNotesY for research bursts, ROW at
+  section starts; credit entrances force panel; S.noNotesCam / S.camKeys / S.panelWins overrides)
+- c_chorus.js C-035..C-102 drafted (frame-accurate content map from op_original.mp4)
+- c_end.js C-103..C-108 drafted (T.B. crucifix + W, faces, 製作, pull-back + おわり + F.O.)
+- WHOLE 90.5 s NOW EXISTS. All stills render without errors.
+
 ## Plan / Next
 A. engine restyle: FULL/large markers -> coloured-pencil hatch wash (pattern), dark markers -> graphite
    tone, small colour markers kept as accents (alpha down); darker strokes; credits = black 写植 strips

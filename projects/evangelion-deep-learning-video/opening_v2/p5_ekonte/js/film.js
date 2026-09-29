@@ -55,9 +55,10 @@ function buildCut(c) {
 
 // ── rostrum camera: push in on the panel, slide to the notes column while a derivation is written,
 //    pull back to the whole sheet at section boundaries. Keys are derived from the cut's own items. ──
-const CAM_P = { s: 1.3, cx: 700, cy: L.panel.y + L.panel.h / 2 };
-function camNotesY(y) { const s = 1.42, vh = H / s; return { s, cx: 1946 - W / (2 * s), cy: clamp(y, L.hdrY0 - 8 + vh / 2, L.rowY1 + 28 - vh / 2) }; }
-const SECTION_START = new Set(['C-001', 'C-010', 'C-011', 'C-020', 'C-103']);
+const CAM_P = { s: 1.32, cx: 702, cy: L.panel.y + L.panel.h / 2 };
+// panel + notes column together (no credit is ever cropped), notes at ~29-36 px
+function camNotesY(y) { const s = 1.2, vh = H / s; return { s, cx: 918, cy: clamp(y, L.hdrY0 - 14 + vh / 2, L.rowY1 + 40 - vh / 2) }; }
+const SECTION_START = new Set(['C-001', 'C-010', 'C-011', 'C-020']);
 function buildCamKeys(c) {
   const S = c.S;
   if (S.camKeys) return S.camKeys(c);

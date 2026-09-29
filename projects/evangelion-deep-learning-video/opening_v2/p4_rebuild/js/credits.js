@@ -39,6 +39,8 @@ export function credits(ctx, t) {
     ctx.save(); ctx.globalAlpha = a;
     for (const it of items) {
       const x = X(it.x), y = Y(it.y);
+      // the 1995 masters' credits carry a faint soft dark fringe that keeps white type readable over light art
+      ctx.shadowColor = 'rgba(10,6,16,0.6)'; ctx.shadowBlur = Math.max(5, it.size * 0.11); ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 1;
       if (it.lat) jp(ctx, it.s, x, y, it.size, { align: it.align, family: LAT, weight: it.reg ? 400 : 700, sx: it.sx ?? 0.95 });
       else if (it.gothic) jp(ctx, it.s, x, y, it.size, { align: it.align, family: '"Liberation Sans"', weight: 700, sx: 0.92 });
       else jp(ctx, it.s, x, y, it.size, { align: it.align, sx: 0.86 });

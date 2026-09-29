@@ -407,7 +407,7 @@ class Builder {
   }
   // ── marker (flat colour with streaks), revealed as a sweep ──
   marker(poly, col, o = {}) {
-    const it = { kind: 'marker', poly, col, alpha: o.a ?? 0.82, ang: o.ang ?? -0.35, streak: o.streak ?? 1, seed: o.seed || this.seed(), blend: o.blend, mode: o.mode };
+    const it = { kind: 'marker', poly, col, alpha: o.a ?? 0.82, ang: o.ang ?? -0.35, streak: o.streak ?? 1, seed: o.seed || this.seed(), blend: o.blend, mode: o.mode, layer: o.layer };
     return this.push(it, o.weight ?? 400);
   }
   rectMarker(x, y, w, h, col, o) { return this.marker([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], col, o); }
@@ -466,12 +466,12 @@ function hatchTile(col, kind) {
   const rng = mulberry32(strSeed(key));
   g.strokeStyle = col; g.lineCap = 'round';
   const dense = kind === 'graphite';
-  const nc = dense ? 150 : 62;
+  const nc = dense ? 280 : 150;
   for (let q = 0; q < nc; q++) {
     const cx = rng() * S, cy = rng() * S;
-    const ang = -0.9 + (rng() - 0.5) * 0.5 + (dense && q % 2 ? 1.4 : 0);
-    const len = 34 + rng() * 60, k = 4 + Math.floor(rng() * 6), sp = 3.2 + rng() * 2.6;
-    const ca = Math.cos(ang), sa = Math.sin(ang), aBase = dense ? 0.45 + rng() * 0.4 : 0.3 + rng() * 0.45;
+    const ang = -0.95 + (rng() - 0.5) * 0.28 + (dense && q % 3 === 0 ? 1.35 : 0);
+    const len = 40 + rng() * 60, k = 6 + Math.floor(rng() * 5), sp = 3.0 + rng() * 2.0;
+    const ca = Math.cos(ang), sa = Math.sin(ang), aBase = dense ? 0.32 + rng() * 0.3 : 0.16 + rng() * 0.26;
     for (let j = 0; j < k; j++) {
       const off = (j - k / 2) * sp, sh = (rng() - 0.5) * 14, l2 = len * (0.7 + rng() * 0.4);
       const x0 = cx - sa * off + ca * sh, y0 = cy + ca * off + sa * sh;

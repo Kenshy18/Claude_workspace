@@ -49,9 +49,12 @@ const CHORUS = {};
     for (const side of [0, 1]) {
       const q = side ? [[0.8, 0.055], [0.58, 0.075], [0.6, 0.09], [0.78, 0.078]] : [[0.2, 0.055], [0.42, 0.075], [0.4, 0.09], [0.22, 0.078]];
       const P = q.map(([u, v]) => cardPt(cam, u, v));
-      const cx = P.reduce((s, p) => s + p[0], 0) / 4, cy = P.reduce((s, p) => s + p[1], 0) / 4;
-      const D = P.map(([x, y]) => [cx + (x - cx) * k * 0.8, cy + (y - cy) * k * 1.9]);
-      const r = Math.hypot(D[0][0] - D[1][0], D[0][1] - D[1][1]);
+      const o0 = [(P[0][0] + P[3][0]) / 2, (P[0][1] + P[3][1]) / 2], i0 = [(P[1][0] + P[2][0]) / 2, (P[1][1] + P[2][1]) / 2];
+      const cx = (o0[0] + i0[0]) / 2, cy = (o0[1] + i0[1]) / 2, dx = i0[0] - o0[0], dy = i0[1] - o0[1], len = Math.hypot(dx, dy);
+      const ux = dx / len, uy = dy / len, hl = len * 0.5 * k, hh = hl * 0.3;
+      // an elongated, slanted diamond: sharp tips, the upper facet longer toward the nose
+      const D = [[cx - ux * hl, cy - uy * hl], [cx + ux * hl * 0.2 + uy * hh, cy + uy * hl * 0.2 - ux * hh], [cx + ux * hl, cy + uy * hl], [cx - ux * hl * 0.2 - uy * hh, cy - uy * hl * 0.2 + ux * hh]];
+      const r = hl * 2;
       ctx.globalCompositeOperation = 'lighter';
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.9);
       g.addColorStop(0, o.halo || 'rgba(190,220,255,0.55)'); g.addColorStop(1, 'rgba(120,160,255,0)');
@@ -85,8 +88,11 @@ const CHORUS = {};
     } else if (mode === 'smile') {
       ctx.lineWidth = s * 0.1; ctx.beginPath(); ctx.moveTo(-s * 0.5, s * 0.12); ctx.quadraticCurveTo(0, -s * 0.34, s * 0.5, s * 0.12); ctx.stroke();
     } else if (mode === 'strain') {
+      // squeezed shut: a heavy lid tilted down toward the nose, two crease strokes above and below
       const d = flip ? -1 : 1;
-      ctx.lineWidth = s * 0.1; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(-s * 0.45 * d, -s * 0.28); ctx.lineTo(s * 0.4 * d, 0); ctx.lineTo(-s * 0.45 * d, s * 0.24); ctx.stroke();
+      ctx.lineWidth = s * 0.11; ctx.beginPath(); ctx.moveTo(-s * 0.55 * d, -s * 0.1); ctx.quadraticCurveTo(0, s * 0.06, s * 0.5 * d, s * 0.08); ctx.stroke();
+      ctx.lineWidth = s * 0.045; ctx.beginPath(); ctx.moveTo(-s * 0.4 * d, -s * 0.3); ctx.quadraticCurveTo(0, -s * 0.2, s * 0.3 * d, -s * 0.12);
+      ctx.moveTo(-s * 0.3 * d, s * 0.22); ctx.quadraticCurveTo(0, s * 0.28, s * 0.25 * d, s * 0.24); ctx.stroke();
     }
     ctx.restore();
   }
@@ -112,21 +118,26 @@ const CHORUS = {};
     }
   }
 
-  // ── purple hand (Unit-01's): silhouette + one hard shadow tone ────────────
-  function purpleHand(ctx, x, y, s, a, pinch) {
-    clearL();
-    for (const [dx, dy] of [[-5, 0], [5, 0], [0, -5], [0, 5], [4, 4], [-4, -4], [4, -4], [-4, 4]]) silHand(LG, x + dx, y + dy, s, a, pinch, '#1c0c2c');
-    silHand(LG, x, y, s, a, pinch, '#8d5ecb');
-    LG.globalCompositeOperation = 'source-atop';
-    LG.fillStyle = '#5b3b96';
-    LG.save(); LG.translate(x, y); LG.rotate(a); LG.fillRect(-1500, 8 * s, 2200, 400); LG.restore();
-    // armour joints: green knuckle plates and orange markers
-    LG.save(); LG.translate(x, y); LG.rotate(a); LG.scale(s, s);
-    for (const [px, py] of [[250, -44], [270, -12], [262, 16], [236, 42]]) { LG.fillStyle = '#9cf252'; LG.fillRect(px - 8, py - 10, 16, 20); }
-    circle(LG, 90, 0, 22, '#ff9c3a'); ringS(LG, 90, 0, 22, '#1c0c2c', 5);
-    LG.restore();
-    LG.globalCompositeOperation = 'source-over';
-    ctx.drawImage(LAYER, 0, 0);
+  // ── purple hand (Unit-01's), open palm, fingers spread: base + one hard shadow + trace line ──
+  function purpleHand(ctx, x, y, s, a) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(s, s);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const OUT = '#1c0c2c', BASE = '#8d5ecb', SH = '#5b3b96', GRN = '#9cf252';
+    // forearm (comes from off-frame) + palm
+    const palm = [[-900, -70], [-60, -80], [60, -120], [150, -100], [175, 95], [60, 120], [-60, 80], [-900, 70]];
+    fillPts(ctx, palm, BASE); fillPts(ctx, [[-900, 20], [-60, 30], [60, 60], [175, 70], [175, 95], [60, 120], [-60, 80], [-900, 70]], SH); strokePts(ctx, palm, OUT, 9);
+    // fingers: [base x, base y, angle, length, width]; two segments each, armour plate on the knuckle
+    for (const [bx, by, ang, len, w] of [[150, -84, -0.36, 230, 62], [172, -30, -0.12, 262, 66], [175, 26, 0.1, 252, 64], [162, 80, 0.32, 205, 56], [40, -112, -0.95, 190, 70]]) {
+      ctx.save(); ctx.translate(bx, by); ctx.rotate(ang);
+      for (const [x0, l, ww] of [[0, len * 0.5, w], [len * 0.52, len * 0.48, w * 0.86]]) {
+        const pts = [[x0, -ww / 2], [x0 + l, -ww * 0.42], [x0 + l + ww * 0.25, 0], [x0 + l, ww * 0.42], [x0, ww / 2]];
+        fillPts(ctx, pts, BASE); fillPts(ctx, [[x0, ww * 0.1], [x0 + l, ww * 0.08], [x0 + l + ww * 0.2, 0.2 * ww], [x0 + l, ww * 0.42], [x0, ww / 2]], SH); strokePts(ctx, pts, OUT, 7);
+      }
+      ctx.fillStyle = GRN; ctx.fillRect(-12, -w * 0.32, 24, w * 0.64); ctx.strokeStyle = OUT; ctx.lineWidth = 5; ctx.strokeRect(-12, -w * 0.32, 24, w * 0.64);
+      ctx.restore();
+    }
+    circle(ctx, -40, 0, 30, '#ff9c3a'); ringS(ctx, -40, 0, 30, OUT, 7);
+    ctx.restore();
   }
 
   // ═════ 66.8 – 70.5 · "zankoku na tenshi no teeze" ═══════════════════════════
@@ -155,7 +166,7 @@ const CHORUS = {};
     fillPts(ctx, [[1180, 0], [1230, 0], [1300, 1080], [1260, 1080]], '#8a1c10');
     for (const y of [180, 480, 780]) { ctx.fillStyle = '#f2f0ea'; ctx.fillRect(1330, y, 36, 120); ctx.fillRect(1330, y + 140, 36, 36); }
     const k = E.outCubic(seg(t, 0, 0.4));
-    purpleHand(ctx, lerp(760, 700, k), lerp(40, 150, k), 1.9, 1.78, 0.02);
+    purpleHand(ctx, lerp(760, 720, k), lerp(20, 130, k), 1.9, 1.62);
   });
   CUT(2042, 2046, 'card_pretrained', (ctx) => wordCard(ctx, [['PRE-TRAINED', 0.5, 0.62, 0.23, 0.84]]));
   CUT(2046, 2057, 'c_back_bay', (ctx, t, fx, T) => {

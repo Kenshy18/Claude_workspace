@@ -8,39 +8,41 @@ const logLine = (i) => {
 };
 
 // ── verse A: the main screen (blue), rendered into its own 1440×1080 surface ─
+// Fixed zones (screen space) so credits never sit on data:
+//   y  40–100  title (left only)          y 110–440  CREDIT BAND (sky + profile double exposure)
+//   y 470–800  accuracy plot              y 850–1040 step counter (left, x<470) | CREDIT BAND (right, x>520)
+const VA = { px: 90, py: 470, pw: 1260, ph: 330 };
 function mainScreen(g, step, t) {
   const bl = '#dcecff', dim = '#5a86d8', or = '#ffa23a';
   g.fillStyle = '#0c3290'; g.fillRect(0, 0, W, H);
   // phosphor unevenness of the big screen (reads like the painted sky of the original)
   cloudLayer(g, 'skyscr', [[10, 44, 140], [30, 84, 190]], 5, t, { gw: 30, gh: 22, speed: 0.04, scale: 0.26, lo: 0.35, hi: 0.8, blur: 1.2 });
-  // top band: title left, newest log record right (credits own the band below it)
-  jpText(g, 'MAGI', 70, 70, 34, bl, { family: COND, weight: 700, sx: 0.9 });
-  jpText(g, '学習経過監視', 160, 68, 30, bl, { weight: 900 });
-  const i = Math.floor(step / DSTEP);
-  monoText(g, '$ ' + logLine(i), 1370, 66, 20, bl, { family: LOGF, alpha: 0.8, align: 'right' });
-  line(g, 70, 88, 1370, 88, dim, 1.5, 0.6);
-  // the accuracy plot, as big as the sky
-  const px = 90, py = 250, pw = 1260, ph = 560;
+  jpText(g, 'MAGI', 70, 76, 38, bl, { family: COND, weight: 700, sx: 0.9 });
+  jpText(g, '学習経過監視', 172, 74, 34, bl, { weight: 900 });
+  line(g, 70, 94, 420, 94, dim, 2, 0.7);
+  // the accuracy plot: a wide strip across the middle of the screen
+  const { px, py, pw, ph } = VA;
   const M = plotMap(px, py, pw, ph, { x0: 0, x1: 600, y0: 0, y1: 1 });
-  for (let j = 0; j <= 4; j++) line(g, px, M.Y(j / 4), px + pw, M.Y(j / 4), dim, 1.5, j === 0 ? 0.9 : 0.45);
-  for (let j = 1; j <= 4; j++) monoText(g, (j * 25) + '%', px + 4, M.Y(j / 4) - 8, 20, bl, { alpha: 0.7 });
-  for (let k = 1; k <= 6; k++) monoText(g, String(k * 100), M.X(k * 100), py + ph + 32, 20, bl, { align: 'center', alpha: 0.7 });
+  for (let j = 0; j <= 4; j++) line(g, px, M.Y(j / 4), px + pw, M.Y(j / 4), dim, 1.5, j === 0 ? 0.9 : 0.4);
+  for (let j = 2; j <= 4; j += 2) monoText(g, (j * 25) + '%', px + 6, M.Y(j / 4) - 10, 28, bl, { alpha: 0.75 });
+  for (let k = 1; k <= 5; k++) monoText(g, String(k * 100), M.X(k * 100), py + ph + 36, 28, bl, { align: 'center', alpha: 0.75 });
   const ch = 1 / RUN.p;
-  dashed(g, px, M.Y(ch), px + pw, M.Y(ch), or, 2, [12, 8]);
-  monoText(g, 'CHANCE 1/97', px + pw, M.Y(ch) - 12, 20, or, { align: 'right' });
+  dashed(g, px, M.Y(ch), px + pw, M.Y(ch), or, 2.5, [14, 9]);
+  monoText(g, 'CHANCE 1/97', M.X(500), M.Y(ch) + 38, 28, or, { align: 'right' });
   const s1 = Math.min(step, 600);
   if (s1 > 0) {
     plotMetric(g, M, 'val_acc', 0, s1, or, 5);
-    plotMetric(g, M, 'train_acc', 0, s1, '#f6faff', 9);
+    plotMetric(g, M, 'train_acc', 0, s1, '#f6faff', 8);
     for (let k = 0; k * DSTEP <= s1; k++) { const X = M.X(k * DSTEP), Y = M.Y(RUN.train_acc[k]); g.fillStyle = '#f6faff'; g.fillRect(X - 6, Y - 6, 12, 12); }
     const ta = mAt('train_acc', s1);
-    monoText(g, `TRAIN ${pct(ta)}`, M.X(s1) + 20, ta > 0.9 ? M.Y(ta) + 40 : Math.min(M.Y(ta) - 16, M.Y(0) - 84), 30, '#f6faff');
-    monoText(g, `VAL ${pct(mAt('val_acc', s1), 2)}`, M.X(s1) + 20, M.Y(0) - 36, 26, or);
+    const lx = ta > 0.99 ? M.X(262) : M.X(s1) + 22;   // once train acc locks, park the labels where the plateau starts (the right edge is behind the standing figures)
+    monoText(g, `TRAIN ${pct(ta)}`, lx, ta > 0.8 ? M.Y(ta) + 44 : Math.min(M.Y(ta) - 16, M.Y(0) - 70), 36, '#f6faff');
+    monoText(g, `VAL ${pct(mAt('val_acc', s1), 2)}`, lx, M.Y(0) - 22, 32, or);
   }
-  // bottom-left: the step counter
-  jpText(g, '経過ステップ', 90, 905, 24, bl, { weight: 700 });
-  monoText(g, 'STEP   FULL BATCH = 2,822 PAIRS', 260, 904, 20, bl, { alpha: 0.7 });
-  seg7(g, String(Math.floor(step)).padStart(4, '0'), 92, 1010, 84, '#f4f8ff', { thick: 0.14, ghost: 'rgba(160,190,255,0.10)' });
+  // bottom-left: the step counter (its own zone)
+  jpText(g, '経過ステップ', 92, 884, 32, bl, { weight: 900 });
+  seg7(g, String(Math.floor(step)).padStart(4, '0'), 94, 1012, 100, '#f4f8ff', { thick: 0.14, ghost: 'rgba(160,190,255,0.10)' });
+  monoText(g, 'FULL BATCH 2,822', 94, 1052, 26, bl, { alpha: 0.75 });
 }
 
 // ── verse B helpers: inverse-video amber screen ─────────────────────────────
@@ -52,11 +54,11 @@ function trainLossPanel(ctx, step, ink, titleA = 1) {
   const px = 170, py = 190, pw = 1040, ph = 640;
   const M = plotMap(px, py, pw, ph, { x0: 0, x1: 2000, y0: 1e-5, y1: 10, logy: true });
   gridLines(ctx, px, py, pw, ph, 4, 6, ink, 1, 0.35);
-  ['1e+1', '1e+0', '1e-1', '1e-2', '1e-3', '1e-4', '1e-5'].forEach((l, j) => monoText(ctx, l, px - 14, py + (ph * j) / 6 + 8, 22, ink, { align: 'right' }));
-  for (let i = 0; i <= 4; i++) monoText(ctx, fmtInt(i * 500), px + (pw * i) / 4, py + ph + 34, 22, ink, { align: 'center' });
+  ['1e+1', '1e+0', '1e-1', '1e-2', '1e-3', '1e-4', '1e-5'].forEach((l, j) => monoText(ctx, l, px - 14, py + (ph * j) / 6 + 10, 28, ink, { align: 'right' }));
+  for (let i = 0; i <= 4; i++) monoText(ctx, fmtInt(i * 500), px + (pw * i) / 4, py + ph + 38, 28, ink, { align: 'center' });
   if (titleA > 0) {
     jpText(ctx, '学習損失', px, py - 50, 44, ink, { weight: 900, alpha: titleA });
-    monoText(ctx, 'TRAIN LOSS (nats, log)  logging floor 1e-5', px + 196, py - 56, 22, ink, { alpha: titleA });
+    monoText(ctx, 'TRAIN LOSS (nats, log)', px + 200, py - 56, 30, ink, { alpha: titleA });
   }
   plotMetric(ctx, M, 'train_loss', 0, Math.min(step, 2000), ink, 5, true, 1e-5);
   return M;
@@ -90,11 +92,14 @@ function drawTree(ctx, x, y, w, h, p, col) {
     ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, r - 8, 0, Math.PI * 2 * pp); ctx.stroke();
     if (pp > 0.6) {
       text(ctx, TREE_LAB[i], cx, cy + 9, { size: r * 0.42, family: '"EB Garamond"', weight: 500, style: 'italic', color: col, align: 'center' });
-      text(ctx, TREE_SUB[i], cx, cy + r + 26, { size: 17, family: '"EB Garamond"', weight: 500, color: col, align: 'center', ls: 1.5 });
+      text(ctx, TREE_SUB[i], cx, cy + r + 28, { size: 21, family: '"EB Garamond"', weight: 500, color: col, align: 'center', ls: 1.5 });
     }
   });
-  text(ctx, 'SYSTEMA PERCEPTRONICVM', x + w * 0.03, y + h * 0.08, { size: 34, family: '"Cinzel"', weight: 700, color: col, alpha: seg(p, 0.1, 0.4), ls: 3 });
-  text(ctx, 'X DIVINO NVMERO XCVII', x + w * 0.97, y + h * 0.08, { size: 26, family: '"Cinzel"', weight: 400, color: col, align: 'right', alpha: seg(p, 0.2, 0.5), ls: 2 });
+  // legends in the two upper corners, clear of the crown node
+  text(ctx, 'SYSTEMA', x + w * 0.02, y + h * 0.045, { size: 32, family: '"Cinzel"', weight: 700, color: col, alpha: seg(p, 0.1, 0.4), ls: 3 });
+  text(ctx, 'PERCEPTRONICVM', x + w * 0.02, y + h * 0.085, { size: 32, family: '"Cinzel"', weight: 700, color: col, alpha: seg(p, 0.1, 0.4), ls: 3 });
+  text(ctx, 'EX DIVINO', x + w * 0.98, y + h * 0.045, { size: 26, family: '"Cinzel"', weight: 400, color: col, align: 'right', alpha: seg(p, 0.2, 0.5), ls: 2 });
+  text(ctx, 'NVMERO XCVII', x + w * 0.98, y + h * 0.085, { size: 26, family: '"Cinzel"', weight: 400, color: col, align: 'right', alpha: seg(p, 0.2, 0.5), ls: 2 });
   ctx.restore();
 }
 
@@ -112,8 +117,8 @@ function timerPanel(ctx, secs, test, t) {
   ctx.save(); ctx.translate(110, 150); ctx.rotate(-0.1);
   boxStroke(ctx, 0, -52, 250, 64, Y, 3);
   jpText(ctx, '汎化開始まで', 12, -6, 40, Y, { weight: 900, sx: 0.86 });
-  condText(ctx, 'TIME TO GENERALIZATION:', 270, -16, 24, Y, { sx: 0.8 });
-  condText(ctx, 'L_val < ln 97', 12, 40, 22, YD, { sx: 0.85 });
+  condText(ctx, 'TIME TO GENERALIZATION:', 270, -14, 30, Y, { sx: 0.8 });
+  condText(ctx, 'L_val < ln 97', 12, 44, 28, YD, { sx: 0.85 });
   ctx.restore();
   // digits
   ctx.save(); ctx.translate(100, 590); ctx.rotate(-0.1);
@@ -128,7 +133,7 @@ function timerPanel(ctx, secs, test, t) {
   hazard(ctx, 250, 6, 72, 168, '#e8140c', '#000', 16);
   boxStroke(ctx, -10, 206, 360, 100, Y, 3);
   jpText(ctx, '荷重減衰システム', 8, 258, 42, Y, { weight: 900, sx: 0.84 });
-  condText(ctx, 'WEIGHT DECAY SYSTEM   λ = 1.0', 10, 292, 24, Y, { sx: 0.8 });
+  condText(ctx, 'WEIGHT DECAY SYSTEM   λ = 1.0', 10, 294, 28, Y, { sx: 0.8 });
   ctx.restore();
   // lr buttons on the green strip (the STOP / SLOW / NORMAL / RACING row)
   ctx.save(); ctx.translate(210, 700); ctx.rotate(-0.1);
@@ -177,7 +182,7 @@ function greenBars(ctx, step, lt) {
   line(ctx, u0[0], u0[1], u1[0], u1[1], '#ff4a22', 2.5);
   const ul = pr([sc / 48 + 0.4, 0, 3]);
   text(ctx, 'UNIFORM 1/48', ul[0], ul[1], { size: 30, family: COND, weight: 700, color: '#ff4a22', rot: -0.5, sx: 0.85 });
-  monoText(ctx, `FOURIER POWER / EMBEDDING   STEP ${fmtInt(step)}`, 40, 1040, 22, '#ff4a22');
+  monoText(ctx, `FOURIER POWER / EMBEDDING   STEP ${fmtInt(step)}`, 40, 1040, 32, '#ff4a22');
 }
 
 // ── verse A shot: one long take pulling back from the log to the control room ──
@@ -207,19 +212,19 @@ shot(23.4, 37.9, 'verseA_main', (ctx, lt, t, fx) => {
   sil(ctx, 'opA', 560, 880 + up, 2.2);
   sil(ctx, 'opC', 80, 840 + up, 2.4);
 });
-cred(23.45, 26.25, (o, t, a) => {
-  credit(o, 'キャラクターデザイン', ['埋め込み 97×128'], 700, 330, { alpha: a, nameSize: 90, roleSize: 42 });
-  credit(o, 'メカニックデザイン', ['MLP 256×256', 'ReLU'], 700, 470, { alpha: a, nameSize: 90, roleSize: 42, lh: 108 });
+cred(23.45, 26.25, (o, t, a) => {        // top band
+  credit(o, 'キャラクターデザイン', ['埋め込み 97×128'], 700, 196, { alpha: a, nameSize: 88, roleSize: 42 });
+  credit(o, 'メカニックデザイン', ['MLP 256×256', 'ReLU'], 700, 312, { alpha: a, nameSize: 88, roleSize: 42, lh: 106 });
 }, 0.1, 0.1);
-cred(26.35, 29.85, (o, t, a) => { credit(o, '副監督', ['AdamW', 'β 0.9 · 0.98'], 700, 770, { alpha: a, nameSize: 90, roleSize: 42, lh: 110 }); });
+cred(26.35, 29.85, (o, t, a) => { credit(o, '副監督', ['AdamW', 'β 0.9 · 0.98'], 760, 930, { alpha: a, nameSize: 84, roleSize: 42, lh: 100 }); });   // bottom band
 cred(29.95, 33.35, (o, t, a) => {
-  credit(o, '美術監督', ['フーリエ基底'], 500, 180, { alpha: a, nameSize: 90, roleSize: 42 });
-  credit(o, '色彩設定', ['蛍光体 P1・P3'], 860, 935, { alpha: a, nameSize: 88, roleSize: 42 });
+  credit(o, '美術監督', ['フーリエ基底'], 500, 196, { alpha: a, nameSize: 88, roleSize: 42 });
+  credit(o, '色彩設定', ['蛍光体 P1・P3'], 860, 975, { alpha: a, nameSize: 86, roleSize: 42 });
 });
 cred(34.0, 37.85, (o, t, a) => {
-  credit(o, '撮影監督', ['フーリエ平面射影'], 790, 180, { alpha: a, nameSize: 84, roleSize: 42 });
-  credit(o, '音響監督', ['交差エントロピー'], 790, 870, { alpha: a, nameSize: 84, roleSize: 42 });
-  credit(o, '音響制作', ['log-softmax'], 790, 975, { alpha: a, nameSize: 70, roleSize: 36 });
+  credit(o, '撮影監督', ['フーリエ平面射影'], 790, 196, { alpha: a, nameSize: 84, roleSize: 42 });
+  credit(o, '音響監督', ['交差エントロピー'], 790, 915, { alpha: a, nameSize: 80, roleSize: 40 });
+  credit(o, '音響制作', ['log-softmax'], 790, 1012, { alpha: a, nameSize: 66, roleSize: 34 });
 });
 
 // S11 37.9–39.3  inverse amber: train loss plunging on a log scale; a black hand reaches in
@@ -233,7 +238,7 @@ shot(37.9, 41.6, 'verseB_hand_tree', (ctx, lt, t, fx) => {
   const M = trainLossPanel(ctx, step, ink, 1 - seg(t, 39.3, 39.5));
   const s1 = Math.min(step, 2000), tl = mAt('train_loss', s1, true);
   ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(M.X(s1), M.Y(Math.max(tl, 1e-5)), 9, 0, 7); ctx.fill();
-  monoText(ctx, `${tl < 1.5e-5 ? '<1e-5' : tl.toExponential(2)}  @ ${fmtInt(s1)}`, M.X(s1) + 18, M.Y(Math.max(tl, 1e-5)) - 14, 26, ink);
+  monoText(ctx, `${tl < 1.5e-5 ? '<1e-5' : tl.toExponential(2)}  @ ${fmtInt(s1)}`, M.X(s1) + 18, M.Y(Math.max(tl, 1e-5)) - 16, 34, ink);
   ctx.restore();
   // the hand (enters 38.2–39.0)
   const hu = E.outCubic(seg(t, 38.1, 39.1));
@@ -258,17 +263,17 @@ shot(41.6, 48.4, 'verseB_valloss_profile', (ctx, lt, t, fx) => {
   const px = 560, py = 470, pw = 780, ph = 440;
   const M = plotMap(px, py, pw, ph, { x0: 0, x1: 3000, y0: 0, y1: 25 });
   gridLines(ctx, px, py, pw, ph, 6, 5, ink, 1, 0.3);
-  for (let j = 0; j <= 5; j++) monoText(ctx, String(j * 5), px + pw + 16, M.Y(j * 5) + 8, 22, ink);
-  for (let i = 0; i <= 3; i++) monoText(ctx, fmtInt(i * 1000), M.X(i * 1000), py + ph + 34, 22, ink, { align: 'center' });
+  for (let j = 0; j <= 5; j++) monoText(ctx, String(j * 5), px + pw + 16, M.Y(j * 5) + 10, 28, ink);
+  for (let i = 0; i <= 3; i++) monoText(ctx, fmtInt(i * 1000), M.X(i * 1000), py + ph + 38, 28, ink, { align: 'center' });
   dashed(ctx, px, M.Y(RUN.LN_P), px + pw, M.Y(RUN.LN_P), ink, 2, [12, 8]);
-  monoText(ctx, 'ln 97 = 4.575  (uniform guess)', px + 10, M.Y(RUN.LN_P) - 12, 22, ink);
+  monoText(ctx, 'ln 97 = 4.575  (uniform guess)', px + 10, M.Y(RUN.LN_P) - 14, 30, ink);
   jpText(ctx, '検証損失', px + pw, py + ph + 96, 48, ink, { weight: 900, align: 'right' });
-  monoText(ctx, 'VAL LOSS (nats)', px + pw - 230, py + ph + 90, 24, ink, { align: 'right' });
+  monoText(ctx, 'VAL LOSS (nats)', px + pw - 230, py + ph + 90, 30, ink, { align: 'right' });
   plotMetric(ctx, M, 'val_loss', 0, Math.min(step, 3000), ink, 5);
   plotMetric(ctx, M, 'train_loss', 0, Math.min(step, 3000), ink, 2.5);
   const s1 = Math.min(step, 3000), vl = mAt('val_loss', s1);
   monoText(ctx, vl.toFixed(2), M.X(s1) + 16, M.Y(vl) - 12, 34, ink);
-  monoText(ctx, 'train', M.X(s1) + 16, M.Y(0) - 12, 22, ink);
+  monoText(ctx, 'train', M.X(s1) + 16, M.Y(0) - 12, 30, ink);
   ctx.restore();
   const pu = E.outCubic(seg(t, 41.6, 42.4));
   sil(ctx, 'profile', lerp(-700, -130, pu), 70, 1.72, '#080201');
@@ -313,7 +318,7 @@ shot(48.4, 50.0, 'verseB_hardcopy', (ctx, lt, t, fx) => {
     plotMetric(ctx, M, p.k, 0, Math.min(step, 3000), ink, 3.5, !!p.log, p.log ? 1e-5 : 0);
     monoText(ctx, p.t, p.x + 24, p.y + 50, 30, ink, { family: '"Liberation Mono"', weight: 700 });
     monoText(ctx, p.v, p.x + 646, p.y + 50, 34, ink, { align: 'right', family: '"Liberation Mono"', weight: 700 });
-    monoText(ctx, `STEP ${fmtInt(step)}`, p.x + 646, p.y + 462, 20, ink, { align: 'right', family: '"Liberation Mono"' });
+    monoText(ctx, `STEP ${fmtInt(step)}`, p.x + 646, p.y + 462, 28, ink, { align: 'right', family: '"Liberation Mono"' });
   });
   ctx.restore();
 });
@@ -410,7 +415,7 @@ shot(52.83, 54.6, 'pre_wnorm', (ctx, lt, t, fx) => {
   jpText(ctx, '重みノルム', -640, -110, 54, '#ff8a1c', { weight: 900 });
   seg7(ctx, wn.toFixed(1), -640, 20, 110, '#ff8a1c', { thick: 0.14 });
   formula(ctx, 'adamw', -250, -120, 108, '#ff8a1c');
-  monoText(ctx, `‖W‖₂  PEAK ${RUN.WPEAK[1].toFixed(1)} @ STEP ${fmtInt(RUN.WPEAK[0])}   η = 1e-3   λ = 1.0`, -250, 20, 26, '#ff8a1c');
+  monoText(ctx, `‖W‖₂  PEAK ${RUN.WPEAK[1].toFixed(1)} @ STEP ${fmtInt(RUN.WPEAK[0])}   η = 1e-3   λ = 1.0`, -250, 24, 32, '#ff8a1c');
   ctx.restore();
 });
 cred(52.9, 54.55, (o, t, a) => {
@@ -433,7 +438,7 @@ shot(54.6, 56.6, 'pre_headset_digits', (ctx, lt, t, fx) => {
     gridLines(ctx, 560, 220, 780, 560, 6, 4, '#8a5410', 1.5);
     plotMetric(ctx, M, 'val_loss', 0, step, '#ffae1a', 5, true, 0.01);
     dashed(ctx, 560, M.Y(RUN.LN_P), 1340, M.Y(RUN.LN_P), '#ff6a12', 2);
-    monoText(ctx, 'ln 97', 1330, M.Y(RUN.LN_P) - 12, 24, '#ff6a12', { align: 'right' });
+    monoText(ctx, 'ln 97', 1330, M.Y(RUN.LN_P) - 14, 32, '#ff6a12', { align: 'right' });
     monoText(ctx, `VAL LOSS ${vl.toFixed(2)}`, 560, 190, 34, '#ffae1a');
     sil(ctx, 'headset', -160 - lt * 30, 150, 1.75, '#000');
     ctx.save(); ctx.strokeStyle = '#000'; ctx.lineWidth = 22; ctx.lineCap = 'round';
@@ -470,10 +475,10 @@ shot(56.6, 58.4, 'pre_redspectrum', (ctx, lt, t, fx) => {
   }
   const uy = base - 9000 / 48;
   line(ctx, bx, uy, bx + 1200, uy, '#7a0a08', 2);
-  monoText(ctx, 'UNIFORM 1/48', bx + 1200, uy - 12, 22, '#9a1410', { align: 'right' });
-  for (let k = 0; k < 48; k += 1) if ((k + 1) % 6 === 0 || top.includes(k)) monoText(ctx, String(k + 1), bx + k * bw + bw / 2, base + 34, 20, top.includes(k) ? '#ff5a3a' : '#7a0a08', { align: 'center' });
+  monoText(ctx, 'UNIFORM 1/48', bx + 1200, uy - 14, 30, '#b01a14', { align: 'right' });
+  for (let k = 0; k < 48; k += 1) if ((k + 1) % 6 === 0 || top.includes(k)) monoText(ctx, String(k + 1), bx + k * bw + bw / 2, base + 38, 26, top.includes(k) ? '#ff5a3a' : '#8a0e0a', { align: 'center' });
   if (t >= 57.87) { monoText(ctx, `k=${top[0] + 1}, k=${top[1] + 1}   pattern BLOOD TYPE : BLUE`, bx, 160, 34, '#ff7a2a'); }
-  monoText(ctx, `FOURIER POWER  STEP ${fmtInt(step)}`, bx, 110, 26, '#9a1410');
+  monoText(ctx, `FOURIER POWER  STEP ${fmtInt(step)}`, bx, 110, 32, '#b01a14');
   formula(ctx, 'power', bx + 1200, 200, 100, '#c01a12', { align: 'right' });
   ctx.restore();
 });
@@ -509,49 +514,89 @@ shot(59.5, 60.0, 'pre_stdout_paper', (ctx, lt, t, fx) => {
   ctx.restore();
 });
 
-// S25 60.00–64.00  hot orange: val loss falls (log), val acc begins to lift — unit-01 colours
+// S25 60.00–64.00  hot orange: val loss falls (log), val acc begins to lift — unit-01 colours.
+// The monitor housing is the "unit": purple armour, green trim; the screen is black phosphor.
+function hotBars(ctx, lt, seed) {
+  fill(ctx, '#e8480a');
+  for (let i = 0; i < 18; i++) {
+    const w = 30 + ((i * 53 + seed) % 5) * 22, x = ((i * 97 + seed * 31) % 1600) - 80 - lt * 26 * (1 + (i % 3));
+    boxFill(ctx, x, 0, w, H, i % 3 === 0 ? '#ff8a24' : (i % 3 === 1 ? '#c8280a' : '#ff6a14'), 0.85);
+  }
+}
+/** purple housing + black screen; draws in local coords, returns the screen rect */
+function hotHousing(ctx, x, y, w, h) {
+  const purple = '#4a2478', purpleD = '#2a1046', green = '#8cff3c';
+  boxFill(ctx, x - 70, y - 70, w + 140, h + 200, purpleD);
+  boxFill(ctx, x - 58, y - 58, w + 116, h + 176, purple);
+  boxFill(ctx, x - 58, y - 58, w + 116, 14, green);               // green trim along the top edge
+  boxFill(ctx, x - 58, y + h + 60, 220, 22, green);
+  boxFill(ctx, x - 12, y - 12, w + 24, h + 24, '#140a1e');
+  boxFill(ctx, x, y, w, h, '#07040a');
+  return { x: x + 40, y: y + 40, w: w - 80, h: h - 90 };
+}
+/** oscilloscope-style scan hatch under a curve: horizontal phosphor lines clipped to the area */
+function scanFill(ctx, pts, yBase, col, pitch = 9, lw = 3, alpha = 0.32) {
+  ctx.save(); ctx.beginPath(); ctx.moveTo(pts[0][0], yBase);
+  for (const [X, Y] of pts) ctx.lineTo(X, Y);
+  ctx.lineTo(pts[pts.length - 1][0], yBase); ctx.closePath(); ctx.clip();
+  const y0 = Math.min(...pts.map((p) => p[1]));
+  ctx.strokeStyle = col; ctx.globalAlpha *= alpha; ctx.lineWidth = lw; ctx.beginPath();
+  for (let Y = Math.floor(yBase / pitch) * pitch; Y >= y0 - pitch; Y -= pitch) { ctx.moveTo(pts[0][0], Y); ctx.lineTo(pts[pts.length - 1][0], Y); }
+  ctx.stroke(); ctx.restore();
+}
 shot(60.0, 64.0, 'pre_hot', (ctx, lt, t, fx) => {
   const step = stepAt(t);
-  fill(ctx, '#f0540c');
-  fx.bloom = 0;
-  const purple = '#4a2478', green = '#8cff3c';
+  fx.bloom = 0.5; fx.thr = 0.8;
+  const green = '#8cff3c', gdim = '#35204e', ink = '#150818', amber = '#ffa640';
   if (t < 62.2) {
-    ctx.save(); cam(ctx, 1.0 + 0.05 * (lt / 2.2), 900, 700, -30 * lt, 0, 0.03);
-    const px = 360, py = 330, pw = 980, ph = 620;
-    const M = plotMap(px, py, pw, ph, { x0: 0, x1: 12000, y0: 0.01, y1: 30, logy: true });
-    ctx.fillStyle = purple; ctx.beginPath(); ctx.moveTo(M.X(0), M.Y(0.01));
-    for (let s = 0; s <= step; s += 50) ctx.lineTo(M.X(s), M.Y(mAt('val_loss', s, true)));
-    ctx.lineTo(M.X(step), M.Y(0.01)); ctx.closePath(); ctx.fill();
-    gridLines(ctx, px, py, pw, ph, 6, 3, '#1a0a24', 1.5, 0.35);
-    plotMetric(ctx, M, 'val_loss', 0, step, green, 7, true, 0.01);
-    dashed(ctx, px, M.Y(RUN.LN_P), px + pw, M.Y(RUN.LN_P), '#1a0a24', 3, [16, 10]);
-    monoText(ctx, 'ln 97', px + pw, M.Y(RUN.LN_P) - 14, 30, '#1a0a24', { align: 'right' });
-    ['10', '1', '0.1', '0.01'].forEach((l, j) => monoText(ctx, l, px - 16, M.Y([10, 1, 0.1, 0.01][j]) + 10, 26, '#1a0a24', { align: 'right' }));
-    jpText(ctx, '検証損失', 60, 1030, 70, '#1a0a24', { weight: 900 });
-    monoText(ctx, `VAL LOSS ${mAt('val_loss', step, true).toFixed(3)}  (log)`, 380, 1020, 34, '#1a0a24');
+    hotBars(ctx, lt, 3);
+    ctx.save(); cam(ctx, 1.0 + 0.04 * (lt / 2.2), 900, 700, -24 * lt, 0); ctx.translate(0, 0); ctx.rotate(-0.045);
+    const S = hotHousing(ctx, 250, 540, 1180, 560);
+    const M = plotMap(S.x + 70, S.y + 70, S.w - 70, S.h - 70, { x0: 0, x1: 12000, y0: 0.01, y1: 30, logy: true });
+    gridLines(ctx, S.x + 70, S.y + 70, S.w - 70, S.h - 70, 6, 3, gdim, 1.5);
+    const pts = [];
+    for (let s = 0; s <= step; s += 50) pts.push([M.X(s), M.Y(mAt('val_loss', s, true))]);
+    pts.push([M.X(step), M.Y(mAt('val_loss', step, true))]);
+    if (pts.length > 1) scanFill(ctx, pts, S.y + S.h, green);
+    plotMetric(ctx, M, 'val_loss', 0, step, green, 6, true, 0.01);
+    dashed(ctx, S.x + 70, M.Y(RUN.LN_P), S.x + S.w, M.Y(RUN.LN_P), amber, 3, [16, 10]);
+    monoText(ctx, 'ln 97', S.x + S.w - 8, M.Y(RUN.LN_P) - 14, 30, amber, { align: 'right' });
+    ['10', '1', '0.1'].forEach((l, j) => monoText(ctx, l, S.x + 56, M.Y([10, 1, 0.1][j]) + 11, 28, green, { align: 'right', alpha: 0.8 }));
+    jpText(ctx, '検証損失', S.x, S.y + 30, 48, green, { weight: 900 });
+    monoText(ctx, `VAL LOSS ${mAt('val_loss', step, true).toFixed(3)}   STEP ${fmtInt(step)}`, S.x + S.w, S.y + 26, 34, green, { align: 'right' });
     ctx.restore();
   } else {
-    ctx.save(); cam(ctx, 1.0 + 0.05 * ((t - 62.2) / 1.8), 720, 700);
-    const px = 170, py = 440, pw = 1130, ph = 520;
-    const M = plotMap(px, py, pw, ph, { x0: 3000, x1: 10000, y0: 1e-4, y1: 1, logy: true });
-    boxFill(ctx, px, py, pw, ph, purple);
-    gridLines(ctx, px, py, pw, ph, 7, 4, '#6a3aa0', 2);
-    plotMetric(ctx, M, 'val_acc', 3000, Math.max(3000, step), green, 8, true, 1e-4);
-    dashed(ctx, px, M.Y(1 / 97), px + pw, M.Y(1 / 97), '#ffb04a', 2.5);
-    monoText(ctx, 'chance 1/97', px + 12, M.Y(1 / 97) - 12, 26, '#ffb04a');
-    ['100%', '10%', '1%', '0.1%', '0.01%'].forEach((l, j) => monoText(ctx, l, px - 14, py + (ph * j) / 4 + 9, 24, '#1a0a24', { align: 'right' }));
-    for (let i = 0; i <= 7; i++) monoText(ctx, fmtInt(3000 + i * 1000), M.X(3000 + i * 1000), py + ph + 36, 24, '#1a0a24', { align: 'center' });
-    jpText(ctx, '検証正解率', 60, 1050, 60, '#1a0a24', { weight: 900 });
-    monoText(ctx, `VAL ACC ${pct(mAt('val_acc', step), 2)}  (log axis)`, 400, 1040, 32, '#1a0a24');
+    hotBars(ctx, t - 62.2, 11);
+    ctx.save(); cam(ctx, 1.0 + 0.05 * ((t - 62.2) / 1.8), 720, 760); ctx.rotate(0.035); ctx.translate(-10, -40);
+    const S = hotHousing(ctx, 150, 500, 1150, 560);
+    const M = plotMap(S.x + 90, S.y + 70, S.w - 90, S.h - 70, { x0: 3000, x1: 10000, y0: 1e-4, y1: 1, logy: true });
+    gridLines(ctx, S.x + 90, S.y + 70, S.w - 90, S.h - 70, 7, 4, gdim, 1.5);
+    const s1 = Math.max(3000, step), pts = [];
+    for (let s = 3000; s <= s1; s += 50) pts.push([M.X(s), M.Y(Math.max(mAt('val_acc', s), 1e-4))]);
+    pts.push([M.X(s1), M.Y(Math.max(mAt('val_acc', s1), 1e-4))]);
+    if (pts.length > 1) scanFill(ctx, pts, S.y + S.h, green);
+    plotMetric(ctx, M, 'val_acc', 3000, s1, green, 7, true, 1e-4);
+    dashed(ctx, S.x + 90, M.Y(1 / 97), S.x + S.w, M.Y(1 / 97), amber, 3, [16, 10]);
+    monoText(ctx, 'CHANCE 1/97', S.x + 104, M.Y(1 / 97) - 14, 30, amber);
+    ['100%', '1%', '0.01%'].forEach((l, j) => monoText(ctx, l, S.x + 78, M.Y([1, 0.01, 1e-4][j]) + 11, 28, green, { align: 'right', alpha: 0.8 }));
+    jpText(ctx, '検証正解率', S.x, S.y + 30, 48, green, { weight: 900 });
+    monoText(ctx, `VAL ACC ${pct(mAt('val_acc', step), 2)}   STEP ${fmtInt(step)}`, S.x + S.w, S.y + 26, 34, green, { align: 'right' });
     ctx.restore();
   }
 });
-cred(60.2, 62.1, (o, t, a) => { credit(o, '広報', ['arXiv:2201.02177', 'arXiv:2301.05217'], 520, 130, { alpha: a, nameSize: 74, roleSize: 38 }); });
+cred(60.2, 62.1, (o, t, a) => {          // centred, name + parenthetical, as the original 広報 card
+  o.globalAlpha = a;
+  credText(o, '広報', 720, 104, 40, { align: 'center' });
+  credText(o, 'arXiv:2201.02177', 720, 188, 72, { align: 'center' });
+  credText(o, '（Power et al., 2022）', 720, 234, 32, { align: 'center' });
+  credText(o, 'arXiv:2301.05217', 720, 314, 72, { align: 'center' });
+  credText(o, '（Nanda et al., 2023）', 720, 360, 32, { align: 'center' });
+});
 cred(62.25, 63.95, (o, t, a) => {
   o.globalAlpha = a;
-  credText(o, 'アニメーション制作', 720, 110, 36, { align: 'center' });
-  text(o, 'Canvas 2D', 720, 225, { size: 96, family: COND, weight: 700, color: P.white, align: 'center', sx: 0.9 });
-  text(o, 'WebGL', 720, 335, { size: 96, family: COND, weight: 700, color: P.white, align: 'center', sx: 0.9 });
+  credText(o, 'アニメーション制作', 720, 118, 38, { align: 'center' });
+  text(o, 'Canvas 2D', 720, 236, { size: 100, family: COND, weight: 700, color: P.white, align: 'center', sx: 0.9 });
+  text(o, 'WebGL', 720, 350, { size: 100, family: COND, weight: 700, color: P.white, align: 'center', sx: 0.9 });
 });
 
 // S26 64.00–66.80  wings: the full DFT spectrum (k and 97−k carry equal power) radiating behind a figure
@@ -579,6 +624,6 @@ shot(64.0, 66.8, 'pre_wings', (ctx, lt, t, fx) => {
   // eclipse: the embedding (still a noisy ring) as a dark body with its 97 points as the corona's edge
   dot(ctx, cx, cy, 250, '#140302');
   drawEmb(ctx, cx, cy, 235, 0, { emb: embAt(step), color: '#ffe6a0', dot: 5, star: false });
-  monoText(ctx, `|DFT|² OF E  k = 1…96   STEP ${fmtInt(step)}   SHARE OF k∈{1,12,20,34,38} ${pct(keyShareAt(step))}`, 40, 1040, 22, '#ffd08a');
+  monoText(ctx, `|DFT|² OF E  k = 1…96   STEP ${fmtInt(step)}   SHARE OF k∈{1,12,20,34,38} ${pct(keyShareAt(step))}`, 40, 1044, 32, '#ffd08a');
 });
 cred(64.05, 66.75, (o, t, a) => { credit(o, 'プロデューサー', ['勾配降下法'], 700, 880, { alpha: a, nameSize: 92, roleSize: 40 }); });

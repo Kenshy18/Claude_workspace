@@ -184,11 +184,16 @@
     ctx.save();
     ctx.strokeStyle = col; ctx.fillStyle = col;
     // rays
-    for (let i = 0; i < 160; i++) {
-      const a = (i / 160) * Math.PI * 2 + 0.013 * Math.sin(i * 7.1);
-      const r0 = 150 + 60 * hash1(i * 3), r1 = 520 + 520 * hash1(i * 5 + 1);
-      ctx.lineWidth = i % 8 === 0 ? 2.2 : 1.1;
-      ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.stroke();
+    // two batched paths (heavy / light rays) instead of 160 strokes
+    for (const heavy of [true, false]) {
+      ctx.lineWidth = heavy ? 2.2 : 1.1; ctx.beginPath();
+      for (let i = 0; i < 160; i++) {
+        if ((i % 8 === 0) !== heavy) continue;
+        const a = (i / 160) * Math.PI * 2 + 0.013 * Math.sin(i * 7.1);
+        const r0 = 150 + 60 * hash1(i * 3), r1 = 520 + 520 * hash1(i * 5 + 1);
+        ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      }
+      ctx.stroke();
     }
     ring(ctx, cx, cy, 138, col, 2); ring(ctx, cx, cy, 128, col, 1);
     arcText(ctx, 'SYSTEMA · GRADIENTIVM · ET · ERRORIS · PROPAGATIO · RETRO · ', cx, cy, 108, -Math.PI / 2, 15, col, FC, '', 400);
@@ -417,7 +422,7 @@
     // second face: the seeker. argmin as a double exposure; a black ℒ stands at the right
     bg(ctx, '#ee9a2c');
     ctx.save(); ctx.fillStyle = '#f6c24a'; ctx.beginPath(); ctx.arc(1180, 420, 130, 0, Math.PI * 2); ctx.fill(); ctx.restore();   // the sun
-    const a = 0.34 * seg(t, 41.6, 42.4) * (1 - seg(t, 44.75, 45.05));
+    const a = 0.46 * seg(t, 41.6, 42.4) * (1 - seg(t, 44.75, 45.05));
     const drift = seg(t, 41.6, 48.4);
     fml(ctx, 'argmin', 110 - drift * 40, 640, 150, K.white, { alpha: a });
     fml(ctx, 'L', lerp(1250, 1440, E2(seg(t, 44.6, 45.2))), 1180, 1250, '#1a0c05', { align: 'center' });
@@ -597,11 +602,12 @@
     const tr = 100, va = valAt(st) * 100;
     rect(ctx, -40, -600, 1520, 560, { fill: '#3a120c' });
     jp(ctx, 'いつか', 720, -140, { size: 96, weight: 900, sx: 0.88, color: '#f2c9a4', align: 'center' });
-    role(ctx, '訓練', 420, 400, 1, { color: '#3a1a10', align: 'center', size: 64 });
-    role(ctx, '検証', 1020, 400, 1, { color: '#3a1a10', align: 'center', size: 64 });
-    lat(ctx, tr.toFixed(1), 420, 700, { size: 270, family: FM, weight: 900, color: '#1c0c06', align: 'center', sx: 0.84 });
-    lat(ctx, va.toFixed(1), 1020, 700, { size: 270, family: FM, weight: 900, color: '#1c0c06', align: 'center', sx: 0.84 });
-    rect(ctx, 240, 744, 360, 9, { fill: '#1c0c06' }); rect(ctx, 840, 744, 360, 9, { fill: '#1c0c06' });
+    // two eyes: columns far enough apart that 100.0 | 100.0 keeps a clear gutter
+    role(ctx, '訓練', 380, 400, 1, { color: '#3a1a10', align: 'center', size: 64 });
+    role(ctx, '検証', 1060, 400, 1, { color: '#3a1a10', align: 'center', size: 64 });
+    lat(ctx, tr.toFixed(1), 380, 700, { size: 240, family: FM, weight: 900, color: '#1c0c06', align: 'center', sx: 0.8 });
+    lat(ctx, va.toFixed(1), 1060, 700, { size: 240, family: FM, weight: 900, color: '#1c0c06', align: 'center', sx: 0.8 });
+    rect(ctx, 200, 744, 360, 9, { fill: '#1c0c06' }); rect(ctx, 880, 744, 360, 9, { fill: '#1c0c06' });
     lat(ctx, `step ${st.toLocaleString('en-US')}`, 720, 860, { size: 46, family: FR, style: 'italic', weight: 400, color: '#5a2a18', align: 'center' });
     lat(ctx, 'accuracy %  ·  (a + b) mod 97', 720, 922, { size: 34, family: FR, style: 'italic', weight: 400, color: '#7a4a30', align: 'center' });
     ctx.restore();
@@ -884,14 +890,27 @@
   S(79.8, (ctx) => { bg(ctx, K.black); lat(ctx, '175,000,000,000', 720, 640, { size: 240, family: FM, weight: 900, color: '#f2ecf4', align: 'center', sx: 0.44 }); jp(ctx, 'パラメータ', 720, 790, { size: 70, weight: 900, color: '#f2ecf4', align: 'center' }); lat(ctx, 'GPT-3', 720, 330, { size: 52, family: FH, weight: 700, color: '#f2ecf4', align: 'center', ls: 10 }); });
   S(80.133, (ctx) => {
     bg(ctx, '#3a2a8a');
-    ctx.save(); ctx.fillStyle = '#e81a24'; ctx.beginPath(); ctx.ellipse(720, 700, 560, 210, -0.05, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffd0d8'; ctx.beginPath(); ctx.ellipse(760, 740, 220, 70, -0.05, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    // the crater seen from orbit: flat concentric cels, survey crosses
+    ctx.save();
+    [[600, 240, '#b8102a'], [540, 205, '#e81a24'], [360, 128, '#ff5a2a'], [220, 72, '#ffb48a'], [120, 36, '#fff0e0']].forEach(([rx, ry, c], i) => {
+      ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(720 + i * 12, 700 + i * 9, rx, ry, -0.05, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+    [[210, 330], [520, 250], [1010, 300], [1250, 520], [300, 960], [1180, 880], [640, 420]].forEach(([x, y]) => {
+      line(ctx, x - 14, y - 14, x + 14, y + 14, '#ff6a8a', 3); line(ctx, x - 14, y + 14, x + 14, y - 14, '#ff6a8a', 3);
+    });
     rect(ctx, 40, 40, 300, 70, { stroke: '#ff3a3a', lw: 4 }); lat(ctx, 'A.D. 2019', 190, 96, { size: 52, family: FH, weight: 700, color: '#ff3a3a', align: 'center' });
     rect(ctx, 960, 960, 440, 70, { stroke: '#ff3a3a', lw: 4 }); lat(ctx, 'INTERPOLATION THRESHOLD', 1180, 1008, { size: 30, family: FH, weight: 700, color: '#ff3a3a', align: 'center', sx: 0.9 });
   });
   S(80.333, (ctx) => { bg(ctx, '#0e2a6a'); fml(ctx, 'empty', 720, 820, 760, '#e8f0ff', { align: 'center', sw: 6 }); });
   S(80.5, (ctx) => { bg(ctx, '#f2c4e0'); J(ctx, '蒸留', 720, 800, 520, '#7a2a5a', { outline: true, stroke: '#7a2a5a', strokeW: 3 }); lat(ctx, 'teacher → student', 720, 930, { size: 44, family: FR, style: 'italic', weight: 400, color: '#7a2a5a', align: 'center' }); });
-  S(80.733, (ctx) => { bg(ctx, '#5a0a14'); dot(ctx, 1010, 420, 60, K.green); lat(ctx, 'val_acc 1.000', 640, 720, { size: 140, family: FR, weight: 700, color: K.green, align: 'center', sx: 0.86 }); });
+  S(80.733, (ctx) => {
+    // Unit-01's head, green eye lit: the grokked run's last validation accuracy
+    bg(ctx, '#3b1860');
+    dot(ctx, 1046, 420, 58, K.eva);
+    lat(ctx, 'val_acc', 156, 640, { size: 64, family: FR, style: 'italic', weight: 400, color: K.eva });
+    lat(ctx, '1.000', 150, 900, { size: 300, family: FM, weight: 900, color: K.eva, sx: 0.84 });
+  });
   S(80.967, (ctx) => gCard(ctx, [{ s: 'ADAM', f: FH, base: 0.708 * H, w: 0.857 * W, cap: 0.43 * H, c: K.ink }], '#fbfbf8'));
   S(81.133, (ctx, lt) => { bg(ctx, '#1f6ad0'); fmlFit(ctx, 'adam1', 700 + lt * 60, 540, 1180, 260, K.white, { sw: 8 }); });
   S(81.367, (ctx) => {
@@ -991,8 +1010,13 @@
     else fml(ctx, 'thetaStar', 700, 930, 1180, K.white, { align: 'center' });
   });
   S(87.267, (ctx) => { bg(ctx, '#1a7a7a'); fml(ctx, 'thetaStar', 720, 1000, 1180, '#e8fff8', { align: 'center', sx: 0.42 }); });
-  S(87.6, (ctx) => bg(ctx, K.black));
-  S(87.767, (ctx, lt) => {
+  S(87.667, (ctx) => bg(ctx, K.black));   // one black frame
+  S(87.7, (ctx) => {
+    // the blown-out memory: where it started, θ₀, almost washed away
+    bg(ctx, '#f7f5fa');
+    fml(ctx, 'theta0', 760, 930, 900, '#d4cddf', { align: 'center' });
+  });
+  S(87.933, (ctx, lt) => {
     bg(ctx, '#5ec46a');
     J(ctx, 'おめでとう', 720, 620, 230, '#fbfff6', { sx: 0.9 });
   });

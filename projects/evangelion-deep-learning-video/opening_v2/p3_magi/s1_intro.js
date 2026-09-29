@@ -22,9 +22,9 @@ function magiDiagram(ctx, cx, cy, s, col, lw, o = {}) {
     box(b.x, b.y, b.w, b.h, 26 * s);
     if (o.verdict && o.verdict[i]) { ctx.save(); ctx.globalAlpha *= o.fillA ?? 1; ctx.fillStyle = o.boxFill || col; ctx.fill(); ctx.restore(); }
     ctx.stroke();
-    text(ctx, b.n, b.x + b.w / 2, b.y + 40 * s, { size: 24 * s, family: COND, weight: 700, color: o.verdict && o.verdict[i] ? (o.textOn || '#000') : col, align: 'center', ls: 3 * s });
+    text(ctx, b.n, b.x + b.w / 2, b.y + 40 * s, { size: 30 * s, family: COND, weight: 700, color: o.verdict && o.verdict[i] ? (o.textOn || '#000') : col, align: 'center', ls: 3 * s });
     if (o.verdict && o.verdict[i]) jpText(ctx, o.verdict[i], b.x + b.w / 2, b.y + 128 * s, 70 * s, o.textOn || '#000', { align: 'center', family: MINCHO });
-    if (o.crit && o.crit[i]) text(ctx, o.crit[i], b.x + b.w / 2, b.y + b.h + 34 * s, { size: 22 * s, family: MONO, weight: 400, color: col, align: 'center' });
+    if (o.crit && o.crit[i]) text(ctx, o.crit[i], b.x + b.w / 2, b.y + b.h + 40 * s, { size: 30 * s, family: MONO, weight: 400, color: col, align: 'center' });
   });
   text(ctx, 'MAGI', cx, cy + 20 * s, { size: 64 * s, family: COND, weight: 700, color: col, align: 'center', ls: 8 * s });
   ctx.restore();
@@ -223,7 +223,7 @@ shot(10.4, 14.1, 'emb_blob', (ctx, lt, t, fx) => {
   ctx.save(); ctx.fillStyle = '#eaf6ff';
   e0.pts.forEach((p) => { const [x, y] = q(p); ctx.beginPath(); ctx.arc(x, y, 3.2, 0, 7); ctx.fill(); });
   ctx.restore();
-  monoText(ctx, `E ∈ ℝ^{97×128}  STEP 0  PLANE k=${e0.k}  r-CV ${RUN.cv[0].toFixed(2)}`, 1380, 1030, 20, '#9cc6ff', { align: 'right' });
+  monoText(ctx, `E ∈ ℝ^{97×128}  STEP 0  PLANE k=${e0.k}  r-CV ${RUN.cv[0].toFixed(2)}`, 1380, 1036, 30, '#9cc6ff', { align: 'right' });
   if (t >= 13.97) {   // two frames: the circle it will become (emb2d at step 30,000, mean radius)
     const eF = RUN.emb2d[RUN.emb2d.length - 1];
     const rr = eF.reduce((s, p) => s + Math.hypot(p[0], p[1]), 0) / 97;

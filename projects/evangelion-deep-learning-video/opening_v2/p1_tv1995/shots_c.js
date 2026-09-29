@@ -90,8 +90,8 @@
     const test = T < 51.95;
     const el = Math.max(0, T - 51.95);
     const cs = test ? '88' : String(99 - Math.floor((el * 100) % 100)).padStart(2, '0');
-    seg7Str(ctx, test ? '88:88:88' : '11:59:56', 70, 150, 260, '#ffd21a', '#2e2400', 0.1);
-    seg7Str(ctx, cs, 1000, 310, 100, '#ffd21a', '#2e2400', 0.1);
+    seg7Str(ctx, test ? '88:88:88' : '11:59:56', 60, 160, 228, '#ffd21a', '#2e2400', 0.1);
+    seg7Str(ctx, cs, 1120, 330, 96, '#ffd21a', '#2e2400', 0.1);
     // right: system box + internal/external box with hazard stripes
     ctx.strokeStyle = '#e8201a'; ctx.lineWidth = 5; ctx.strokeRect(930, -20, 420, 120);
     mincho(ctx, '主計算供給システム', 1140, 50, 46, { align: 'center', color: '#ffd21a', sx: 0.72, family: '"Noto Sans CJK JP"', weight: 900, embolden: 0 });
@@ -177,10 +177,16 @@
 
   // ── 54.6–56.6 · A10 connectors clip on; the attention "eyes" open ─────────
   const ATT = attnPE(8, 64, 5, 1);
+  const hOpenBox = (s, open) => s * Math.min(1, open * 1.05);
   function attnEye(ctx, x, y, s, open, flip) {
     const n = ATT.length, cs = s / n;
     ctx.save(); ctx.translate(x, y);
-    ctx.fillStyle = '#1b1020'; ctx.fillRect(-s / 2 - 10, -s / 2 - 10, s + 20, s + 20);
+    if (open < 0.04) {   // closed: a lid line, like the closed eyes of the original shot
+      ctx.strokeStyle = '#1b1020'; ctx.lineCap = 'round'; ctx.lineWidth = s * 0.08;
+      ctx.beginPath(); ctx.moveTo(-s * 0.55, -s * 0.02); ctx.quadraticCurveTo(0, s * 0.2, s * 0.55, -s * 0.02); ctx.stroke();
+      ctx.restore(); return;
+    }
+    ctx.fillStyle = '#1b1020'; ctx.fillRect(-s / 2 - 10, -hOpenBox(s, open) / 2 - 10, s + 20, hOpenBox(s, open) + 20);
     const hOpen = s * open;
     ctx.save(); ctx.beginPath(); ctx.rect(-s / 2, -hOpen / 2, s, hOpen); ctx.clip();
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
@@ -328,6 +334,9 @@
 
   // ── 64.0–66.8 · full body, sixteen heads unfold as wings; プロデューサー ──
   const HEADS = attnPE(16, 64, 3, 2);
+  function eyeGlowW(ctx, cam) {
+    for (const [x0, x1] of [[-90, -24], [90, 24]]) fillPts(ctx, [[x0, -374, -56], [x1, -357, -56], [x1 + (x1 > x0 ? -6 : 6), -344, -56], [x0 + (x1 > x0 ? 6 : -6), -356, -56]].map((p) => v3proj(p, cam)), '#fff6d0');
+  }
   SHOT(64.0, 66.8, 'wings', (ctx, t, fx, T) => {
     ctx.drawImage(ART.bars, -180, -60, 1800, 1200);
     const g = E.outCubic(seg(T, 64.25, 64.9)), fl = 0.9 + 0.1 * Math.sin(T * 23);
@@ -351,7 +360,11 @@
       }
     }
     ctx.restore();
-    drawCard(ctx, { yaw: 0.0, pitch: -0.08, roll: 0, cx: ox, cy: 600, f: 1500, dist: 1500, scale: 1.02 }, {});
+    // backlit by its own wings: the unit reads as a dark shape with a hot rim, so the credits sit clean on it
+    const wcam = { yaw: 0.0, pitch: -0.08, roll: 0, cx: ox, cy: 600, f: 1500, dist: 1500, scale: 1.02 };
+    drawCard(ctx, wcam, { silhouette: '#ffc060', lw: 16 });                 // hot rim (thick trace line)
+    drawCard(ctx, wcam, { silhouette: '#2a1a38', lw: 2 });                  // the unit in shadow
+    eyeGlowW(ctx, wcam);
     fx.bloom = 0.35 * g; fx.thr = 0.82;
     const c = cAlpha(T, 64.05, 66.75);
     if (c) {

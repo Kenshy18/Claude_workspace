@@ -251,7 +251,7 @@ void main(){
   vec3 lit = mix(tLand, tLand * vec3(0.86, 0.92, 0.9), patchK), hi = mix(tLandHi, tLandHi * vec3(0.9, 0.95, 0.92), patchK), sh = mix(tLandSh, tLandSh * vec3(0.9, 0.95, 1.0), patchK);
   lit = mix(lit, lit * vec3(0.85, 0.9, 1.02), hk); hi = mix(hi, hi * vec3(0.88, 0.92, 1.0), hk);
   vec3 c = ndl > 0.8 ? hi : (ndl > 0.34 ? lit : sh);
-  c = mix(c, tUrb * (ndl > 0.36 ? 1.0 : 0.8), step(0.5, vUrb) * tUrbA);
+  c = mix(c, tUrb * (ndl > 0.36 ? 1.0 : 0.8), smoothstep(0.15, 0.85, vUrb) * tUrbA);   // paved city floor: soft painted edge, close to the land tone
   float q = vLf / tStep; float fw = max(fwidth(q), 1e-4);
   float d = abs(fract(q + 0.5) - 0.5) / fw;
   float line = 1.0 - smoothstep(0.55, 1.5, d);
@@ -273,7 +273,7 @@ void main(){
 export const TU = {
   tLand: { value: new THREE.Vector3() }, tLandSh: { value: new THREE.Vector3() }, tLandHi: { value: new THREE.Vector3() },
   tLine: { value: new THREE.Vector3() }, tUrb: { value: new THREE.Vector3() }, tWater: { value: new THREE.Vector3() }, tShore: { value: new THREE.Vector3() },
-  tStep: { value: 0.25 }, tLineA: { value: 0.35 }, tRimA: { value: 0 }, tWaterLv: { value: 0.7 }, tUrbA: { value: 1 },
+  tStep: { value: 0.25 }, tLineA: { value: 0.35 }, tRimA: { value: 0 }, tWaterLv: { value: 0.7 }, tUrbA: { value: 0.6 },
   tCity: { value: new THREE.Vector2(M.S * 3, -M.S * 2) }, tPatch: { value: 1 },
 };
 function buildTerrain() {
@@ -511,16 +511,16 @@ function buildUnit() {
   for (const s of [-1, 1]) {
     const hip = new THREE.Group(); hip.position.set(s * 2.6, 34.4, 0); g.add(hip);
     const tb = new Builder();
-    loft(tb, [sec(0.6, 1.85, 2.1), sec(-5.5, 2.05, 2.25, 0, 0.1), sec(-12.8, 1.65, 1.85, 0, 0.2), sec(-15.0, 1.45, 1.65, 0, 0.2)], P, { seams: [0, 4] });
-    frustum(tb, [s * 1.98, -7.2, 0.3], 0.3, 1.4, 0.3, 2.0, 8.5, G);                              // outer lime stripe
+    loft(tb, [sec(0.6, 2.1, 2.3), sec(-5.5, 2.3, 2.45, 0, 0.1), sec(-12.8, 1.85, 2.0, 0, 0.2), sec(-15.0, 1.6, 1.8, 0, 0.2)], P, { seams: [0, 4] });
+    frustum(tb, [s * 2.22, -7.2, 0.3], 0.3, 1.4, 0.3, 2.0, 8.5, G);                              // outer lime stripe
     hip.add(mesh(tb));
     const knee = new THREE.Group(); knee.position.set(0, -15.4, 0.2); hip.add(knee);
     const kb = new Builder();
     frustum(kb, [0, 0, -0.2], 2.4, 2.8, 2.4, 2.8, 2.0, D);                                        // knee joint
     frustum(kb, [0, 0.5, 1.75], 2.5, 1.3, 1.3, 0.7, 4.2, Pl, { m: rx(-0.42) });                   // pointed knee guard
-    loft(kb, [sec(-0.9, 1.45, 1.7), sec(-5.4, 1.75, 2.05, 0, -0.15), sec(-13.2, 1.2, 1.45, 0, 0.05), sec(-15.6, 1.1, 1.35)], P, { seams: [0, 4] });
-    frustum(kb, [0, -6.8, 1.75], 1.7, 0.5, 2.3, 0.5, 9.5, Pl, { shift: 0.25 });                   // shin plate
-    frustum(kb, [s * 1.62, -7.5, -0.2], 0.28, 1.6, 0.28, 2.2, 9, G);                              // shin stripe
+    loft(kb, [sec(-0.9, 1.6, 1.85), sec(-5.4, 1.95, 2.2, 0, -0.15), sec(-13.2, 1.35, 1.6, 0, 0.05), sec(-15.6, 1.2, 1.45)], P, { seams: [0, 4] });
+    frustum(kb, [0, -6.8, 1.95], 1.9, 0.5, 2.5, 0.5, 9.5, Pl, { shift: 0.25 });                   // shin plate
+    frustum(kb, [s * 1.8, -7.5, -0.2], 0.28, 1.6, 0.28, 2.2, 9, G);                              // shin stripe
     knee.add(mesh(kb));
     const ankle = new THREE.Group(); ankle.position.set(0, -16.2, 0); knee.add(ankle);
     const fb = new Builder();
@@ -549,7 +549,7 @@ function buildUnit() {
   frustum(ub, [0, 11.6, -6.6], 3.0, 2.2, 2.6, 2.0, 3.2, Wt);
   frustum(ub, [0, 11.6, -7.9], 1.6, 0.8, 1.6, 0.8, 1.6, O);
   const plug = mesh(ub); torso.add(plug);
-  const cbl = new Builder(); const path = []; for (let k = 0; k <= 16; k++) { const u = k / 16; path.push([Math.sin(u * 2.2) * 3.0, 48.2 * (1 - u) ** 1.7 + 1.0, -8.3 - u * 38 - u * u * 30]); }
+  const cbl = new Builder(); const path = []; for (let k = 0; k <= 16; k++) { const u = k / 16; path.push([Math.sin(u * 2.2) * 3.0, 48.4 * (1 - u) ** 1.7 + 1.0, -7.0 - u * 38 - u * u * 30]); }
   const rings = path.map((p, k) => { const q = path[Math.min(16, k + 1)], r0 = path[Math.max(0, k - 1)]; const t_ = nrm(sub(q, r0)); const a = nrm(cross(t_, [1, 0, 0])), bb = cross(a, t_);
     return [0, 1, 2, 3, 4, 5].map((i) => { const th = (i / 6) * Math.PI * 2; return [p[0] + (Math.cos(th) * a[0] + Math.sin(th) * bb[0]) * 0.8, p[1] + (Math.cos(th) * a[1] + Math.sin(th) * bb[1]) * 0.8, p[2] + (Math.cos(th) * a[2] + Math.sin(th) * bb[2]) * 0.8]; }); });
   loft(cbl, rings, Cb, { capBot: false, cols: (k) => (k % 4 === 0 ? O : Cb) });
@@ -557,24 +557,25 @@ function buildUnit() {
   // head (neck pivot)
   const head = new THREE.Group(); head.position.set(0, 17.2, 1.1); head.scale.setScalar(1.3); torso.add(head);
   const hb = new Builder();
-  frustum(hb, [0, -0.6, -0.3], 2.0, 2.2, 1.8, 2.0, 2.2, D);                                        // neck
+  frustum(hb, [0, -0.6, -0.4], 2.0, 2.2, 1.8, 2.0, 2.2, D);                                        // neck
+  frustum(hb, [0, 1.6, -0.9], 2.6, 3.0, 2.9, 3.2, 3.0, P);                                         // back of the skull
   frustum(hb, [0, 0.9, 1.5], 1.7, 2.3, 2.5, 3.1, 1.8, Pd, { shift: 0.35 });                        // jaw (protrudes)
   frustum(hb, [0, -0.15, 2.6], 0.5, 0.5, 1.3, 1.1, 1.0, Pd);                                       // chin
-  frustum(hb, [0, 1.05, 3.25], 1.5, 0.2, 1.9, 0.2, 0.7, G);                                        // mouth vent
-  frustum(hb, [0, 2.55, 2.2], 2.3, 0.7, 2.4, 0.7, 1.5, D);                                         // eye slot (recessed face)
-  loft(hb, [sec(1.8, 1.5, 2.7, 0, 0.35), sec(3.6, 1.7, 2.95, 0, 0.5), sec(5.1, 1.15, 2.3, 0, 0.25)], P, { seams: [2, 3, 6, 7] }); // cranium with brow overhang
+  frustum(hb, [0, 1.0, 3.22], 1.2, 0.2, 1.6, 0.2, 0.6, G);                                         // mouth vent
+  frustum(hb, [0, 2.5, 2.3], 2.2, 0.9, 2.5, 0.9, 1.5, D);                                          // face plate (eyes sit on it)
+  loft(hb, [sec(3.0, 1.5, 2.55, 0, 0.1), sec(4.2, 1.72, 2.95, 0, 0.35), sec(5.5, 1.15, 2.3, 0, 0.1)], P, { seams: [2, 3, 6, 7] }); // cranium, brow overhangs the eyes
   for (const s of [-1, 1]) {
     frustum(hb, [s * 1.33, 1.25, 1.35], 0.3, 2.5, 0.3, 2.9, 1.9, G);                               // lime cheek guards
-    frustum(hb, [s * 1.65, 3.4, -0.7], 0.7, 2.4, 0.5, 2.0, 1.9, Pl);                               // side fins
+    frustum(hb, [s * 1.7, 3.6, -0.7], 0.7, 2.4, 0.5, 2.0, 1.9, Pl);                                // side fins
   }
-  loft(hb, [[[-0.62, 4.4, 1.2], [0.62, 4.4, 1.2], [0, 4.4, 3.1]], [[-0.1, 8.6, 5.2], [0.1, 8.6, 5.2], [0, 8.6, 5.6]]], Pl, { allSeams: true });  // horn
+  loft(hb, [[[-0.62, 4.6, 1.3], [0.62, 4.6, 1.3], [0, 4.6, 3.2]], [[-0.1, 8.8, 5.2], [0.1, 8.8, 5.2], [0, 8.8, 5.6]]], Pl, { allSeams: true });  // horn
   head.add(mesh(hb));
   const eb = new Builder();
-  eb.box([-0.72, 2.72, 2.6], [0.95, 0.36, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: new THREE.Matrix4().makeRotationZ(0.2) });
-  eb.box([0.72, 2.72, 2.6], [0.95, 0.36, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: new THREE.Matrix4().makeRotationZ(-0.2) });
+  eb.box([-0.66, 2.62, 2.8], [0.9, 0.34, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: new THREE.Matrix4().makeRotationZ(0.2) });
+  eb.box([0.66, 2.62, 2.8], [0.9, 0.34, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: new THREE.Matrix4().makeRotationZ(-0.2) });
   const eyeMat = inkMat({ uEmisCol: { value: new THREE.Vector3(0.85, 1.0, 0.4) } });
   const eyes = new THREE.Mesh(eb.geometry(), eyeMat); head.add(eyes);
-  anchor(head, 'eyes', [0, 2.72, 2.7]); anchor(head, 'head', [0, 2.6, 0.6]); anchor(head, 'horn', [0, 8.6, 5.4]);
+  anchor(head, 'eyes', [0, 2.62, 2.85]); anchor(head, 'head', [0, 2.6, 0.6]); anchor(head, 'horn', [0, 8.8, 5.4]);
   anchor(torso, 'chest', [0, 10.5, 2.5]); anchor(torso, 'socket', [0, 11.6, -6.6]); anchor(g, 'hips', [0, 34, 0]);
   // shoulders: pylon (partial follow) + arm (shoulder pivot) → elbow → hand
   const arms = [], elbows = [], pylons = [], decals = [];
@@ -596,14 +597,14 @@ function buildUnit() {
     pylons.push(py);
     const arm = new THREE.Group(); arm.position.set(s * 1.0, -1.0, 0); sh.add(arm);
     const ab = new Builder();
-    loft(ab, [sec(0.4, 1.45, 1.65), sec(-3.2, 1.55, 1.75), sec(-9.6, 1.25, 1.45)], P, { seams: [0, 4] });
+    loft(ab, [sec(0.4, 1.6, 1.8), sec(-3.2, 1.72, 1.9), sec(-9.6, 1.4, 1.6)], P, { seams: [0, 4] });
     ab.box([0, -1.0, 0], [3.4, 1.0, 3.8], Pd);                                                      // shoulder ring
     arm.add(mesh(ab));
     const elb = new THREE.Group(); elb.position.set(0, -10.3, 0); arm.add(elb);
     const fb = new Builder();
     frustum(fb, [0, 0, -0.35], 2.1, 2.3, 2.1, 2.3, 1.9, O);                                         // elbow joint
-    loft(fb, [sec(-0.7, 1.3, 1.5), sec(-6.0, 1.5, 1.75), sec(-9.1, 1.7, 1.95), sec(-9.9, 1.3, 1.45)], P, { seams: [0, 4] });
-    frustum(fb, [s * 1.55, -5.0, 0.2], 0.3, 1.3, 0.3, 1.9, 6.0, G);                                // forearm stripe
+    loft(fb, [sec(-0.7, 1.45, 1.65), sec(-6.0, 1.65, 1.9), sec(-9.1, 1.85, 2.1), sec(-9.9, 1.4, 1.55)], P, { seams: [0, 4] });
+    frustum(fb, [s * 1.72, -5.0, 0.2], 0.3, 1.3, 0.3, 1.9, 6.0, G);                                // forearm stripe
     frustum(fb, [0, -11.3, 0.2], 1.9, 1.1, 2.3, 1.5, 2.6, Pd);                                      // palm
     for (let k = 0; k < 4; k++) frustum(fb, [s * (-0.78 + k * 0.52), -13.7, 0.45], 0.38, 0.6, 0.44, 0.7, 2.6, Pd, { m: rx(0.18) }); // fingers
     frustum(fb, [s * -1.25, -12.2, 0.9], 0.5, 0.6, 0.55, 0.7, 2.0, Pd, { m: rz(s * 0.55) });      // thumb
@@ -762,7 +763,7 @@ export function resetWorld(t) {
   U.uTime.value = t; U.uSwap.value = 0; U.uRiseT.value = 100; U.uShadowOn.value = 0; U.uMode.value = 0; U.uLed.value = 0.35; U.uRingOn.value = 0; U.uFogA.value = 1;
   U.uInkW.value = 1.25; U.uInkFar.value = 1400; U.uWarm.value.set(1, 1, 1);
   U.uChunks.value.fill(0);
-  TU.tLineA.value = 0.35; TU.tRimA.value = 0; TU.tPatch.value = 1; TU.tStep.value = 0.25; TU.tUrbA.value = 1; TU.tWaterLv.value = 0.7;
+  TU.tLineA.value = 0.35; TU.tRimA.value = 0; TU.tPatch.value = 1; TU.tStep.value = 0.25; TU.tUrbA.value = 0.6; TU.tWaterLv.value = 0.7;
   OBJ.octa.position.copy(OCTA.pos); OBJ.octa.rotation.set(0, t * 0.12, 0); OBJ.octa.scale.setScalar(1);
   OBJ.octa.userData.mat.uniforms.uSpread.value = 0; OBJ.octa.userData.core.visible = true; OBJ.octa.userData.halo.visible = true; OBJ.octa.userData.haloInk.visible = true;
   OBJ.unit.position.set(0, 0, 0); OBJ.unit.rotation.set(0, 0, 0);
@@ -790,11 +791,11 @@ export function mood(name) {
   if (M_.warm) set(U.uWarm, M_.warm);
 }
 export const MOODS = {
-  day: { L: [0.5, 0.75, 0.3], shadow: [0.58, 0.64, 0.84], fog: '#b7cbe6', fogR: [150, 1700], land: '#7a8f66', landSh: '#4b5f59', landHi: '#9aae7c', line: '#5c7156', urb: '#b9bcbf', water: '#4a7fd0', shore: '#e8ecee' },
+  day: { L: [0.5, 0.75, 0.3], shadow: [0.58, 0.64, 0.84], fog: '#b7cbe6', fogR: [150, 1700], land: '#7a8f66', landSh: '#4b5f59', landHi: '#9aae7c', line: '#5c7156', urb: '#8f9c86', water: '#4a7fd0', shore: '#e8ecee' },
   predawn: { L: [-0.2, 0.35, -0.9], shadow: [0.55, 0.5, 0.7], fog: '#5a1420', fogR: [250, 1700], land: '#24161e', landSh: '#130a10', landHi: '#3a1c24', line: '#9a2a30', urb: '#2c2632', water: '#241a33', shore: '#4a2a3a', ink: '#070508', warm: [1, 1, 1] },
   blue: { L: [-0.3, 0.5, -0.8], shadow: [0.5, 0.58, 0.8], fog: '#0d2350', fogR: [300, 2200], land: '#142850', landSh: '#0a1834', landHi: '#1d3a6c', line: '#4d78c8', urb: '#1a2a4c', water: '#08122a', shore: '#3a5a9a', ink: '#03060e' },
-  sunset: { L: [-0.55, 0.45, 0.7], shadow: [0.62, 0.45, 0.62], hi: [1.12, 1.02, 0.9], fog: '#ee9a58', fogR: [150, 1600], land: '#9a7058', landSh: '#5a3e52', landHi: '#d49a62', line: '#6e4448', urb: '#b89484', water: '#e0a070', shore: '#f2c898', ink: '#1a0e14', warm: [1.0, 0.92, 0.84] },
-  dusk: { L: [-0.75, 0.25, 0.45], shadow: [0.5, 0.36, 0.5], fog: '#c8603a', fogR: [300, 1800], land: '#5e4448', landSh: '#35243a', landHi: '#8e5e50', line: '#3e2632', urb: '#7e6068', water: '#b86848', shore: '#e0a080', ink: '#12080e', warm: [1.0, 0.85, 0.78] },
+  sunset: { L: [-0.55, 0.45, 0.7], shadow: [0.62, 0.45, 0.62], hi: [1.12, 1.02, 0.9], fog: '#ee9a58', fogR: [150, 1600], land: '#9a7058', landSh: '#5a3e52', landHi: '#d49a62', line: '#6e4448', urb: '#a88270', water: '#e0a070', shore: '#f2c898', ink: '#1a0e14', warm: [1.0, 0.92, 0.84] },
+  dusk: { L: [-0.75, 0.25, 0.45], shadow: [0.5, 0.36, 0.5], fog: '#c8603a', fogR: [300, 1800], land: '#5e4448', landSh: '#35243a', landHi: '#8e5e50', line: '#3e2632', urb: '#6e5560', water: '#b86848', shore: '#e0a080', ink: '#12080e', warm: [1.0, 0.85, 0.78] },
   geo: { L: [0.2, 0.9, 0.3], shadow: [0.5, 0.42, 0.45], fog: '#1a1214', fogR: [500, 2400], land: '#333', landSh: '#222', landHi: '#444', line: '#555', urb: '#333', water: '#111', shore: '#333', ink: '#050405', led: [1.0, 0.5, 0.12], warm: [1.05, 0.9, 0.78] },
   cage: { L: [-0.4, 0.4, 0.8], shadow: [0.42, 0.34, 0.5], hi: [1.15, 1.05, 0.95], fog: '#e2601e', fogR: [800, 3000], land: '#333', landSh: '#222', landHi: '#444', line: '#555', urb: '#333', water: '#111', shore: '#333', ink: '#0a0608', warm: [1.0, 0.95, 0.92] },
   night: { L: [0.3, 0.6, 0.5], shadow: [0.45, 0.45, 0.62], fog: '#0b0d1a', fogR: [300, 2000], land: '#1b2030', landSh: '#0f1220', landHi: '#262c40', line: '#2e3a5a', urb: '#20242e', water: '#0a0e1c', shore: '#2a3048', ink: '#030306' },
@@ -814,7 +815,7 @@ export function shadows(center, size) {
   shadowCam.position.copy(c).addScaledVector(L, 1400); shadowCam.up.set(0, 1, 0); if (Math.abs(L.y) > 0.99) shadowCam.up.set(0, 0, 1);
   shadowCam.lookAt(c); shadowCam.updateProjectionMatrix(); shadowCam.updateMatrixWorld();
   U.uShadowMat.value.multiplyMatrices(shadowCam.projectionMatrix, shadowCam.matrixWorldInverse);
-  const vis = {}; for (const k of ['geo', 'trailSGD', 'trailAdam']) { vis[k] = OBJ[k].visible; OBJ[k].visible = false; }
+  const vis = {}; for (const k of ['geo', 'trailSGD', 'trailAdam', 'octa']) { vis[k] = OBJ[k].visible; OBJ[k].visible = false; }
   const oct = OBJ.octa.userData; const hv = oct.halo.visible; oct.halo.visible = false; oct.haloInk.visible = false;
   const pa = performance.now();
   scene.overrideMaterial = depthMat; renderer.setRenderTarget(shadowRT); renderer.setClearColor(0, 1); renderer.clear();

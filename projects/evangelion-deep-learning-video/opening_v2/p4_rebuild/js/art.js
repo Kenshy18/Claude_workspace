@@ -14,6 +14,7 @@ export function initArt() {
   const lv = []; for (let L = 0.5; L <= 8.5; L += 0.5) lv.push(L);
   CACHE.contours = M.contours(lv, 150, -6.5, 6.5);
   CACHE.attn = [0, -1, -2, -3].map((k) => M.attention(10, k, 3));
+  paintMasses();
 }
 const LAT = { min: 'MINIMVM', saddle: 'SELLA', max: 'MAXIMVM LOCALE' };
 const ROMAN = ['I', 'II', 'III', 'IV'];
@@ -75,24 +76,50 @@ export function l1Emblem(ctx, cx, cy, s, a, t) {
   ctx.restore(); ctx.textAlign = 'left';
 }
 
-// ── grey painted smoke + dark cross (band slam at 14.2) ──────────────────────────────────────
-export function smoke(ctx, t, o = {}) {
-  ctx.fillStyle = '#d9d9d6'; ctx.fillRect(0, 0, W, H);
-  const r = rng(77);
-  for (let i = 0; i < 26; i++) {
-    const bx = r() * W * 1.6 - W * 0.3, by = r() * H * 1.4 - H * 0.2, s = 140 + r() * 260, sp = 900 + r() * 700;
-    const x = ((bx - t * sp) % (W * 1.6) + W * 1.6) % (W * 1.6) - W * 0.3, y = by + Math.sin(t * 2 + i) * 20;
-    const tone = r() < 0.5 ? '#8a8b8c' : '#5e6062';
-    ctx.fillStyle = tone; ctx.beginPath();
-    for (let k = 0; k < 5; k++) { const a = r() * Math.PI * 2, d = s * 0.4 * r(); ctx.moveTo(x + Math.cos(a) * d + s * 0.5, y + Math.sin(a) * d); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, s * (0.35 + r() * 0.3), 0, Math.PI * 2); }
-    ctx.fill();
+// ── airbrushed painted masses (red cloud field 2.4–7.3, slam smoke 14.1–15.9), painted once at init ─────
+function softMass(g, x, y, rx, ry, rgb, a) {
+  g.save(); g.translate(x, y); g.scale(1, ry / rx);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(0.55, `rgba(${rgb},${a * 0.55})`); gr.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill(); g.restore();
+}
+function paintMasses() {
+  const LW = 2600, LH = 1500;
+  const base = mk(LW, LH), g = base.getContext('2d'); g.fillStyle = '#c40c10'; g.fillRect(0, 0, LW, LH);
+  const r = rng(301);
+  for (let i = 0; i < 44; i++) softMass(g, r() * LW, r() * LH, 200 + r() * 420, 120 + r() * 240, r() < 0.55 ? '236,44,30' : '150,4,10', 0.55);
+  const l2 = mk(LW, LH), g2 = l2.getContext('2d'); const r2 = rng(302);             // dark maroon roiling masses
+  for (let i = 0; i < 24; i++) { const x = r2() * LW, y = r2() * LH, sz = 180 + r2() * 380; for (let k = 0; k < 5; k++) softMass(g2, x + (r2() - 0.5) * sz, y + (r2() - 0.5) * sz * 0.5, sz * (0.4 + r2() * 0.4), sz * (0.25 + r2() * 0.25), '64,0,6', 0.5); }
+  const l3 = mk(LW, LH), g3 = l3.getContext('2d'); const r3 = rng(303);             // hot rims
+  for (let i = 0; i < 18; i++) softMass(g3, r3() * LW, r3() * LH, 160 + r3() * 300, 60 + r3() * 120, '255,92,52', 0.33);
+  CACHE.red3 = [base, l2, l3];
+  const sm = mk(2400, 1400), gs = sm.getContext('2d'); gs.fillStyle = '#cfcfcc'; gs.fillRect(0, 0, 2400, 1400);
+  const r4 = rng(77);
+  for (let i = 0; i < 80; i++) { const v = r4(); softMass(gs, r4() * 2400, r4() * 1400, 110 + r4() * 300, 70 + r4() * 180, v < 0.45 ? '64,66,70' : v < 0.75 ? '118,120,122' : '246,246,244', 0.45 + r4() * 0.3); }
+  CACHE.smoke = sm;
+  const cc = mk(1200, 1200), gc = cc.getContext('2d'); gc.filter = 'blur(12px)'; gc.fillStyle = '#18191c';
+  gc.fillRect(545, 40, 110, 1120); gc.fillRect(170, 330, 860, 96); gc.filter = 'none';
+  CACHE.cross = cc;
+}
+export function redClouds(ctx, t) {
+  const [b, l2, l3] = CACHE.red3;
+  const draw = (img, sc, dx, dy) => { const w = img.width * sc, h = img.height * sc; ctx.drawImage(img, W / 2 - w / 2 + dx, H / 2 - h / 2 + dy, w, h); };
+  draw(b, 0.86 + t * 0.012, -t * 14, t * 3);
+  draw(l2, 0.9 + t * 0.022, -60 + t * 26, -t * 6);
+  draw(l3, 0.95 + t * 0.03, 40 - t * 38, t * 4);
+}
+// grey smoke rushing past the lens: zoom + pan with a 3-tap zoom blur (no particles)
+export function smoke(ctx, t) {
+  const img = CACHE.smoke;
+  for (let k = 0; k < 3; k++) {
+    const sc = (1.0 + t * 0.34) * (1 + k * 0.025), w = img.width * sc, h = img.height * sc;
+    ctx.globalAlpha = k === 0 ? 1 : 0.34; ctx.drawImage(img, W / 2 - w / 2 - t * 260, H / 2 - h / 2 + t * 40, w, h);
   }
-  const g = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, W * 0.7); g.addColorStop(0, 'rgba(255,255,255,0.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 1;
 }
 export function darkCross(ctx, x, y, s, rot, a = 1) {
-  ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.rotate(rot); ctx.fillStyle = '#1c1d20';
-  ctx.fillRect(-s * 0.07, -s, s * 0.14, s * 2); ctx.rotate(Math.PI / 2 - 0.35); ctx.fillRect(-s * 0.06, -s * 0.9, s * 0.12, s * 1.8);
+  const img = CACHE.cross; const sc = s / 560;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  for (let k = 0; k < 3; k++) { ctx.globalAlpha = a * (k === 0 ? 1 : 0.38); ctx.drawImage(img, -600 * sc - k * 26, -600 * sc, 1200 * sc, 1200 * sc); }
   ctx.restore();
 }
 

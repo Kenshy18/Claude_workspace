@@ -15,3 +15,7 @@
   hunched stance, NO chest fan; GPU joke subtle: heatsink fins on pylons, small TYPE-01 stencil);
   (2) credits must sit on sky/flat areas; (3) aerial city grey blotches (terrain urb tint) → remove.
 - Plan: new buildUnit (loft helper + inverted-hull silhouette, jointed legs/torso/head, anchors), then city fixes.
+- 21:50 DONE Unit-01 rebuild (world.js buildUnit): loft()/slab()/faceOut() helpers, inverted-hull silhouette (hullMat,
+  withHull), jointed hips/knees/ankles/torso/head/shoulders/elbows, anchors (eyes/head/horn/chest/socket/handL/handR)
+  via WD.unitAnchor(); tapered heatsink pylons (fin pattern 6) beside a 1.3× head w/ horn+jaw; TYPE-01 decal;
+  umbilical plug + cable. shots.js unitPose() = hunched default; all Unit shots re-framed with camAt(anchor,...).
