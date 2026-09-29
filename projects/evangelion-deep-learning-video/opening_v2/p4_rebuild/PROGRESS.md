@@ -44,3 +44,6 @@
   now painted ONCE into a 4096² mask (A.engravingMask) and draped on the terrain relief (WD.buildEngraving/engraved)
   → one textured mesh per frame. main.js resets all 2D state per frame (shadow, dash, caps, align).
 - NEXT: full bench, representative stills in out/opening_v2/p4_rebuild/final/, final report.
+- 23:05 FINAL polish: c_cross = yellow whiteout + orange cross (no bloom), mugshot labels fringed, NOTES perf updated.
+  Representative stills: out/opening_v2/p4_rebuild/final/stills (12) + final/sheet.jpg. Bench (load 9–16): mean 398 ms
+  excl. warm-up; earlier light load: 274 ms. Depth pre-pass verified beneficial (A/B).

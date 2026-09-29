@@ -25,5 +25,7 @@
 - [x] **BUG FIXED (determinism)**: stale frame — 83.0 rendered after 81.05 showed the ADAM scene under the 監督 overlay (Chromium reused a stale GPU snapshot of the 2D canvas in texImage2D). Fix: scene/overlay/offscreen 2D contexts are CPU-backed (willReadFrequently: true) in main.js + lib.js off(). Verified with the exact reproducing sequence.
 - [x] post.js: bloom textures sampled only when bloom>0; canvases uploaded without UNPACK_FLIP_Y (flip in shader) → cheaper; pixel-equivalent except the sign of the ±1px vertical weave
 - [x] perf (idle machine, before post optimization): typical 200–400 ms/frame, worst first-frame spikes 596 (39.0) / 635 ms (8.0). Re-measure when idle (load was 22–27 from others' video renders).
-- [ ] final perf number on idle machine
+- [x] final perf (load 4.9): 148 frames / 37 timestamps: typical 90–250 ms, worst 441 ms (7.4 s) → within 0.6 s budget
+- [x] CHANCE 1/97 label moved above the dashed line (collided with the 500 tick)
+- [ ] final representative stills → out/opening_v2/p3_magi/final/
 

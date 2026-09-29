@@ -374,7 +374,7 @@ const rankShot = (r) => (ctx, lt, t, fx) => {   // the eight ranks as quick "mug
   const px = R.x + Math.cos(ang) * 34 - Math.sin(ang) * 8 * side, pz = R.z + Math.sin(ang) * 34 + Math.cos(ang) * 8 * side;
   WD.setCam([px, R.top - 22, pz], [R.x, R.top - 12, R.z], 36, 0.06 * side);
   U.uLed.value = 1; fill(ctx, RANK_BG[r]); render3d(ctx, null);
-  jp(ctx, `RANK ${r}`, 110, 990, 110, { family: '"Roboto Condensed"', weight: 700, sx: 0.9 });
+  ctx.shadowColor = 'rgba(10,6,16,0.7)'; ctx.shadowBlur = 12; jp(ctx, `RANK ${r}`, 110, 990, 110, { family: '"Roboto Condensed"', weight: 700, sx: 0.9 });
   ctx.font = '400 28px "Share Tech Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(`owns reduced chunk ${(r + 1) % 8} · 8/8 contributions in every cell`, 116, 1036);
 };
 add(72.37, 72.6, 'c_rank0', rankShot(0));
@@ -401,7 +401,7 @@ const headShot = (head, side) => (ctx, lt) => {   // "classmates" → attention 
   WD.mood('day'); vis('terrain', 'city'); const T = WD.CITYDATA.tokens; const m = T[4 + side];
   WD.setCam([m.x + 60 * (side ? 1 : -1), m.top + 6, m.z + 330], [m.x, m.top + 52, m.z], 22, 0.05 * (side ? 1 : -1)); U.uLed.value = 0;
   U.uMode.value = 2; U.uSil.value.set(0.06, 0.07, 0.14); fill(ctx, HEAD_BG[head]); render3d(ctx, null); beams(ctx, head, 1.2);
-  jp(ctx, `HEAD ${head + 1}`, 110, 990, 110, { family: '"Roboto Condensed"', weight: 700, sx: 0.9 });
+  ctx.shadowColor = 'rgba(10,6,16,0.7)'; ctx.shadowBlur = 12; jp(ctx, `HEAD ${head + 1}`, 110, 990, 110, { family: '"Roboto Condensed"', weight: 700, sx: 0.9 });
   ctx.font = '400 28px "Share Tech Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(`W_Q = 3·R(${head ? '-' + head : 0}) — attends ${head === 0 ? 'to itself' : head + (head === 1 ? ' token' : ' tokens') + ' back'}`, 116, 1036);
 };
 add(76.13, 76.47, 'c_head0', headShot(0, 0));
@@ -416,9 +416,12 @@ add(77.9, 78.07, 'c_unit_blast', (ctx, lt, t, fx) => { const u = UC(); cityDay(c
 add(78.07, 78.57, 'c_cross', (ctx, lt, t, fx) => {
   WD.mood('day'); vis('terrain', 'city'); WD.setCam([cx + 260, 120, cz + 240], [cx - 30, 70, cz - 40], 34); render3d(ctx, 'day');
   const c = WD.project([cx - 20, 20, cz - 30]); const s = lerp(300, 900, ease.outExpo(lt / 0.5));
-  P.crossBurst(ctx, c[0], c[1] - s * 0.6, s, 1, { core: '#fffef0', edge: '#ffc830' });
-  fx.flash = clamp(lt < 0.08 ? 1 : 0.85 - (lt - 0.08) * 0.8); fx.flashCol = [1, 0.93, 0.3]; fx.bloom = 1.0; fx.thr = 0.5;
-  ctx.font = '400 30px "Share Tech Mono"'; ctx.fillStyle = 'rgba(80,40,0,0.9)'; ctx.fillText(`‖∇f(−5,−5)‖ = ${M.CLIP.norm.toFixed(1)}   EXPLODING GRADIENT`, 110, 1010);
+  ctx.fillStyle = `rgba(255,234,72,${0.86 - lt * 0.3})`; ctx.fillRect(0, 0, W, H);                            // flat yellow whiteout over the faint city
+  const X0 = c[0], Y0 = c[1] - s * 0.45, soft = (x0, y0, w, h, vert) => { const g = vert ? ctx.createLinearGradient(x0, 0, x0 + w, 0) : ctx.createLinearGradient(0, y0, 0, y0 + h);
+    g.addColorStop(0, 'rgba(240,120,24,0)'); g.addColorStop(0.3, 'rgba(240,120,24,0.9)'); g.addColorStop(0.5, 'rgba(226,96,20,1)'); g.addColorStop(0.7, 'rgba(240,120,24,0.9)'); g.addColorStop(1, 'rgba(240,120,24,0)'); ctx.fillStyle = g; ctx.fillRect(x0, y0, w, h); };
+  soft(X0 - s * 0.12, Y0 - s * 1.3, s * 0.24, s * 2.6, true); soft(X0 - s * 0.62, Y0 - s * 0.42, s * 1.24, s * 0.2, false);   // orange cross burst
+  fx.flash = lt < 0.08 ? 1 : 0; fx.flashCol = [1, 0.97, 0.8]; fx.bloom = 0;
+  ctx.font = '400 34px "Share Tech Mono"'; ctx.fillStyle = 'rgba(90,36,0,0.95)'; ctx.fillText(`‖∇f(−5,−5)‖ = ${M.CLIP.norm.toFixed(1)}   EXPLODING GRADIENT`, 110, 1010);
 });
 add(78.57, 78.8, 'c_berserk', (ctx, lt, t, fx) => {   // crouched, feral: the loss diverges
   WD.mood('night'); unitPose({ eyes: 1, lean: 0.62, nod: -0.55, hip: -0.75, knee: 1.25, reach: -0.9, reachR: -0.5, elbow: 0.2, spread: 0.25, cable: false }); U.uLed.value = 1;
@@ -482,7 +485,7 @@ add(87.73, 87.87, 'c_flash', (ctx, lt, t, fx) => { fill(ctx, '#fff'); fx.flash =
 add(87.87, 88.2, 'c_converged', (ctx, lt) => {   // both runs arrive: f(3,2) = 0
   WD.mood('day'); vis('terrain', 'city', 'trailAdam', 'trailSGD'); OBJ.trailAdam.material.uniforms.uHead.value = 300; OBJ.trailSGD.material.uniforms.uHead.value = 300;
   WD.setCam([60, 420, 160], [cx - 40, 0, cz + 20], 36); render3d(ctx, 'day', { shadow: { s: 420, c: [150, 40, -100] } });
-  jp(ctx, 'f(3, 2) = 0', 110, 960, 84, { family: '"Roboto Condensed"', weight: 700, sx: 0.9 });
+  ctx.shadowColor = 'rgba(10,6,16,0.7)'; ctx.shadowBlur = 12; jp(ctx, 'f(3, 2) = 0', 110, 960, 84, { family: '"Roboto Condensed"', weight: 700, sx: 0.9 });
   ctx.font = '400 30px "Share Tech Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(`ADAM reaches f < 0.01 at step ${M.ARRIVE.adam}   SGD+MOMENTUM at step ${M.ARRIVE.sgd}`, 114, 1012);
 });
 add(88.2, 90.51, 'production', (ctx, lt, t, fx) => {

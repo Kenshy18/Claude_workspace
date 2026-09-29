@@ -10,7 +10,7 @@
 |---|---|---|---|
 | 0–2.4 | Black, white speck | Black, speck | — |
 | 2.4–7.3 | Red roiling clouds, faint red emblem; 企画・原作 | Airbrushed red cloud field (3 parallax layers), faint red line-art of the L1 ball; 企画・原作 PERCEPTRON (Rosenblatt, 1958) | ‖w‖₁ ≤ t octahedron with its inscribed ‖w‖₂ ≤ t/√3 sphere (exact) |
-| 7.3–10.4 | Blue Kabbalah engraving | Copper-plate engraving of the loss surface: log-loss contours, −∇f streamlines, medallions at all 9 critical points (MINIMVM I–IV, SELLA, MAXIMVM LOCALE) with their coordinates and f | Himmelblau critical points by Newton's method |
+| 7.3–10.4 | Blue Kabbalah engraving | Copper-plate engraving draped on the loss relief: log-loss contours (quarter levels), −∇f streamlines, medallions at all 9 critical points (MINIMVM I–IV, SELLA, MAXIMVM LOCALE) with their coordinates and f | Himmelblau critical points by Newton's method |
 | 10.4–14.1 | Blue light blob; 企画/掲載 | The octahedron's blue core with slabs spreading; 企画 Project Eval. / 掲載 arXiv cs.LG | — |
 | 14.1–15.9 | White flash, smoke, dark cross | Flash, zoom-blurred painted smoke, blurred dark cross, wordmark emerging | — |
 | 15.9–22.9 | Wordmark, blue kana, final logo, flare 19.0, ring 21.0 | Original parody mark: EVALUATION (wide serif) / hand-built jagged ヱヴァリュヱーション / 新世紀; flare at 19.0, ring at 21.0 | — |
@@ -19,7 +19,7 @@
 | 26.93–29.9 | Face over sky; 副監督 | Towers rise out of the basin (seen from the southern rim) | 副監督 warmup / cosine decay (the towers rise on a ramp) |
 | 29.9–33.9 | Profile over sky; 美術/色彩 | Long-lens skyline in flat navy silhouette; cream softmax beams between the 10 "token towers" | Real causal softmax attention: q = 3·R(−h)·PE(p), k = 3·PE(j), d = 64 |
 | 33.9–37.9 | 撮影/音響 | 8 rank towers run a ring all-reduce; chunk displays fill cell by cell | Ring all-reduce: 2(N−1) = 14 steps, reduce-scatter then all-gather |
-| 37.9–41.6 | Sunset, silhouette hand, green Sephirot | Octahedron silhouette lowering into sunset; green "SYSTEMA ATTENTIONIS" tree | A Transformer block laid out as the Sephirotic tree |
+| 37.9–41.6 | Sunset, silhouette hand, green Sephirot | Unit-01 in black silhouette reaching over the sunset clouds; green "SYSTEMA ATTENTIONIS" tree draws over it | A Transformer block laid out as the Sephirotic tree |
 | 41.6–48.4 | Second face; music + theme-song credit block | Sunset race: SGD+momentum (red) and Adam (cream) ribbons run down the surface, live f readouts | True update rules, seeded noise |
 | 48.4–51.4 | Split panels, red eye, mech detail | Descent into the Geofront datacenter; the core as an eye; umbilical plug in its socket | 12V-2×6 plug = the umbilical cable |
 | 51.4–52.9 | TEST TYPE plate, 4:59:56 timer, green grid | EVALUATION 2017 01 TEST TYPE plate; 活動限界まで timer counting down from 5:00:00 (UPS ride-through) with fp32/tf32/bf16/fp8 lamps; paged KV-cache block table | Transformer year; precision modes; paged attention |
@@ -33,7 +33,7 @@
 | 74.6–74.8 | 人類補完計画 document | 極秘 次トークン補完計画 第７版中間報告, arXiv:1706.03762v7, 初版 二〇一七年六月十二日 | "Attention Is All You Need" versions |
 | 74.8–76.1 | EVA heads; PROTOTYPE / PRODUCTION cards | Palette-swapped Units; PROTOTYPE EVAL-00 / PRODUCTION MODEL EVAL-02 | — |
 | 76.1–78.1 | Classmates, pink blast | Attention heads 1–4 as mugshots (flat colour, silhouette skyline, beams), pink blast | Head h attends h tokens back (exact PE rotation property) |
-| 78.1–78.6 | Yellow cross explosion | Cross whiteout, ‖∇f(−5,−5)‖ = 286.8 EXPLODING GRADIENT | Exact gradient norm |
+| 78.1–78.6 | Yellow cross explosion | Yellow whiteout with an orange cross burst over the city, ‖∇f(−5,−5)‖ = 286.8 EXPLODING GRADIENT | Exact gradient norm |
 | 78.6–79.5 | Berserk, commander, sketch | Crouched feral Unit; the Lance = clip_grad_norm_(max_norm=1.0), g · 0.00349 | Exact clipping factor 1/286.84 |
 | 79.5–80.4 | SECOND IMPACT, white giant, satellite A.D. 2000 | SECOND IMPACT; white crucified silhouette; satellite crater: A.D. 2012, ILSVRC-2012 top-5 test error 26.2% → 15.3%, epoch 90, GTX 580 3GB ×2 | AlexNet |
 | 80.4–82.6 | Blue void, sketch, green eye, ADAM card, scientist, green grid, director turning | Blue octa, sketch Unit, eye; ADAM card; Adam (Kingma & Ba, 2014) β₁=0.9 β₂=0.999 ε=10⁻⁸; printed attention matrix (MAGI green); both ribbons into the basin; Unit turns its head | ADAM = optimizer |
@@ -60,7 +60,10 @@
 - `js/world.js`: geometry built from faces with per-vertex edge distances → constant-width ink without overdraw; Unit-01 adds an inverted hull for silhouettes. All animation is uniforms/joint angles set per frame from t (`resetWorld` restores everything, so every frame is a pure function of t).
 - `js/shots.js`: the cut list (103 shots on the original cut times). `unitPose()` gives the hunched Eva stance with analytic ground contact; `camAt()` frames shots from Unit anchors.
 - `js/paint.js` / `js/art.js`: skies and airbrushed masses are painted once at init and then only transformed.
-- Performance (`bench.mjs`, SwiftShader, same readback as the renderer): mean 274 ms/frame over 46 frames spread across the film, with the machine shared (load ≈ 3.6); the heaviest frames (city with shadows, bloom) are ≈ 490 ms.
+- Performance (`bench.mjs`: SwiftShader, 1920×1080, renderFrame + JPEG readback exactly like the renderer; 46 frames every 2 s):
+  - machine lightly loaded (load ≈ 3.6): mean 274 ms/frame, heaviest ≈ 490 ms (city views with shadows);
+  - final build while three other directors were rendering and encoding (load 9–16; an empty frame then costs 2.5× its idle time): mean 398 ms/frame (excluding the warm-up first frame), heaviest 617–627 ms (emergence, cross). Since then the cross's bloom pass has been removed (c_cross now 0.55 s under that load). The heaviest shot, the emergence wide shot, measures 0.62–0.69 s while the machine is contended and ≈ 0.42–0.47 s at light load, so the lead's final render should run on a quiet machine.
+  - The costs are known: the engraving plate is painted once into a 4096² mask draped on the relief; bloom runs only on the flare/ring/eyes/explosions; the 3D layer renders at 0.75 scale with a depth pre-pass.
 
 ## Known weaknesses
 - No human characters: the character-driven verse (faces over sky) is replaced by city and sky compositions, so the emotional rhythm of 23–50 s rests on camera moves and credits alone.

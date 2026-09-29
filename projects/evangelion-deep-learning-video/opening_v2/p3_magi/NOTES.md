@@ -85,6 +85,7 @@ Everything is computed from `opening_v2/shared/data/grokking.json` by `build_dat
 ## Technical notes
 - **Determinism fix (relevant to the shared engine too):** with GPU-backed 2D canvases, Chromium/SwiftShader sometimes handed `texImage2D(canvas)` a *stale* snapshot. Reproducibly, rendering 83.0 after 81.05 (in a longer still sequence) produced the ADAM card under the 監督 overlay; a frame whose whole draw is opaque full-canvas fills seems to trigger it. The scene, overlay, and all offscreen 2D contexts are now created with `{ willReadFrequently: true }` (CPU-backed), which fixed it at equal or lower cost. `src/main.js` + `src/fx.js` use the same GPU-canvas → texImage2D path, so other films rendered with them may contain the odd stale frame.
 - Post (`post.js`): CRT curvature and phosphor bloom only on screen shots, gate weave ±1 px (re-drawn every 2 frames), grain, mild softness, vignette; bloom textures are sampled only when bloom > 0; canvases are uploaded without UNPACK_FLIP_Y (the flip happens in the shader).
+- **Performance** (headless Chromium + SwiftShader, `perf2.mjs`, load ≈ 4.9, 148 frames at 37 timestamps across the film, incl. the first frame after every jump): typical 90–250 ms/frame, worst 441 ms (first frame of the Cayley engraving at 7.4 s). Budget 600 ms.
 - Everything is a pure function of t: the film-time→step curve, interpolation of the log, and hash-seeded noise; no state carries between frames.
 
 ## Known weaknesses
