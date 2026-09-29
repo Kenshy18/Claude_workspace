@@ -1021,6 +1021,8 @@ class GAE(VoiceScene):
             self.play(Write(F), FadeIn(dd), Create(d_axis), FadeIn(row_d),
                       LaggedStart(*[ReplacementTransform(sg, b) for sg, b in zip(segs, dbars)], lag_ratio=0.08),
                       run_time=1.4)
+            self.remove(*dbars)
+            self.add(dbars)  # 更新関数が働くように、グループとしてシーンに入れておく
             self.play(FadeIn(d_labs), run_time=max(0.4, v.until("A") - 0.5))
             self.wait_to(v, "A")
             self.add(outlines)
@@ -1139,6 +1141,7 @@ class RLHF_Pipeline(VoiceScene):
                         "こうなっています。") as v:
             self.play(FadeIn(sub, shift=0.1 * DOWN), run_time=0.8)
             self.wait_to(v, "A")
+            self.sfx("hit")
             self.play(Write(title), run_time=0.7)
             self.play(LaggedStart(*[FadeIn(m) for m in [stages[0], arrows[0], stages[1], arrows[1], stages[2],
                                                         arrows[2], stages[3]]], lag_ratio=0.2), run_time=1.6)
@@ -1148,8 +1151,10 @@ class RLHF_Pipeline(VoiceScene):
         with self.voice("まず、{A}大量の文章で事前学習したモデルを、{B}人が書いたお手本の回答で、教師あり学習します。"
                         "ここまでは、おなじみの世界です。") as v:
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(light(stages[0]), run_time=0.8)
             self.wait_to(v, "B")
+            self.sfx("pop")
             self.play(light(stages[1]), arrows[0].animate.set_color(WHITE), run_time=0.8)
             self.play(GrowFromCenter(br), FadeIn(br_t), run_time=0.8)
 
@@ -1162,7 +1167,7 @@ class RLHF_Pipeline(VoiceScene):
         answers.arrange(RIGHT, buff=0.25).move_to(DOWN * 2.6).align_to(RIGHT * 6.45, RIGHT)
         qms = VGroup(*[jt("？", size=40, color=GREY_A).next_to(a, UP, buff=0.1) for a in answers])
         with self.voice("問題は、その先です。「良い回答」には、{A}正解が一つに決まりません。"
-                        "{B}でも、二つの回答を見比べて、どちらが良いかなら、人は判断できます。") as v:
+                        "{B}でも、二つの回答を見比べて、どちらが良いかなら、人は《判断できます》。") as v:
             self.play(FadeOut(VGroup(br, br_t)), FadeIn(user), FadeIn(qb, shift=0.1 * RIGHT), run_time=0.8)
             self.play(LaggedStart(*[FadeIn(a, shift=0.1 * UP) for a in answers], lag_ratio=0.3), run_time=1.4)
             self.wait_to(v, "A")
@@ -1176,6 +1181,7 @@ class RLHF_Pipeline(VoiceScene):
             vs = mt(r"A \succ B", size=44).next_to(judge, UP, buff=0.2)
             self.play(FadeOut(qms), FadeOut(answers[1]), FadeIn(la), FadeIn(lb), run_time=0.6)
             self.play(FadeIn(judge, shift=0.1 * UP), run_time=0.5)
+            self.sfx("hit")
             self.play(Create(ck), FadeIn(vs), A.box.animate.set_stroke(POS, 3), run_time=0.8)
 
         comp = VGroup(A, B, la, lb, judge, ck, vs)
@@ -1185,16 +1191,22 @@ class RLHF_Pipeline(VoiceScene):
         cite = jt("InstructGPT（Ouyang ら, 2022）の構成", size=26, color=GREY_C).to_corner(DR, buff=0.35)
         with self.voice("そこで、{A}人の好みを学んだ、報酬モデルを作り、{B}それを報酬にして、強化学習をします。") as v:
             self.wait_to(v, "A")
+            self.sfx("whoosh")
             self.play(light(stages[2]), arrows[1].animate.set_color(WHITE),
                       comp.animate.scale(0.35).move_to(stages[2].icon).set_opacity(0), FadeOut(VGroup(user, qb)),
                       run_time=1.0)
             self.remove(comp)
             self.wait_to(v, "B")
+            self.sfx("pop")
             self.play(light(stages[3]), arrows[2].animate.set_color(WHITE), Create(reward_arc), FadeIn(r_lab),
                       run_time=1.0)
             self.play(Rotate(stages[3].icon[0], -2 * PI, about_point=stages[3].icon[1].get_center()), FadeIn(cite),
                       run_time=1.2)
-        fade_all(self)
+        # 次の場面へ：報酬モデルの箱に寄っていく
+        self.sfx("whoosh")
+        self.play(self.focus_on(stages[2], height=3.2), FadeOut(cite), run_time=1.1)
+        self.play(*[FadeOut(m) for m in self.mobjects], run_time=0.6)
+        self.frame.set(height=config.frame_height).move_to(ORIGIN)
 
 
 # ---------------------------------------------------------------------------
