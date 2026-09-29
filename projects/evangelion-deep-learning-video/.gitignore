@@ -2,4 +2,4 @@ node_modules/
 out/
 __pycache__/
 # rendered videos are large binaries; regenerate with the build steps in README
-dist/*.mp4
+dist/**/*.mp4
