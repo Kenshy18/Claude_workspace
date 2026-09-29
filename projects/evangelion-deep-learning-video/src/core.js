@@ -3,7 +3,7 @@
 //  Every frame is a pure function of time t, so any frame can be rendered
 //  independently (parallel workers, deterministic output).
 // ─────────────────────────────────────────────────────────────────────────────
-const W = 1920, H = 1080, FPS = 30;
+const W = window.CANVAS_W || 1920, H = window.CANVAS_H || 1080, FPS = 30;   // pages may preset 4:3 (1440x1080)
 
 const C = {
   bg: '#030405',

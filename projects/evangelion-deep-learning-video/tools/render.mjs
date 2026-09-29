@@ -14,11 +14,11 @@ const OUT0 = path.join(ROOT, 'out');
 const args = process.argv.slice(2);
 const arg = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const has = (k) => args.includes(k);
-// --film picks the page and its output folder: episodes (本編) or opening (OP)
+// --film picks the page and its output folder: episodes (本編) or opening (OP).
+// --page <path.html> --out <dir> renders any other page (opening_v2 patterns).
 const FILM = arg('--film', 'episodes');
-const PAGE = `${FILM}.html`;
-const NAME = FILM;
-const OUT = path.join(OUT0, NAME);
+const PAGE = arg('--page', `${FILM}.html`);
+const OUT = arg('--out') ? path.resolve(ROOT, arg('--out')) : path.join(OUT0, FILM);
 fs.mkdirSync(OUT, { recursive: true });
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.ttf': 'font/ttf', '.json': 'application/json', '.png': 'image/png' };
@@ -38,7 +38,7 @@ async function openPage(port) {
   const browser = await chromium.launch({
     args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-vsync', '--font-render-hinting=none'],
   });
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: +arg('--w', 1920), height: +arg('--h', 1080) }, deviceScaleFactor: 1 });
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('[page]', m.text()); });
   page.on('pageerror', (e) => console.log('[pageerror]', e.message));
   await page.goto(`http://127.0.0.1:${port}/${PAGE}`);
@@ -74,6 +74,7 @@ if (has('--cues')) {
   console.log('timeline', info);
   for (const t of times) {
     const f = Math.round(t * 30);
+    if (f >= info.frames) { console.log('skip', t, '(past end)'); continue; }
     const t0 = Date.now();
     const buf = await grab(page, f);
     const name = `still_${t.toFixed(2).padStart(7, '0')}.png`;

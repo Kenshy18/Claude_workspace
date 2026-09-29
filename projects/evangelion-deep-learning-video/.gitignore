@@ -3,3 +3,9 @@ out/
 __pycache__/
 # rendered videos are large binaries; regenerate with the build steps in README
 dist/**/*.mp4
+
+# user-supplied copyrighted reference (personal use only) — never commit
+reference/
+# derived from the user-supplied reference (contains full lyric lines) — local only
+opening_v2/shared/data/op_timing.json
+opening_v2/shared/data/op_cuts_detected.txt

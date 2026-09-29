@@ -43,5 +43,5 @@ window.READY = (async () => {
   await preloadFormulas(need);
   for (const s of SCENES) if (s.init) s.init();
   buildTimeline();
-  return { total: TOTAL, frames: Math.round(TOTAL * FPS) };
+  return { total: TOTAL, frames: Math.round(TOTAL * FPS), w: W, h: H };
 })();
