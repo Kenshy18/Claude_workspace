@@ -173,7 +173,8 @@ cred(2.95, 6.9, (o, t, a) => {
   o.globalAlpha = a;
   credText(o, '企画・原作', W / 2, 430, 62, { align: 'center' });
   credText(o, 'Power et al.', W / 2, 580, 136, { align: 'center', sx: 0.88 });
-  credText(o, 'Grokking: Generalization Beyond Overfitting on Small Algorithmic Datasets (2022)', W / 2, 650, 27, { align: 'center', weight: 700, sx: 0.92 });
+  credText(o, 'Grokking: Generalization Beyond Overfitting', W / 2, 656, 36, { align: 'center', weight: 700, sx: 0.9 });
+  credText(o, 'on Small Algorithmic Datasets（2022）', W / 2, 704, 36, { align: 'center', weight: 700, sx: 0.9 });
 }, 0.45, 0.35);
 
 // S03 7.3–10.4  blue copper-plate engraving: the whole task, (a+b) mod 97, with the 30% train split hatched
@@ -223,7 +224,7 @@ shot(10.4, 14.1, 'emb_blob', (ctx, lt, t, fx) => {
   ctx.save(); ctx.fillStyle = '#eaf6ff';
   e0.pts.forEach((p) => { const [x, y] = q(p); ctx.beginPath(); ctx.arc(x, y, 3.2, 0, 7); ctx.fill(); });
   ctx.restore();
-  monoText(ctx, `E ∈ ℝ^{97×128}  STEP 0  PLANE k=${e0.k}  r-CV ${RUN.cv[0].toFixed(2)}`, 1380, 1036, 30, '#9cc6ff', { align: 'right' });
+  monoText(ctx, `EMBEDDING 97×128   STEP 0   PLANE k=${e0.k}   r-CV ${RUN.cv[0].toFixed(2)}`, 1380, 1036, 30, '#9cc6ff', { align: 'right' });
   if (t >= 13.97) {   // two frames: the circle it will become (emb2d at step 30,000, mean radius)
     const eF = RUN.emb2d[RUN.emb2d.length - 1];
     const rr = eF.reduce((s, p) => s + Math.hypot(p[0], p[1]), 0) / 97;
@@ -234,14 +235,15 @@ cred(10.45, 14.0, (o, t, a) => {
   o.globalAlpha = a;
   credit(o, '解析', ['Nanda et al.'], 300, 400, { nameSize: 96, roleSize: 50 });
   credit(o, '掲載', ['ICLR 2023'], 300, 580, { nameSize: 96, roleSize: 50 });
-  credText(o, 'Progress Measures for Grokking via Mechanistic Interpretability', 302, 646, 26, { weight: 700, sx: 0.92 });
+  credText(o, 'Progress Measures for Grokking', 302, 652, 36, { weight: 700, sx: 0.9 });
+  credText(o, 'via Mechanistic Interpretability', 302, 700, 36, { weight: 700, sx: 0.9 });
 }, 0.3, 0.12);
 
 // S05 14.1–15.9  white flash → grey smoke, a giant dark "+" sweeps through (the operator of the task)
 shot(14.1, 15.9, 'plus_smoke', (ctx, lt, t, fx) => {
   fill(ctx, '#d8dadb');
   cloudLayer(ctx, 'smoke', [[58, 62, 64], [246, 246, 246]], 11, t * 6, { gw: 40, gh: 30, speed: 0.5, scale: 0.3, lo: 0.3, hi: 0.62, blur: 0.9 });
-  fx.flash = 1 - seg(lt, 0.03, 0.2); fx.flashCol = [1, 1, 1];
+  fx.flash = 1 - seg(lt, 0.17, 0.32); fx.flashCol = [1, 1, 1];     // full white through the band hit at 14.2, gone by 14.42
   // the cross sweeps fast (camera whip), motion-blurred by stacking
   const u = lt / 1.8;
   const cx = lerp(1500, -200, E.inOutSine(seg(u, 0, 0.62))), cy = lerp(160, 760, seg(u, 0, 0.62));

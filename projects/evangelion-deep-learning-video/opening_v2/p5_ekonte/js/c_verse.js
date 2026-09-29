@@ -107,7 +107,7 @@ const TREE = {
   edges: [[10, 9], [9, 8], [9, 7], [8, 5], [5, 4], [7, 4], [4, 6], [10, 6], [6, 3], [3, 2], [2, 1], [6, 1]],
 };
 function treeOfLife(B, o = {}) {
-  const c = { col: o.col || '#8ef0a0', a: 0.95, layer: 'paste' };
+  const c = { col: o.col || '#17864a', a: 0.95, layer: 'paste' };
   const N = TREE.nodes;
   B.text('HORIZON  CONTEXTVS', 720, 72, { size: 26, align: 'center', ...c });
   B.stroke(ellipsePts(720, 140, 60, 40, Math.PI, Math.PI * 2, 0), { ...c, w: 2.4, over: 0 });
@@ -118,12 +118,12 @@ function treeOfLife(B, o = {}) {
     const A = N[a], Bn = N[b];
     const mid = a === 10 && b === 6;   // the residual stream runs up the middle pillar
     const off = mid ? 20 : 0;
-    B.line(A[0] + off, A[1] - 44, Bn[0] + off, Bn[1] + 44, { ...c, w: mid ? 4 : 2.2 });
+    B.line(A[0] + off, A[1] - 44, Bn[0] + off, Bn[1] + 44, { ...c, w: mid ? 5 : 3 });
     if (!mid) B.line(A[0] + 5, A[1] - 44, Bn[0] + 5, Bn[1] + 44, { ...c, w: 1.2, a: 0.45, passes: 1 });
   }
   B.line(720, 546, 720, 244, { ...c, w: 4 });
   for (const [k, [x, y, sym, lat]] of Object.entries(N)) {
-    B.circle(x, y, 46, { ...c, w: 2.4 });
+    whiteOut(B, ellipsePts(x, y, 44, 44, 0, 7, 0, 24)); B.circle(x, y, 46, { ...c, w: 3.2 });
     B.circle(x, y, 38, { ...c, w: 1.2, a: 0.5, passes: 1 });
     B.text(sym, x, y + 9, { size: sym.length > 3 ? 20 : 28, align: 'center', ...c });
     B.text(lat, x, y + 72, { size: 17, align: 'center', ...c, a: 0.8 });

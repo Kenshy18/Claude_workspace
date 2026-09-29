@@ -134,8 +134,8 @@ shot(68.62, 68.75, 'card_mlp01', (ctx) => card(ctx, [{ s: 'MLP-01', y: 640, size
 shot(68.75, 69.0, 'cu_wnorm', (ctx, lt, t, fx) => {
   const step = stepAt(t);
   fill(ctx, '#0a0400'); fx.bloom = 0.7; fx.thr = 0.5; fx.curve = 0.06;
-  ctx.save(); cam(ctx, 1.5, 720, 600, -60, 0);
-  seg7(ctx, mAt('wnorm', step).toFixed(1), 150, 760, 460, '#ff8a1c', { thick: 0.15 });
+  ctx.save(); cam(ctx, 1.15, 720, 600, -60, 0);      // every digit stays in frame: a cropped leading digit would misread
+  seg7(ctx, mAt('wnorm', step).toFixed(1), 170, 760, 460, '#ff8a1c', { thick: 0.15 });
   ctx.restore();
   jpText(ctx, '重みノルム', 90, 1010, 64, '#ff8a1c', { weight: 900 });
   monoText(ctx, `||W||  STEP ${fmtInt(step)}`, 440, 1004, 40, '#ff8a1c');
@@ -422,8 +422,10 @@ shot(81.37, 81.62, 'green_grid', (ctx, lt, t, fx) => {
     }
   }
   monoText(ctx, `${RUN.key.length} KEY FREQUENCIES   pattern BLOOD TYPE : BLUE`, 360, 66, 32, '#ff8a1a');
-  monoText(ctx, '1100001', 1380, 66, 32, '#ff8a1a', { align: 'right' });
-  monoText(ctx, '111010100110000', 60, 1062, 28, '#ff8a1a');
+  monoText(ctx, '10 SNAPSHOTS × 3,000 STEPS', 1380, 66, 32, '#ff8a1a', { align: 'right' });
+  // bit mask of the frequencies carrying > 5 % of the power at step 30,000 (k = 1…48): computed, not decoration
+  const mask = RUN.fourier[LAST].map((v) => (v > 0.05 ? '1' : '0')).join('');
+  monoText(ctx, 'k>5% ' + mask, 60, 1062, 28, '#ff8a1a');
 });
 shot(81.62, 82.62, 'director_turn', (ctx, lt, t, fx) => {
   fill(ctx, '#0a1830'); fx.bloom = 0.4; fx.thr = 0.7;

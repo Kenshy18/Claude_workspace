@@ -25,6 +25,14 @@
 - c_end.js C-103..C-108 drafted (T.B. crucifix + W, faces, 製作, pull-back + おわり + F.O.)
 - WHOLE 90.5 s NOW EXISTS. All stills render without errors.
 
+## Review pass 1 (22:40): 128 timestamps via compare.sh (out/opening_v2/p5_ekonte/review/b1..b8)
+- perf: avg 108 ms, max 181 ms per frame (hatch masks prebuilt at READY)
+- camNotesY now s=1.2 showing panel + notes (no cropped credits)
+- fixed: C-004 dots dark, C-006 faster rough, C-009 flash timing, tree of life green, 企画=Chinchilla
+- TODO from review: bigger text cards; C-071 blue face sketch, C-072 red MODEL CARD, C-073 gloved
+  hands; C-034 wings light; C-020 low-angle warp; C-039 hand; C-085 explosion; portraits offsets;
+  C-027 wall; C-053 figure bigger; 監督 name bigger; C-108 fade; C-092/094/095; C-050 glow; NOTES.md
+
 ## Plan / Next
 A. engine restyle: FULL/large markers -> coloured-pencil hatch wash (pattern), dark markers -> graphite
    tone, small colour markers kept as accents (alpha down); darker strokes; credits = black 写植 strips

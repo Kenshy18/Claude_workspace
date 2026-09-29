@@ -106,7 +106,7 @@ SPEC['C-107'] = {
 SPEC['C-108'] = {
   dlg: [{ s: '♪ 終', y: L.panel.y + 120 }],
   camKeys: (c) => [{ t: 0, cam: CAM_P }, { t: 0.9, cam: CAM_ROW, tr: 1.0 }],
-  fx(lt, fx) { fx.black = clamp((lt - 1.95) / 0.33); },
+  fx(lt, fx) { fx.black = 0.92 * clamp((lt - 1.65) / 0.62); },
   build(B, c) {
     B.done();
     bg(B, COL.mRed, 0.85, { ang: -0.6 });

@@ -247,7 +247,7 @@ SPEC['C-004'] = {
       const k = clamp(Math.floor(lt / 0.23), 0, n - 1);
       const pts = E.pts[k];
       ctx.save();
-      ctx.strokeStyle = '#f6fbff'; ctx.fillStyle = '#f6fbff'; ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#1d3a66'; ctx.fillStyle = '#1d3a66'; ctx.lineWidth = 2.4;
       for (let i = 0; i < pts.length; i++) {
         const x = 720 + pts[i][0] * 330, y = 520 - pts[i][1] * 330;
         ctx.globalAlpha = 0.85;
@@ -334,8 +334,8 @@ SPEC['C-006'] = {
     B.at(0.0, 0.25);
     B.line(90, LOGO.y + 6, 1350, LOGO.y + 4, { col: COL.blue, w: 1.6, a: 0.5, passes: 1 });
     B.line(90, LOGO.y - LOGO.size * 0.7, 1350, LOGO.y - LOGO.size * 0.7 + 3, { col: COL.blue, w: 1.6, a: 0.45, passes: 1 });
-    B.at(0.2, 1.0);
-    wordmarkPencil(B, { a: 0.85, guides: false });
+    B.at(0.05, 0.45);
+    wordmarkPencil(B, { a: 0.9, guides: false });
     B.at(0.2, 0.4);
     camNote(B, 'BLACK BG', 70, 90, { size: 34 });
     B.at(0.1, 0.8);
@@ -419,7 +419,7 @@ SPEC['C-008'] = {
 
 SPEC['C-009'] = {
   noNotesCam: true,
-  fx(lt, fx) { fx.flash = lt < 0.1 ? 1 - lt / 0.1 * 0.4 : lt > 0.28 ? clamp((lt - 0.28) / 0.14) * 0.92 : 0.25; },
+  fx(lt, fx) { fx.flash = lt < 0.08 ? 0.15 : 0.9 * clamp((lt - 0.08) / 0.08); },
   build(B) {
     B.done();
     B.marker(FULL, '#e8eef8', { a: 0.5, streak: 0 });

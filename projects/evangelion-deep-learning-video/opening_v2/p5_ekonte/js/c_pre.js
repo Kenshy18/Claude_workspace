@@ -40,7 +40,9 @@ SPEC['C-020'] = {
   build(B) {
     B.done();
     hotBands(B, 2020);
-    mecha(B, 720, 70, 1.02, { arms: 0.05, a: 0.9, w: 3 });
+    // アオリ: extreme low angle — feet huge at the bottom, body receding upward
+    const warp = (px, py) => { const u = Math.pow(clamp(py / 1000, -0.05, 1.1) + 0.05, 1.45); const k = lerp(1.0, 2.7, u); return [720 + px * k, 40 + 1230 * u]; };
+    mecha(B, 720, 70, 1.02, { arms: 0.05, a: 0.9, w: 3, warp });
     cage(B);
     camNote(B, 'アオリ  T.U. (ゆっくり)', 60, 1040, { size: 30 });
     // credit ⑨ — centred block, as in the reference
@@ -219,12 +221,13 @@ SPEC['C-027'] = {
     const rng = mulberry32(2701), nx = 48, ny = 36, cw = 1440 / nx, chh = 1080 / ny, vals = [];
     for (let i = 0; i < nx * ny; i++) vals.push(gauss(rng) * Math.sqrt(2 / 512));
     const sd = Math.sqrt(2 / 512);
-    B.custom((ctx) => {
+    B.custom((ctx) => {     // each cell shaded in pencil, darkness = value
+      const pat = ctx.createPattern(hatchTile(COL.graph, 'graphite'), 'repeat');
+      ctx.fillStyle = pat;
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-        const v = clamp(0.5 + vals[j * nx + i] / sd * 0.16, 0.1, 0.9);
-        const g = Math.round(120 + v * 110);
-        ctx.fillStyle = `rgb(${g},${g},${g - 4})`;
-        ctx.fillRect(i * cw, j * chh, cw + 0.5, chh + 0.5);
+        const v = clamp(0.5 - vals[j * nx + i] / sd * 0.18, 0.05, 0.95);
+        ctx.globalAlpha = 0.08 + 0.6 * v;
+        ctx.fillRect(i * cw, j * chh, cw - 1, chh - 1);
       }
     }, { layer: 'marker', weight: 10 });
     for (let j = 1; j < 4; j++) B.line(0, j * 270 + 4, 1440, j * 270 - 3, { w: 2, a: 0.35, passes: 1 });
@@ -354,6 +357,22 @@ SPEC['C-034'] = {
         if (k % 2 === 0) B.line(cx + ca * 110, cy + sa * 110, cx + ca * (L2 - 40), cy + sa * (L2 - 40), { col: '#b8521a', w: 2.2, a: 0.6, passes: 1, weight: 5 });
       }
     }
+    B.paste((ctx, p, lt) => {     // the wings are light (透過光), as in the reference
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(cx, cy, 30, cx, cy, 1000);
+      g.addColorStop(0, 'rgba(255,236,170,0.6)'); g.addColorStop(0.5, 'rgba(255,170,60,0.22)'); g.addColorStop(1, 'rgba(255,140,30,0)');
+      ctx.fillStyle = g; ctx.fillRect(-400, -400, 2240, 1880);
+      const r2 = mulberry32(3403);
+      ctx.lineCap = 'round';
+      for (let k = 0; k < 13; k++) for (const sgn of [-1, 1]) {
+        const a = -Math.PI / 2 + sgn * (0.22 + k * 0.105), L3 = 760 + r2() * 380;
+        const lg = ctx.createLinearGradient(cx, cy, cx + Math.cos(a) * L3, cy + Math.sin(a) * L3);
+        lg.addColorStop(0, 'rgba(255,250,210,0.75)'); lg.addColorStop(1, 'rgba(255,190,60,0)');
+        ctx.strokeStyle = lg; ctx.lineWidth = 16 + r2() * 20;
+        ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * 60, cy + Math.sin(a) * 60); ctx.lineTo(cx + Math.cos(a) * L3, cy + Math.sin(a) * L3); ctx.stroke();
+      }
+      ctx.restore();
+    });
     B.ungroup();
     // the unit: arms rise 64+04 .. 64+16 (four key poses)
     const poses = [[0.25, -1, 0.02], [0.45, 0.08, 0.2], [0.8, 0.2, 0.28], [1.0, 0.32, 99]];

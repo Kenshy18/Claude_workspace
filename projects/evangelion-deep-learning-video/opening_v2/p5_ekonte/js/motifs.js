@@ -218,7 +218,7 @@ function mechaParts(o = {}) {
 }
 function mecha(B, x, y, s, o = {}) {
   const P = mechaParts(o);
-  const T = (pts) => pts.map(([px, py]) => [x + px * s, y + py * s]);
+  const T = o.warp ? (pts) => pts.map(([px, py]) => o.warp(px, py)) : (pts) => pts.map(([px, py]) => [x + px * s, y + py * s]);
   const a = o.a ?? 0.88, w = o.w ?? 2.6;
   const armor = [P.head, P.torso, P.pylL, P.pylR, P.legL.thigh, P.legL.shin, P.legR.thigh, P.legR.shin, P.armL.upper, P.armL.fore, P.armR.upper, P.armR.fore];
   const minor = [P.neck, P.waist, P.hips, P.legL.knee, P.legR.knee, P.legL.foot, P.legR.foot, P.armL.palm, P.armR.palm];
@@ -310,26 +310,38 @@ function mechaHead(B, x, y, s, o = {}) {
   }
 }
 function mechaHand(B, x, y, s, o = {}) {
-  const T = (pts) => pts.map(([px, py]) => [x + px * s, y + py * s]);
+  // big armoured hand, fingers down: palm, 4 three-segment fingers (curl by o.spread), thumb; red tips, orange studs
   const a = o.a ?? 0.88, w = o.w ?? 3;
-  const palm = [[-160, 0], [160, 0], [190, 260], [-170, 280]];
-  const fingers = [];
+  const S = (px, py) => [x + px * s, y + py * s];
+  const palm = [S(-190, 0), S(190, -20), S(210, 250), S(-200, 280)];
+  B.marker(palm, COL.mPurple, { a: 0.8, mode: 'wash' });
+  const parts = [];
   for (let i = 0; i < 4; i++) {
-    const fx = -120 + i * 82, ang = (i - 1.5) * 0.14 + (o.spread || 0) * (i - 1.5) * 0.18;
-    const len = 330 - Math.abs(i - 1.5) * 40;
-    const p0 = [fx, 250], p1 = [fx + Math.sin(ang) * len * 0.5, 250 + Math.cos(ang) * len * 0.5], p2 = [fx + Math.sin(ang) * len, 250 + Math.cos(ang) * len];
-    fingers.push([p0, p1, p2]);
+    let px = -150 + i * 100, py = 262 - Math.abs(i - 1.5) * 6, ang = (i - 1.5) * 0.08 + (o.spread || 0) * (i - 1.5) * 0.16;
+    const lens = [150, 120, 92].map((l) => l * (1 - Math.abs(i - 1.5) * 0.07)), wid = [50, 44, 38, 30];
+    for (let k = 0; k < 3; k++) {
+      const p0 = S(px, py), p1 = S(px + Math.sin(ang) * lens[k], py + Math.cos(ang) * lens[k]);
+      parts.push({ poly: taperLimb(p0, p1, wid[k] * s * 0.5, wid[k] * s * 0.55, wid[k + 1] * s * 0.5), tip: k === 2, k, p0 });
+      px += Math.sin(ang) * lens[k]; py += Math.cos(ang) * lens[k];
+      ang -= 0.12 * (1 - (o.spread || 0)) * (k + 1) * 0.6;
+    }
   }
-  const thumb = [[-160, 60], [-300, 170], [-340, 290]];
-  if (o.marker !== false) B.marker(T(palm), COL.mPurple, { a: 0.72 });
-  B.poly(T(palm), { w, a });
-  for (const f of fingers.concat([thumb])) {
-    B.stroke(T(f), { w: w * 9 * (o.thick || 1), a: o.marker !== false ? 0.55 : 0.2, col: COL.mPurple, passes: 1 });
-    B.stroke(T(f), { w: w * 1.1, a });
+  const th0 = S(-190, 80), th1 = S(-330, 250), th2 = S(-360, 380);
+  parts.push({ poly: taperLimb(th0, th1, 30 * s, 34 * s, 26 * s) }, { poly: taperLimb(th1, th2, 26 * s, 26 * s, 20 * s), tip: true });
+  for (const pt of parts) {
+    B.marker(pt.poly, pt.tip ? COL.mRed : COL.mPurple, { a: pt.tip ? 0.85 : 0.8, mode: pt.tip ? 'accent' : 'wash', streak: 0.3 });
+    const [cx] = centroid(pt.poly);
+    const half = clipHalf(pt.poly, 1, 0, cx + 2);
+    if (half.length > 2) B.hatch(half, 0.8, 8, { w: 1.4, a: a * 0.55 });
+    B.poly(pt.poly, { w: w * 1.05, a, passes: 1 });
   }
-  B.line(...T([[-150, 120]])[0], ...T([[170, 120]])[0], { w: 6 * s + 2, col: COL.mGreen, a: 0.85, passes: 1 });
+  const half = clipHalf(palm, 1, 0, x + 40 * s);
+  if (half.length > 2) B.hatch(half, 0.8, 10, { w: 1.5, a: a * 0.5 });
+  B.poly(palm, { w: w * 1.3, a });
+  B.stroke([S(-170, 120), S(0, 104), S(180, 110)], { w: w * 0.6, a: a * 0.8, passes: 1 });
+  B.line(...S(-150, 190), ...S(170, 172), { w: 6 * s + 2, col: COL.mGreen, a: 0.85, passes: 1 });
+  for (const i of [1, 2]) { const [sx, sy] = S(-150 + i * 100, 330); B.marker(ellipsePts(sx, sy, 20 * s, 20 * s, 0, 7, 0, 16), COL.mOrange, { a: 0.95, streak: 0, mode: 'accent' }); B.circle(sx, sy, 20 * s, { w: 2, a: 0.85, passes: 1 }); }
 }
-
 // ── attention heatmap (pencil shading per cell) ─────────────────────────────
 function attnGrid(B, x, y, cell, mat, o = {}) {
   const n = mat.length, col = o.col || COL.graph;

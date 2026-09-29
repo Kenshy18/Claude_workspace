@@ -28,6 +28,9 @@ function racks(B, y0, seed, o = {}) {               // datacenter skyline: rows 
 function bust(B, cx, cy, s, o = {}) {               // head-and-shoulders outline for the "mugshots"
   const T = (pts) => pts.map(([x, y]) => [cx + x * s, cy + y * s]);
   const a = o.a ?? 0.88;
+  for (const sx of [-1, 1]) B.curve(T([[sx * 228, -20], [sx * 262, -10], [sx * 268, 60], [sx * 244, 110], [sx * 226, 100]]), { w: 2.4, a });
+  B.hatch(T([[-110, 230], [110, 230], [110, 300], [0, 330], [-110, 300]]), 0.8, 9, { w: 1.5, a: a * 0.55 });
+  B.hatch(T([[-230, -40], [-150, -40], [-120, 120], [-150, 220], [-200, 170], [-238, 80]]), 0.85, 11, { w: 1.4, a: a * 0.35 });
   const sh = T([[-470, 560], [-430, 420], [-300, 330], [-120, 300], [120, 300], [300, 330], [430, 420], [470, 560]]);
   if (o.suit) B.marker(sh.concat(T([[470, 700], [-470, 700]])), o.suit, { a: 0.7, weight: 5 });
   B.curve(sh, { w: 3, a });
@@ -41,8 +44,9 @@ function bust(B, cx, cy, s, o = {}) {               // head-and-shoulders outlin
 function optPortrait(B, key, name, sub, bgc, hair, o = {}) {
   B.done();
   bg(B, bgc, 0.55);
-  bust(B, 720, 470, 1.05, { hair, suit: o.suit });
-  contourPortrait(B, 720, 440, 62, window.D5.opt[key], { col: COL.red, levels: [0.3, 1, 2.2, 4] });
+  const X = 720 + (o.dx || 0);
+  bust(B, X, 470, 1.08, { hair, suit: o.suit });
+  contourPortrait(B, X, 450, 76, window.D5.opt[key], { col: COL.red, levels: [0.3, 1, 2.2, 4] });
   B.text(name, 90, 980, { size: 58, a: 0.92 });
   B.text(sub, 92, 1036, { size: 26, a: 0.8 });
   const it = B.text('f(θ₄₀) = ' + window.D5.optFinal[key].toFixed(5), 1350, 1030, { size: 30, align: 'right', col: COL.red, a: 0.9 }); it.fixed = true;
@@ -51,7 +55,7 @@ function digitPortrait(B, k, bgc, o = {}) {
   const d = window.D5.digits[k];
   B.done();
   bg(B, bgc, 0.55);
-  const cs = 78, x0 = 720 - cs * 4 + (o.dx || 0), y0 = 470 - cs * 4;
+  const cs = 78, x0 = 720 - cs * 4 + (o.dx || 0), y0 = 450 - cs * 4;
   B.custom((ctx) => {
     const pat = ctx.createPattern(hatchTile(COL.graph, 'graphite'), 'repeat');
     ctx.fillStyle = '#fbfaf5'; ctx.globalAlpha = 0.9; ctx.fillRect(x0 - 16, y0 - 16, cs * 8 + 32, cs * 8 + 32);
@@ -66,7 +70,8 @@ function digitPortrait(B, k, bgc, o = {}) {
   for (let i = 1; i < 8; i++) { B.line(x0 + i * cs, y0, x0 + i * cs, y0 + 8 * cs, { w: 1, a: 0.25, passes: 1 }); B.line(x0, y0 + i * cs, x0 + 8 * cs, y0 + i * cs, { w: 1, a: 0.25, passes: 1 }); }
   B.text(o.name || ('No.' + d.y), 90, 990, { size: 54, a: 0.92 });
   const it = B.text(`y = ${d.y}   p̂(y|x) = ${d.p.toFixed(3)}`, 1360, 1030, { size: 32, align: 'right', col: COL.red, a: 0.9 }); it.fixed = true;
-  if (o.shoulders !== false) B.curve([[180, 1100], [260, 950], [480, 880], [960, 880], [1180, 950], [1260, 1100]], { w: 3, a: 0.7 });
+  const dx = o.dx || 0;
+  if (o.shoulders !== false) B.curve([[180 + dx, 1100], [260 + dx, 950], [480 + dx, 880], [960 + dx, 880], [1180 + dx, 950], [1260 + dx, 1100]], { w: 3, a: 0.7 });
 }
 // text cards (black paper, white condensed type)
 function cardTxt(lines, o = {}) {
@@ -151,14 +156,13 @@ flip('C-039', {
     for (const x of [1210, 1330]) B.marker([[x, 80], [x + 70, 60], [x + 80, 720], [x + 10, 740]], COL.mRed, { a: 0.8 });
     B.marker([[0, 820], [1440, 760], [1440, 1080], [0, 1080]], '#e8e8ea', { a: 0.6 });
     const poses = [[0, 0.0, 0.14], [0.35, 0.14, 0.27], [0.6, 0.27, 9]];
-    for (const [sp, a0, a1] of poses) { B.group({ alpha: (lt) => (lt >= a0 && lt < a1 ? 1 : 0) }); mechaHand(B, 640, 120, 1.25, { spread: sp }); B.ungroup(); }
-    for (const [x, y] of [[560, 470], [760, 440]]) { B.marker(ellipsePts(x, y, 22, 22, 0, 7, 0, 16), ORNG, { a: 0.95, streak: 0 }); B.circle(x, y, 22, { w: 2, a: 0.8 }); }
+    for (const [sp, a0, a1] of poses) { B.group({ alpha: (lt) => (lt >= a0 && lt < a1 ? 1 : 0) }); mechaHand(B, 640, 40, 1.35, { spread: sp }); B.ungroup(); }
     note(B, '手 アップ。指が開く (3枚)', ACT.y + 2, { size: 22 });
   },
 });
 flip('C-040', { build(B) {
   B.done();
-  pasteCard(B, cardTxt([{ s: 'TEST SET', x: 720, y: 610, size: 210, sx: 0.82 }]));
+  pasteCard(B, cardTxt([{ s: 'TEST SET', x: 720, y: 660, size: 330, sx: 0.86 }]));
   note(B, 'テロップ (黒ベタ白抜き)', ACT.y + 2, { size: 22 });
   rnote(B, 'TEST TYPE → TEST SET', ACT.y + 40, { size: 22, col: COL.red });
 } });
@@ -175,7 +179,7 @@ flip('C-041', { build(B) {
 } });
 flip('C-042', { build(B) {
   B.done();
-  pasteCard(B, cardTxt([{ s: 'EVAL-01', x: 720, y: 700, size: 400, sx: 0.8 }]));
+  pasteCard(B, cardTxt([{ s: 'EVAL-01', x: 720, y: 740, size: 480, sx: 0.8 }]));
   note(B, 'テロップ', ACT.y + 2, { size: 22 });
   rnote(B, 'EVA-01 → EVAL-01', ACT.y + 40, { size: 22, col: COL.red });
 } });
@@ -245,6 +249,13 @@ flip('C-050', { build(B) {
   const rng = mulberry32(5001);
   for (let i = 0; i < 6; i++) { const pts = []; let x = 440 + rng() * 400, y = 300 + rng() * 460; for (let k = 0; k < 7; k++) { pts.push([x, y]); x += (rng() - 0.4) * 90; y += (rng() - 0.5) * 70; } B.stroke(pts, { w: 2, a: 0.8, col: '#ffd6cc', passes: 1 }); }
   B.circle(880, 470, 22, { w: 2, col: '#ffd6cc', a: 0.9 }); B.circle(930, 470, 16, { w: 2, col: '#ffd6cc', a: 0.9 });
+  B.paste((ctx) => {   // the core glows (light, as in the reference)
+    const g = ctx.createRadialGradient(720, 540, 380, 720, 540, 600);
+    g.addColorStop(0, 'rgba(255,90,70,0.55)'); g.addColorStop(1, 'rgba(255,60,40,0)');
+    ctx.save(); ctx.fillStyle = g; ctx.fillRect(0, 0, 1440, 1080);
+    const h = ctx.createRadialGradient(620, 420, 10, 620, 420, 260); h.addColorStop(0, 'rgba(255,230,220,0.45)'); h.addColorStop(1, 'rgba(255,200,190,0)');
+    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(720, 540, 430, 0, 7); ctx.fill(); ctx.restore();
+  });
   const it = B.text('loss = NaN', 1000, 1010, { size: 48, col: '#ff9a8c', a: 0.95 }); it.fixed = true;
   note(B, 'コア (赤い球)', ACT.y + 2, { size: 22 });
 } });
@@ -252,10 +263,10 @@ flip('C-051', { build(B) {
   B.done();
   pasteCard(B, (ctx) => {
     // oversized initials, as on the reference card (ABSOLUTE / TERROR / FIELD)
-    const X = 250;
-    sansHeavy(ctx, 'A', X, 400, 250); sansHeavy(ctx, 'TTENTION', X + 168, 400, 118);
-    sansHeavy(ctx, 'T', X, 640, 230); sansHeavy(ctx, 'ENSOR', X + 138, 640, 118);
-    sansHeavy(ctx, 'FIELD', X, 900, 250);
+    const X = 150;
+    sansHeavy(ctx, 'A', X, 390, 330); sansHeavy(ctx, 'TTENTION', X + 226, 390, 150);
+    sansHeavy(ctx, 'T', X, 670, 310); sansHeavy(ctx, 'ENSOR', X + 190, 670, 150);
+    sansHeavy(ctx, 'FIELD', X, 980, 340);
   });
   note(B, 'テロップ 頭文字を大きく', ACT.y + 2, { size: 22 });
   rnote(B, 'A.T.フィールド = Attention Tensor Field', ACT.y + 40, { size: 20, col: COL.red });
@@ -280,8 +291,8 @@ flip('C-053', {
       const px = mx + x / rmax * R * 0.86, py = my - y / rmax * R * 0.86;
       if (py < 1090) B.circle(px, py, 9 + (i % 5), { w: 1.8, a: 0.6, passes: 1, col: '#4a5f73' });
     });
-    figureStand(B, 720, 150, 1.05, { fill: '#fbfaf5', hair: true, a: 0.9 });
-    B.marker([[690, 300], [750, 300], [745, 330], [695, 330]], COL.mRed, { a: 0.8, streak: 0 });
+    figureStand(B, 720, 90, 1.45, { fill: '#fbfaf5', hair: true, a: 0.9, w: 3 });
+    B.marker([[680, 300], [760, 300], [755, 336], [685, 336]], COL.mRed, { a: 0.8, streak: 0 });
     const it = B.text('月 = (a+b) mod 97 の埋め込み (step 30,000)', 70, 1040, { size: 30, col: COL.red, a: 0.9 }); it.fixed = true;
     note(B, '巨大な月の前に立つ', ACT.y + 2, { size: 22 });
     note(B, 'ゆっくり T.U.', ACT.y + 32, { size: 22 });
@@ -291,7 +302,7 @@ flip('C-053', {
 });
 flip('C-054', { build(B) {
   B.done();
-  pasteCard(B, cardTxt([{ s: 'LOSS SPIKES', x: 720, y: 620, size: 220, sx: 0.78 }]));
+  pasteCard(B, cardTxt([{ s: 'LOSS SPIKES', x: 720, y: 660, size: 290, sx: 0.8 }]));
   note(B, 'テロップ', ACT.y + 2, { size: 22 });
   rnote(B, 'ANGELS → LOSS SPIKES', ACT.y + 40, { size: 22, col: COL.red });
 } });
@@ -305,7 +316,7 @@ flip('C-055', { build(B) {
 } });
 flip('C-056', { build(B) {
   B.done();
-  pasteCard(B, cardTxt([{ s: 'US-EAST-1', x: 720, y: 660, size: 300, sx: 0.8 }]));
+  pasteCard(B, cardTxt([{ s: 'US-EAST-1', x: 720, y: 690, size: 350, sx: 0.8 }]));
   note(B, 'テロップ', ACT.y + 2, { size: 22 });
   rnote(B, 'TOKYO-3 → US-EAST-1', ACT.y + 40, { size: 22, col: COL.red });
 } });
@@ -353,7 +364,7 @@ const hairBob = (B, T, a) => { B.curve(T([[-270, 180], [-280, -200], [0, -350], 
 const hairTail = (B, T, a) => { hairShort(B, T, a); B.curve(T([[230, -80], [330, 60], [360, 260]]), { w: 3, a }); };
 const glasses = (B, T, a) => { B.rect(...T([[-200, -20]])[0], 170 * 1.05, 90 * 1.05, { w: 3.4, a }); B.rect(...T([[30, -20]])[0], 170 * 1.05, 90 * 1.05, { w: 3.4, a }); };
 
-flip('C-059', { build(B) { optPortrait(B, 'sgd', 'SGD', 'Robbins & Monro, 1951 — ノイズ入り', '#4b8f85', hairSwept, { suit: '#6a4a3a' }); note(B, '副司令 = SGD (最古参)', ACT.y + 2, { size: 22 }); } });
+flip('C-059', { build(B) { optPortrait(B, 'sgd', 'SGD', 'Robbins & Monro, 1951 — ノイズ入り', '#4b8f85', hairSwept, { suit: '#6a4a3a', dx: -170 }); note(B, '副司令 = SGD (最古参)', ACT.y + 2, { size: 22 }); } });
 flip('C-060', { build(B) {
   B.done(); bg(B, '#cdbfd6', 0.5);
   // loss-landscape "map": contour lines of a sum of Gaussian wells (drawn like a survey map)
@@ -373,8 +384,8 @@ flip('C-060', { build(B) {
   const it = B.text('loss landscape (Li+ 2018)', 70, 1040, { size: 30, col: COL.red, a: 0.9 }); it.fixed = true;
   note(B, '地図', ACT.y + 2, { size: 22 });
 } });
-flip('C-061', { build(B) { optPortrait(B, 'momentum', 'Momentum', 'Polyak, 1964 — μ = 0.8', '#3f78b8', (B2, T, a) => { hairShort(B2, T, a); glasses(B2, T, a); }, { suit: '#e7e2d6' }); note(B, 'オペレーター① = Momentum', ACT.y + 2, { size: 22 }); } });
-flip('C-062', { build(B) { optPortrait(B, 'nesterov', 'Nesterov', 'Nesterov, 1983 — 先読み勾配', '#a38e86', hairLong, { suit: '#e7e2d6' }); note(B, 'オペレーター② = Nesterov', ACT.y + 2, { size: 22 }); } });
+flip('C-061', { build(B) { optPortrait(B, 'momentum', 'Momentum', 'Polyak, 1964 — μ = 0.8', '#3f78b8', (B2, T, a) => { hairShort(B2, T, a); glasses(B2, T, a); }, { suit: '#e7e2d6', dx: 230 }); note(B, 'オペレーター① = Momentum', ACT.y + 2, { size: 22 }); } });
+flip('C-062', { build(B) { optPortrait(B, 'nesterov', 'Nesterov', 'Nesterov, 1983 — 先読み勾配', '#a38e86', hairLong, { suit: '#e7e2d6', dx: -150 }); note(B, 'オペレーター② = Nesterov', ACT.y + 2, { size: 22 }); } });
 flip('C-063', { build(B) {
   optPortrait(B, 'adagrad', 'AdaGrad', 'Duchi+ 2011 — Σg² で割る', '#d8b8d8', hairBob, { suit: '#e7e2d6' });
   note(B, 'オペレーター③ = AdaGrad', ACT.y + 2, { size: 22 });
@@ -395,8 +406,8 @@ flip('C-064', { build(B) {
   const it = B.text('grokking: (a+b) mod 97', 70, 1040, { size: 30, col: '#ffb3a8', a: 0.9 }); it.fixed = true;
   note(B, '発令所 全景。主モニタ', ACT.y + 2, { size: 22 });
 } });
-flip('C-065', { build(B) { optPortrait(B, 'gd', 'GD', 'Cauchy, 1847 — 全バッチ', '#e0a040', hairTail, { suit: '#5a6a8a' }); note(B, '加持 = 最急降下法', ACT.y + 2, { size: 22 }); } });
-flip('C-066', { build(B) { optPortrait(B, 'adam', 'Adam', 'Kingma & Ba, 2015 — β = (0.9, 0.999)', '#3b7f7a', hairBob, { suit: '#f2f0ea' }); note(B, '技術部長 = Adam', ACT.y + 2, { size: 22 }); } });
+flip('C-065', { build(B) { optPortrait(B, 'gd', 'GD', 'Cauchy, 1847 — 全バッチ', '#e0a040', hairTail, { suit: '#5a6a8a', dx: -200 }); note(B, '加持 = 最急降下法', ACT.y + 2, { size: 22 }); } });
+flip('C-066', { build(B) { optPortrait(B, 'adam', 'Adam', 'Kingma & Ba, 2015 — β = (0.9, 0.999)', '#3b7f7a', hairBob, { suit: '#f2f0ea', dx: 210 }); note(B, '技術部長 = Adam', ACT.y + 2, { size: 22 }); } });
 flip('C-067', { build(B) {
   B.done(); bg(B, COL.mBlack, 0.95);
   const eyes = [[330, 300, 1], [720, 250, 0.9], [1110, 300, 1], [420, 640, 0.8], [1020, 640, 0.8], [720, 840, 0.9]];
@@ -446,11 +457,64 @@ flip('C-070', { build(B) {
 } });
 
 // ── C-071..C-077 : units 00 and 02, their cards ─────────────────────────────
+function faceSketch(B, cx, cy, s, o = {}) {        // loose front-face sketch (line only)
+  const T = (pts) => pts.map(([x, y]) => [cx + x * s, cy + y * s]);
+  const c = { w: o.w ?? 2.4, a: o.a ?? 0.85, col: o.col, passes: 1 };
+  B.curve(T([[-150, -40], [-158, 80], [-120, 200], [-50, 258], [0, 268], [50, 258], [120, 200], [158, 80], [150, -40]]), c);
+  B.curve(T([[-195, 20], [-190, -150], [-90, -262], [60, -270], [180, -170], [198, 20]]), c);
+  const fr = []; for (let i = 0; i <= 10; i++) fr.push([-185 + i * 37, i % 2 ? 40 + (i % 3) * 12 : -60]);
+  B.stroke(T(fr), c);
+  for (const sx of [-1, 1]) {
+    B.curve(T([[sx * 115, 70], [sx * 75, 48], [sx * 30, 62]]), { ...c, w: c.w * 1.3 });
+    B.curve(T([[sx * 112, 76], [sx * 70, 96], [sx * 34, 78]]), c);
+    B.circle(...T([[sx * 70, 74]])[0], 18 * s, { ...c, w: c.w * 0.9 });
+    B.stroke(T([[sx * 120, 20], [sx * 40, 16]]), c);
+    B.curve(T([[sx * 158, 40], [sx * 185, 70], [sx * 165, 130], [sx * 150, 120]]), c);
+  }
+  B.stroke(T([[4, 110], [12, 150], [0, 156]]), c);
+  B.stroke(T([[-30, 205], [30, 203]]), c);
+  B.stroke(T([[-70, 245], [-80, 340]]), c); B.stroke(T([[70, 245], [80, 340]]), c);
+}
 flip('C-071', { build(B) {
-  B.done(); bg(B, '#2e5f78', 0.8);
-  figureStand(B, 720, 120, 1.6, { col: '#d9ecf7', a: 0.8, hair: true });
-  B.hatch([[0, 0], [1440, 0], [1440, 1080], [0, 1080]], -0.6, 22, { w: 1.6, a: 0.3, col: '#0f2a38' });
-  note(B, '青い水中 (LCL) の上半身', ACT.y + 2, { size: 22 });
+  B.done(); bg(B, '#2e6f8e', 0.75);
+  B.marker([[-20, 700], [1460, 240], [1460, 420], [-20, 900]], '#bfe6f6', { a: 0.8, mode: 'accent', streak: 0.3 });
+  faceSketch(B, 720, 470, 1.55, { col: '#10324a', w: 2.6, a: 0.9 });
+  note(B, '青い光の中の顔 (線画調)', ACT.y + 2, { size: 22 });
+} });
+flip('C-072', { build(B) {
+  B.done(); bg(B, '#f1eee8', 0.3);
+  // a red transparent ID card -> a "model card" (Mitchell et al., 2019): what the model is, what it was evaluated on
+  const C = xf([[-460, -300], [460, -300], [460, 300], [-460, 300]], [Math.cos(-0.12), Math.sin(-0.12), -Math.sin(-0.12), Math.cos(-0.12), 720, 540]);
+  B.marker(C, COL.mRed, { a: 0.75, mode: 'accent', streak: 0.5 }); B.poly(C, { w: 3.2, a: 0.9 });
+  const g = [520, 590];
+  for (let k = 0; k < 12; k++) { const a0 = k / 12 * Math.PI * 2; B.line(g[0] + Math.cos(a0) * 120, g[1] + Math.sin(a0) * 120, g[0] + Math.cos(a0) * 160, g[1] + Math.sin(a0) * 160, { w: 5, a: 0.85, col: '#5a0f0c', passes: 1 }); }
+  B.circle(g[0], g[1], 124, { w: 3, a: 0.85, col: '#5a0f0c' }); B.circle(g[0], g[1], 44, { w: 3, a: 0.85, col: '#5a0f0c' });
+  for (const [x0, y0, x1, y1] of [[-120, 540, 320, 480], [1120, 600, 1560, 540]]) B.line(x0, y0, x1, y1, { w: 6, a: 0.7, col: '#8a86a0' });
+  B.paste((ctx) => {
+    ctx.save(); ctx.translate(720, 540); ctx.rotate(-0.12);
+    condText(ctx, 'MODEL CARD', 40, -170, 84, { col: '#fff1ea', align: 'left', sx: 0.9 });
+    condText(ctx, 'SAMPLE', -400, 250, 44, { col: '#fff1ea', align: 'left' });
+    ctx.fillStyle = '#fff1ea'; ctx.globalAlpha = 0.9;
+    ctx.font = `700 30px ${FONT.cond}`;
+    ['intended use', 'eval data', 'metrics', 'caveats'].forEach((t, i) => ctx.fillText(t, 60, -90 + i * 52));
+    ctx.restore();
+  });
+  const it = B.text('(Mitchell et al., 2019)', 70, 1040, { size: 30, col: COL.red, a: 0.9 }); it.fixed = true;
+  note(B, '赤い IDカード', ACT.y + 2, { size: 22 });
+  rnote(B, '= モデルカード', ACT.y + 40, { size: 22, col: COL.red });
+} });
+flip('C-073', { build(B) {
+  B.done(); bg(B, '#caa088', 0.55);
+  // the commander's white gloves over his face, very close (the loss hides its intent)
+  B.hatch([[0, 620], [1440, 560], [1440, 1080], [0, 1080]], 0.7, 8, { w: 2, a: 0.6 });
+  B.stroke(catmull([[380, 900], [560, 960], [760, 970], [980, 930]], 5), { w: 5, a: 0.9 });
+  const glove = [[-40, 200], [300, 80], [640, 40], [980, 60], [1300, 140], [1480, 260], [1480, 560], [1180, 600], [900, 560], [620, 620], [300, 640], [-40, 600]];
+  whiteOut(B, glove); B.poly(glove, { w: 3.4, a: 0.9 });
+  for (let k = 0; k < 5; k++) B.curve([[180 + k * 250, 110 - (k % 2) * 30], [230 + k * 250, 330], [210 + k * 245, 600]], { w: 2.4, a: 0.8 });
+  for (let k = 0; k < 9; k++) B.stroke([[200 + k * 130, 380 + (k % 3) * 30], [240 + k * 130, 400 + (k % 3) * 30]], { w: 2, a: 0.6, passes: 1 });
+  B.hatch([[900, 560], [1480, 560], [1480, 600], [1180, 600]], 0.9, 7, { w: 1.6, a: 0.6 });
+  B.marker([[560, 520], [760, 500], [720, 560], [600, 570]], '#e0552e', { a: 0.85, mode: 'accent' });
+  note(B, '手袋のアップ (司令)', ACT.y + 2, { size: 22 });
 } });
 function unit00Head(B, cx, cy, s, o = {}) {
   const T = (pts) => pts.map(([x, y]) => [cx + x * s, cy + y * s]);
@@ -464,16 +528,10 @@ function unit00Head(B, cx, cy, s, o = {}) {
   B.marker(ellipsePts(cx, cy - 20 * s, 42 * s, 42 * s, 0, 7, 0, 20), o.eye || GRN, { a: 0.9, streak: 0 });
   B.marker(T([[-120, 330], [120, 330], [80, 470], [-80, 470]]), '#f0d24a', { a: 0.8 });
 }
-flip('C-072', { build(B) {
-  B.done(); bg(B, '#9fb7d8', 0.4);
-  for (const [x, y, r] of [[380, 420, 0.3], [1040, 520, -0.2]]) { const P = xf([[-220, -300], [220, -300], [260, 360], [-260, 360]], [Math.cos(r), Math.sin(r), -Math.sin(r), Math.cos(r), x, y]); whiteOut(B, P); B.poly(P, { w: 3, a: 0.9 }); B.marker(P, '#eef0f4', { a: 0.6, streak: 0 }); }
-  note(B, '白い装甲 (零号機)', ACT.y + 2, { size: 22 });
-} });
-flip('C-073', { build(B) { B.done(); bg(B, '#8fb7de', 0.45); unit00Head(B, 720, 520, 1.0); note(B, '零号機 頭部 (単眼)', ACT.y + 2, { size: 22 }); rnote(B, '単眼 = 5×5 畳み込み核', ACT.y + 40, { size: 20, col: COL.red }); } });
-flip('C-074', { pcam(lt) { const s = 1.0 + 0.1 * lt; return [s, 0, 0, s, 720 * (1 - s), 480 * (1 - s)]; }, build(B) { B.done(); bg(B, '#6f9ccc', 0.5); unit00Head(B, 720, 560, 1.45, { eye: COL.mRed }); note(B, '同 アップ', ACT.y + 2, { size: 22 }); } });
+flip('C-074', { pcam(lt) { const s = 1.0 + 0.1 * lt; return [s, 0, 0, s, 720 * (1 - s), 480 * (1 - s)]; }, build(B) { B.done(); bg(B, '#6f9ccc', 0.5); unit00Head(B, 720, 560, 1.45, { eye: COL.mRed }); note(B, '零号機 頭部 (単眼)', ACT.y + 2, { size: 22 }); rnote(B, '単眼 = 5×5 畳み込み核', ACT.y + 40, { size: 20, col: COL.red }); } });
 flip('C-075', { build(B) {
   B.done();
-  pasteCard(B, cardTxt([{ s: 'PROTOTYPE', x: 720, y: 360, size: 110, sans: true, sx: 1.0 }, { s: 'EVAL-00', x: 720, y: 780, size: 330, sx: 0.78 }]));
+  pasteCard(B, cardTxt([{ s: 'PROTOTYPE', x: 720, y: 330, size: 150, sans: true, sx: 1.0 }, { s: 'EVAL-00', x: 720, y: 850, size: 450, sx: 0.78 }]));
   note(B, 'テロップ', ACT.y + 2, { size: 22 });
 } });
 flip('C-076', { build(B) {
@@ -489,19 +547,19 @@ flip('C-076', { build(B) {
 } });
 flip('C-077', { build(B) {
   B.done();
-  pasteCard(B, cardTxt([{ s: 'PRODUCTION', x: 720, y: 250, size: 104, sans: true }, { s: 'MODEL', x: 720, y: 360, size: 104, sans: true }, { s: 'EVAL-02', x: 720, y: 790, size: 330, sx: 0.78 }]));
+  pasteCard(B, cardTxt([{ s: 'PRODUCTION', x: 720, y: 230, size: 140, sans: true }, { s: 'MODEL', x: 720, y: 380, size: 140, sans: true }, { s: 'EVAL-02', x: 720, y: 880, size: 450, sx: 0.78 }]));
   note(B, 'テロップ', ACT.y + 2, { size: 22 });
 } });
 
 // ── C-078..C-082 : the children = held-out digits (sklearn digits, logistic regression, real p̂) ──
 flip('C-078', { build(B) { digitPortrait(B, 0, '#8e9fcf', { name: 'First Child' }); note(B, 'チルドレン = テスト画像', ACT.y + 2, { size: 22 }); } });
 flip('C-079', { build(B) {
-  digitPortrait(B, 1, COL.mRed, { name: 'Second Child' });
+  digitPortrait(B, 1, COL.mRed, { name: 'Second Child', dx: 160 });
   note(B, '(表情 4 枚)', ACT.y + 2, { size: 22 });
 } });
-flip('C-080', { build(B) { digitPortrait(B, 2, ORNG, { name: 'Classmate 1' }); const it = B.text('?!', 1200, 300, { size: 90, col: COL.red, a: 0.9 }); it.fixed = true; note(B, '自信なさげ (0.752)', ACT.y + 2, { size: 22 }); } });
-flip('C-081', { build(B) { digitPortrait(B, 3, '#d8a36a', { name: 'Classmate 2' }); note(B, '同級生②', ACT.y + 2, { size: 22 }); } });
-flip('C-082', { build(B) { digitPortrait(B, 4, COL.mPink, { name: 'Classmate 3' }); note(B, '同級生③', ACT.y + 2, { size: 22 }); } });
+flip('C-080', { build(B) { digitPortrait(B, 2, ORNG, { name: 'Classmate 1', dx: -80 }); const it = B.text('?!', 1200, 300, { size: 90, col: COL.red, a: 0.9 }); it.fixed = true; note(B, '自信なさげ (0.752)', ACT.y + 2, { size: 22 }); } });
+flip('C-081', { build(B) { digitPortrait(B, 3, '#d8a36a', { name: 'Classmate 2', dx: 200 }); note(B, '同級生②', ACT.y + 2, { size: 22 }); } });
+flip('C-082', { build(B) { digitPortrait(B, 4, COL.mPink, { name: 'Classmate 3', dx: 110 }); note(B, '同級生③', ACT.y + 2, { size: 22 }); } });
 
 // ── C-083..C-096 : explosions, the commander young, Second Impact ───────────
 flip('C-083', { build(B) {
@@ -519,18 +577,24 @@ flip('C-084', { build(B) {
   note(B, '街で爆発。ユニット', ACT.y + 2, { size: 22 });
 } });
 flip('C-085', {
-  fx(lt, fx) { fx.flash = lt < 0.06 ? 0.9 : lt > 0.4 && lt < 0.5 ? 0.35 : 0; fx.flashCol = '#fff6d8'; },
+  fx(lt, fx) { fx.flash = lt < 0.06 ? 0.9 : lt > 0.4 && lt < 0.47 ? 0.3 : 0; fx.flashCol = '#fff6d8'; },
   build(B) {
-    B.done(); bg(B, COL.mYellow, 0.6);
-    B.paste((ctx, p, lt) => {
-      const u = E.outCubic(clamp(lt / 0.5)), cx = 720, cy = 520;
-      ctx.save();
-      const hw = 90 + 120 * u, len = 700 + 500 * u;
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, len);
-      g.addColorStop(0, 'rgba(255,255,245,1)'); g.addColorStop(0.35, 'rgba(255,236,150,0.95)'); g.addColorStop(1, 'rgba(250,180,60,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(cx - hw, cy - len, hw * 2, len * 2); ctx.fillRect(cx - len, cy - hw * 0.8, len * 2, hw * 1.6);
-      ctx.fillStyle = '#fffdf2'; ctx.fillRect(cx - hw * 0.45, cy - len * 0.8, hw * 0.9, len * 1.6); ctx.fillRect(cx - len * 0.8, cy - hw * 0.35, len * 1.6, hw * 0.7);
+    B.done(); bg(B, COL.mYellow, 0.75);
+    explosion(B, 720, 560, 520, 8501, ORNG, { a: 0.75, mode: 'wash' });
+    mecha(B, 720, 150, 0.85, { sil: true, silCol: '#4a2a5a', silA: 0.8 });
+    B.paste((ctx, p, lt) => {    // the cross-shaped flash (light)
+      const u = E.outCubic(clamp(lt / 0.45)), cx = 720, cy = 470;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 700 * u + 200);
+      g.addColorStop(0, 'rgba(255,250,220,0.9)'); g.addColorStop(0.4, 'rgba(255,220,120,0.35)'); g.addColorStop(1, 'rgba(255,160,40,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 1440, 1080);
+      const hw = 26 + 40 * u, L2 = 400 + 700 * u;
+      for (const [dx, dy] of [[1, 0], [0, 1]]) {
+        const lg = ctx.createLinearGradient(cx - dx * L2, cy - dy * L2, cx + dx * L2, cy + dy * L2);
+        lg.addColorStop(0, 'rgba(255,240,180,0)'); lg.addColorStop(0.5, 'rgba(255,252,235,0.95)'); lg.addColorStop(1, 'rgba(255,240,180,0)');
+        ctx.fillStyle = lg;
+        if (dx) ctx.fillRect(cx - L2, cy - hw * 0.6, L2 * 2, hw * 1.2); else ctx.fillRect(cx - hw, cy - L2, hw * 2, L2 * 2);
+      }
       ctx.restore();
     });
     const n0 = B.items.length;
@@ -591,7 +655,7 @@ flip('C-090', { build(B) {
 } });
 flip('C-091', { build(B) {
   B.done();
-  pasteCard(B, cardTxt([{ s: 'SECOND', x: 720, y: 430, size: 260, sx: 0.8, col: '#e02a22' }, { s: 'IMPACT', x: 720, y: 820, size: 260, sx: 0.8, col: '#e02a22' }]));
+  pasteCard(B, cardTxt([{ s: 'SECOND', x: 720, y: 440, size: 350, sx: 0.84, col: '#e02a22' }, { s: 'IMPACT', x: 720, y: 900, size: 350, sx: 0.84, col: '#e02a22' }]));
   note(B, 'テロップ (赤)', ACT.y + 2, { size: 22 });
   rnote(B, 'セカンドインパクト = 2012', ACT.y + 40, { size: 22, col: COL.red });
 } });
@@ -663,7 +727,7 @@ flip('C-096', { build(B) {
 } });
 flip('C-097', { build(B) {
   B.done();
-  pasteCard(B, (ctx) => sansHeavy(ctx, 'ADAM', 720, 660, 330, { align: 'center', col: '#111', sx: 0.92 }), { bg: '#f8f7f2' });
+  pasteCard(B, (ctx) => sansHeavy(ctx, 'ADAM', 720, 720, 470, { align: 'center', col: '#111', sx: 0.95 }), { bg: '#f8f7f2' });
   note(B, 'テロップ (白地に黒)', ACT.y + 2, { size: 22 });
   rnote(B, 'ADAM = オプティマイザ', ACT.y + 40, { size: 22, col: COL.red });
 } });
@@ -733,8 +797,8 @@ flip('C-102', {
   build(B) {
     B.done();
     pasteCard(B, (ctx) => {
-      credit(ctx, [{ s: '監督', x: 160, y: 250, size: 110, vert: true, sx: 0.9, role: true, lh: 1.0 }], { col: '#f8f5ec' });
-      credit(ctx, [{ s: '逆伝播', x: 310, y: 610, size: 330, sx: 0.84 }, { s: '法', x: 1030, y: 960, size: 330, sx: 0.84 }], { col: '#f8f5ec' });
+      credit(ctx, [{ s: '監督', x: 130, y: 210, size: 130, vert: true, sx: 0.9, role: true, lh: 1.0 }], { col: '#f8f5ec' });
+      credit(ctx, [{ s: '逆伝播', x: 270, y: 590, size: 400, sx: 0.86 }, { s: '法', x: 1000, y: 1010, size: 400, sx: 0.86 }], { col: '#f8f5ec' });
     }, { tape: true });
     // green slash wipe (marker, fast) — 83.6 = lt 0.97
     B.at(0.93, 0.1);
