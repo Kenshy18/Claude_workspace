@@ -830,6 +830,10 @@ class Replay(VoiceScene):
                                           fill_opacity=1).move_to(RIGHT * (-7.0 + 0.4 * k) + UP * (2.55 + s * 0.6))
                          for k in range(36) for s in (-1, 1)])
         film_speed = 0.55  # 単位/秒
+        # 最初は画面の中央に大きく出し、グラフが出るときに上段へ縮める
+        BIG = 1.6
+        film_all = Group(film_bg, holes, film)
+        film_all.scale(BIG, about_point=film_bg.get_center()).shift(DOWN * 2.05)
 
         # 下段: 場面（時刻）と価値
         ax = Axes(x_range=[0, 1, 0.1], y_range=[0, 1, 0.25], x_length=11.0, y_length=2.9, tips=False,
@@ -844,8 +848,8 @@ class Replay(VoiceScene):
         with self.voice("もう一つの問題は、{A}データの性質です。") as v:
             self.add(film_bg, holes)
             self.play(FadeIn(film_bg), FadeIn(film), run_time=0.6)
-            self.play(film.animate(rate_func=linear).shift(LEFT * film_speed * v.until("A")), run_time=v.until("A"))
-            self.play(film.animate(rate_func=linear).shift(LEFT * film_speed * 1.2), Indicate(film_bg, color=GREY_D),
+            self.play(film.animate(rate_func=linear).shift(LEFT * film_speed * BIG * v.until("A")), run_time=v.until("A"))
+            self.play(film.animate(rate_func=linear).shift(LEFT * film_speed * BIG * 1.2), Indicate(film_bg, color=GREY_D),
                       run_time=1.2)
 
         seq = forgetting_run("seq")
@@ -853,15 +857,18 @@ class Replay(VoiceScene):
         # ミニバッチ = 連続した4コマ
         with self.voice("ゲームを遊びながら集めた経験は、{A}時間の順に並んでいて、隣り合う場面は、ほとんど同じです。"
                         "{B}確率的勾配降下法が前提にしている、独立で同じ分布から来たデータ、とは、ほど遠いんです。") as v:
-            self.play(film.animate(rate_func=linear).shift(LEFT * film_speed * v.until("A")), run_time=v.until("A"))
+            self.play(film.animate(rate_func=linear).shift(LEFT * film_speed * BIG * v.until("A")), run_time=v.until("A"))
             # 画面中央付近の4コマを囲む
             xs_now = [f.get_center()[0] for f in film]
-            k0 = int(np.argmin([abs(x - (-1.2)) for x in xs_now]))
+            k0 = int(np.argmin([abs(x - (-1.9)) for x in xs_now]))
             four = Group(*film[k0:k0 + 4])
-            br = SurroundingRectangle(four, color=style.REWARD, buff=0.08, stroke_width=4)
-            mb_lab = jt("ミニバッチ", size=30, color=style.REWARD).next_to(br, DOWN, buff=0.15)
+            br = SurroundingRectangle(four, color=style.REWARD, buff=0.1, stroke_width=5)
+            mb_lab = jt("ミニバッチ", size=46, color=style.REWARD).next_to(br, DOWN, buff=0.2)
             self.play(Create(br), FadeIn(mb_lab), run_time=0.7)
             self.play(LaggedStart(*[Indicate(f, scale_factor=1.12, color=WHITE) for f in four], lag_ratio=0.25), run_time=1.4)
+            c = film_bg.get_center()
+            self.play(Group(film_all, br, mb_lab).animate.scale(1 / BIG, about_point=c).shift(UP * (2.55 - c[1])),
+                      run_time=0.9)
             self.play(Create(ax), FadeIn(xl), FadeIn(yl), Create(truth), FadeIn(t_lab), run_time=1.0)
             # 全体の分布（薄い点）と、ミニバッチ（連続 = 一か所に固まる）
             allx = np.linspace(0.02, 0.98, 49)
@@ -960,14 +967,12 @@ class Replay(VoiceScene):
             copies = [live[i].copy() for i in pick]
             self.play(Create(mb_frame), FadeIn(mb_lab2), *[c.animate.move_to(p) for c, p in zip(copies, mb_pos)], run_time=1.1)
             self.wait_to(v, "C")
-            er = jt("経験リプレイ", size=48, color=WHITE, weight="MEDIUM").move_to(DOWN * 1.2 + RIGHT * 0.3)
-            er_bg = BackgroundRectangle(er, color=style.BG, fill_opacity=0.9, buff=0.15)
-            self.play(FadeIn(er_bg), Write(er), run_time=0.8)
+            er = jt("経験リプレイ", size=40, color=WHITE, weight="MEDIUM").move_to(UP * 0.55 + RIGHT * 0.3)
+            self.play(Write(er), run_time=0.8)
 
         with self.voice("これで、ミニバッチの中の相関が断ち切られ、{A}しかも、同じ経験を何度も使い回せるので、"
                         "データの無駄も減ります。{B}Q学習が、方策オフ型だからこそ使える手です。"
                         "古い方策で集めたデータからでも、学べるからです。") as v:
-            self.play(FadeOut(VGroup(er, er_bg)), run_time=0.4)
             cur["rec"] = rep
             kt.set_value(0)
             fc2 = always_redraw(fit_curve)
@@ -996,7 +1001,7 @@ class Replay(VoiceScene):
             self.play(c.animate.move_to(mb_pos[6]), FadeOut(copies[6]), run_time=0.8)
             copies[6] = c
         self.play(FadeOut(Group(*live, *copies, glows, tint, old_lab, buf_frame, buf_lab, mb_frame, mb_lab2, ax, xl, yl,
-                                truth, t_lab, cloud, fc2, bd2)), run_time=0.9)
+                                truth, t_lab, cloud, fc2, bd2, er)), run_time=0.9)
 
 
 # ---------------------------------------------------------------------------
@@ -1354,35 +1359,34 @@ class Algorithm(VoiceScene):
                 shape.move_to(t[0].get_center() + np.array([rng.uniform(-0.22, 0.22), rng.uniform(-0.22, 0.22), 0]))
                 t.add(shape)
             tiles.add(t)
-        tiles.arrange_in_grid(7, 7, buff=0.1).move_to(RIGHT * 2.6 + DOWN * 0.3)
-        n49 = jt("49種類のゲーム", size=34, color=WHITE).next_to(tiles, UP, buff=0.3)
-        same = jt("同じネットワーク・同じ設定", size=30, color=GREY_B).next_to(tiles, LEFT, buff=0.6).shift(1.0 * UP)
-        dqn_icon = VGroup(tiny_network((4, 5, 3), width=1.6, height=1.4), jt("DQN", size=36, color=WHITE, weight="BOLD"))
-        dqn_icon.arrange(DOWN, buff=0.2).next_to(same, DOWN, buff=0.4)
-        human = VGroup(Circle(0.2, color=GREY_A, fill_opacity=1, fill_color=GREY_A),
-                       RoundedRectangle(width=0.55, height=0.6, corner_radius=0.2, color=GREY_A, fill_opacity=1,
-                                        fill_color=GREY_A)).arrange(DOWN, buff=0.06)
+        tiles.arrange_in_grid(7, 7, buff=0.08).scale(0.92).move_to(RIGHT * 3.75 + DOWN * 0.05)
+        n49 = jt("49種類のゲーム", size=36, color=WHITE).next_to(tiles, UP, buff=0.25)
+        human = VGroup(Circle(0.17, color=GREY_A, fill_opacity=1, fill_color=GREY_A),
+                       RoundedRectangle(width=0.46, height=0.5, corner_radius=0.18, color=GREY_A, fill_opacity=1,
+                                        fill_color=GREY_A)).arrange(DOWN, buff=0.05)
         with self.voice("2015年に発表された[DQN|ディーキューエヌ]は、この仕組みで、{A}49種類のゲームを、"
                         "同じネットワーク構造、同じ設定のまま、画面の画素だけから学習し、"
                         "{B}その多くで、人間のプロのテスターに匹敵するスコアを出しました。") as v:
-            self.play(FadeOut(Group(*self.mobjects), scale=0.9), run_time=1.0)
+            diagram = Group(*self.mobjects)
+            self.play(diagram.animate.scale(0.45).move_to(LEFT * 3.75 + UP * 0.2), run_time=1.2)
+            dqn_lab = jt("DQN", size=44, color=WHITE, weight="BOLD").next_to(diagram, DOWN, buff=0.3)
+            same = jt("同じネットワーク・同じ設定", size=30, color=GREY_B).next_to(diagram, UP, buff=0.35)
+            self.play(FadeIn(dqn_lab), run_time=0.6)
             self.wait_to(v, "A")
-            self.play(LaggedStart(*[FadeIn(t, scale=0.6) for t in tiles], lag_ratio=0.02), FadeIn(n49), run_time=1.8)
-            self.play(FadeIn(same, shift=0.1 * RIGHT), FadeIn(dqn_icon, shift=0.1 * RIGHT), run_time=0.8)
-            arr = Arrow(dqn_icon.get_right(), tiles.get_left() + DOWN * 0.3, buff=0.2, color=GREY_B, stroke_width=4)
-            self.play(GrowArrow(arr), run_time=0.6)
+            arr = Arrow(diagram.get_right() + 0.05 * RIGHT, tiles.get_left() + 0.05 * LEFT, buff=0.08, color=GREY_B,
+                        stroke_width=5)
+            self.play(LaggedStart(*[FadeIn(t, scale=0.6) for t in tiles], lag_ratio=0.02), FadeIn(n49), GrowArrow(arr),
+                      run_time=1.8)
+            self.play(FadeIn(same, shift=0.1 * DOWN), run_time=0.8)
             self.wait_to(v, "B")
-            rob = Robot(height=0.8)
-            vs = VGroup(rob, mt(r"\approx", size=52, color=GREY_A), human).arrange(RIGHT, buff=0.35)
-            vs.next_to(tiles, DOWN, buff=0.3)
-            pro = jt("人間のプロ", size=28, color=GREY_A).next_to(human, RIGHT, buff=0.15)
-            self.play(tiles.animate.shift(0.35 * UP), n49.animate.shift(0.35 * UP), run_time=0.5)
-            vs.next_to(tiles, DOWN, buff=0.25)
-            pro.next_to(vs, RIGHT, buff=0.15)
-            self.play(FadeIn(vs), FadeIn(pro), run_time=0.8)
+            rob = Robot(height=0.62)
+            vs = VGroup(rob, mt(r"\approx", size=48, color=GREY_A), human).arrange(RIGHT, buff=0.3)
+            pro = jt("人間のプロ", size=30, color=GREY_A)
+            row = VGroup(vs, pro).arrange(RIGHT, buff=0.2).next_to(tiles, DOWN, buff=0.18)
+            self.play(FadeIn(row), run_time=0.8)
             self.play(LaggedStart(*[Indicate(t, color=style.REWARD, scale_factor=1.12) for t in tiles], lag_ratio=0.02),
                       run_time=2.0)
-        self.play(FadeOut(VGroup(tiles, n49, same, dqn_icon, arr, vs, pro)), run_time=0.9)
+        self.play(FadeOut(Group(diagram, dqn_lab, same, tiles, n49, arr, row)), run_time=0.9)
 
 
 # ---------------------------------------------------------------------------
@@ -1495,7 +1499,9 @@ class DeadlyTriad(VoiceScene):
         l_bs = jt("ブートストラップ", size=38, color=ORANGE).next_to(c_bs, RIGHT, buff=0.15).shift(0.9 * UP)
         l_op = jt("方策オフ", size=38, color=style.POLICY).next_to(c_op, DOWN, buff=0.1)
         center = Intersection(Intersection(c_fa, c_bs), c_op, stroke_width=0, fill_color=RED, fill_opacity=0.85)
-        danger = jt("発散しうる", size=30, color=WHITE, weight="MEDIUM").move_to(center).shift(0.08 * UP)
+        danger = jt("発散しうる", size=36, color=RED, weight="MEDIUM").move_to(LEFT * 5.1 + DOWN * 2.3)
+        d_arrow = Arrow(danger.get_top() + 0.05 * UP, center.get_center() + 0.1 * LEFT, buff=0.12, color=RED,
+                        stroke_width=5)
         title = jt("死の三つ組", size=54, color=RED, weight="MEDIUM").move_to(LEFT * 1.2 + UP * 3.3)
         tricks = VGroup(jt("ターゲットネットワーク", size=28, color=WHITE), jt("経験リプレイ", size=28, color=WHITE),
                         jt("ダブルDQN", size=28, color=WHITE))
@@ -1514,7 +1520,7 @@ class DeadlyTriad(VoiceScene):
             self.wait_to(v, "C")
             self.play(Create(c_op), FadeIn(l_op), run_time=0.7)
             self.wait_to(v, "D")
-            self.play(FadeIn(center), Write(danger), run_time=0.9)
+            self.play(FadeIn(center), Write(danger), GrowArrow(d_arrow), run_time=0.9)
             self.play(center.animate.set_fill(opacity=1.0), rate_func=there_and_back, run_time=0.8)
             self.wait_to(v, "E")
             self.play(Write(title), run_time=0.9)
@@ -1522,7 +1528,8 @@ class DeadlyTriad(VoiceScene):
             self.play(Create(tbox), FadeIn(ttag), LaggedStart(*[FadeIn(t, shift=0.1 * LEFT) for t in tricks], lag_ratio=0.3),
                       run_time=1.4)
             self.play(center.animate.set_fill(ORANGE, 0.6), run_time=1.0)
-        self.play(FadeOut(VGroup(c_fa, c_bs, c_op, l_fa, l_bs, l_op, center, danger, title, tricks, tbox, ttag)), run_time=0.9)
+        self.play(FadeOut(VGroup(c_fa, c_bs, c_op, l_fa, l_bs, l_op, center, danger, d_arrow, title, tricks, tbox, ttag)),
+                  run_time=0.9)
 
 
 # ---------------------------------------------------------------------------
@@ -1643,13 +1650,15 @@ class Outro(VoiceScene):
                         for a, b in zip(chain[:-1], chain[1:])])
         cut = cross_mark(0.5).move_to(back[2])
         detour = CurvedArrow(n_J.get_top() + 0.15 * UP, n_th.get_top() + 0.15 * UP, angle=0.8, color=style.POLICY, stroke_width=7)
-        pi_big = mt(r"\pi_{\theta}(a \mid s)", size=68, color=style.POLICY).to_edge(UP, buff=0.4)
+        pi_big = mt(r"\pi_{\theta}(a \mid s)", size=96, color=style.POLICY).move_to(UP * 0.4)
+        pi_lab = jt("方策そのもの", size=40, color=style.POLICY).next_to(pi_big, DOWN, buff=0.4)
         with self.voice("価値を経由せずに、{A}方策そのものを、直接学ぶことはできないのか。"
                         "{B}第1章で、途中で途切れていた、あの勾配の道に戻るときが来ました。") as v:
             self.play(FadeOut(Group(vocab, v_lab, seq, seq_lab, mg3, qm, mq)), run_time=0.6)
             self.wait_to(v, "A")
-            self.play(Write(pi_big), run_time=1.0)
+            self.play(Write(pi_big), FadeIn(pi_lab, shift=0.1 * UP), run_time=1.0)
             self.wait_to(v, "B")
+            self.play(FadeOut(pi_lab), pi_big.animate.scale(0.7).to_edge(UP, buff=0.4), run_time=0.7)
             self.play(LaggedStart(*[FadeIn(m) for m in chain], lag_ratio=0.12), LaggedStart(*[GrowArrow(a) for a in fwd], lag_ratio=0.12),
                       run_time=1.2)
             self.play(LaggedStart(*[GrowArrow(a) for a in reversed(back)], lag_ratio=0.2), run_time=1.0)

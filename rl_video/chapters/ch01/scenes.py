@@ -124,6 +124,8 @@ class Hook(VoiceScene):
         with self.voice("このロボットは、右上の{A}星にたどり着くと、ごほうびがもらえます。"
                         "逆に、[その下|そのした]の{B}赤い穴に落ちると、罰を受けます。") as v:
             self.sfx("whoosh")
+            self.add(g.board)
+            self.bring_to_front(robot)
             self.play(self.reset_frame(run_time=1.8), FadeIn(g.board, lag_ratio=0.02, run_time=1.8),
                       robot.animate(run_time=1.8).look(UP))
             self.wait_to(v, "A")
