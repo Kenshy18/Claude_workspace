@@ -27,5 +27,9 @@
 - [x] perf (idle machine, before post optimization): typical 200–400 ms/frame, worst first-frame spikes 596 (39.0) / 635 ms (8.0). Re-measure when idle (load was 22–27 from others' video renders).
 - [x] final perf (load 4.9): 148 frames / 37 timestamps: typical 90–250 ms, worst 441 ms (7.4 s) → within 0.6 s budget
 - [x] CHANCE 1/97 label moved above the dashed line (collided with the 500 tick)
-- [ ] final representative stills → out/opening_v2/p3_magi/final/
+- [x] final representative stills → out/opening_v2/p3_magi/final/stills (16) + final2/stills/still_0067.20.png
+- [x] review total this session: c1–c5 (80), v1/v2/f1–f3 (checks), cmp_A–H (128 timestamps side-by-side vs original), final (16)
+
+## STATUS: complete (session 3, ~22:55). Remaining known weaknesses are listed in NOTES.md.
+Tools in folder: perf2.mjs (per-frame timing), probe.mjs (shot name + scene pixel per frame, for state-leak debugging).
 
