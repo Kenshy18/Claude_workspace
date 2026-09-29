@@ -155,8 +155,10 @@ add(10.4, 14.1, 'blue_core', (ctx, lt, t, fx) => {
   const g = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], 140); g.addColorStop(0, 'rgba(210,235,255,0.9)'); g.addColorStop(0.35, 'rgba(80,150,255,0.45)'); g.addColorStop(1, 'rgba(0,40,120,0)');
   ctx.fillStyle = g; ctx.fillRect(c[0] - 140, c[1] - 140, 280, 280);
   const flashR = seg(lt, 3.45, 3.7); if (flashR > 0) { ctx.strokeStyle = `rgba(230,245,255,${1 - flashR * 0.4})`; ctx.lineWidth = 30; ctx.beginPath(); ctx.arc(c[0], c[1], 60 + flashR * 500, 0, Math.PI * 2); ctx.stroke(); }
+  const g2 = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], 420); g2.addColorStop(0, 'rgba(120,180,255,0.35)'); g2.addColorStop(1, 'rgba(0,30,120,0)');
+  ctx.fillStyle = g2; ctx.fillRect(c[0] - 420, c[1] - 420, 840, 840);
   ctx.restore();
-  fx.bloom = 0.7; fx.thr = 0.72;
+  fx.bloom = 0;                                                     // no bloom: the credits must stay crisp; glow is painted
 });
 
 // TITLE — band slam at 14.2
@@ -226,12 +228,10 @@ add(33.9, 37.9, 'ring', (ctx, lt, t, fx) => {
 });
 
 // VERSE B — sunset
-add(37.9, 41.6, 'sunset_touch', (ctx, lt, t, fx) => {
-  WD.mood('sunset'); vis('octa'); U.uMode.value = 2; U.uSil.value.set(0.06, 0.03, 0.06);
-  const o = WD.OCTA.pos; OBJ.octa.userData.halo.visible = false; OBJ.octa.userData.haloInk.visible = false;
-  const k = ease.out(clamp(lt / 1.4));
-  OBJ.octa.position.set(o.x, o.y + lerp(95, 30, k), o.z);
-  WD.setCam([o.x + 30, o.y - 60, o.z + 170], [o.x - 10, o.y - 10, o.z], 40);
+add(37.9, 41.6, 'sunset_touch', (ctx, lt, t, fx) => {   // a black silhouette hand reaches down into the sunset; the attention tree draws over it
+  WD.mood('sunset'); const k = ease.out(clamp(lt / 1.5));
+  unitPose({ eyes: 0, reachR: -1.05 - k * 0.35, elbowR: -0.05, curl: 0.55 - k * 0.25, look: 0.2, cable: false }); U.uMode.value = 2; U.uSil.value.set(0.05, 0.03, 0.07);
+  const h = UA('handR'); WD.setCam([h[0] - 12, h[1] - 16 + k * 3, h[2] + 26], [h[0] - 5, h[1] - 6, h[2]], 40, 0.25);
   render3d(ctx, 'sunset', { skyO: { dy: 420, dx: 1400 } });
   if (t >= 39.3) A.tree(ctx, 960, 560, 900, clamp((t - 39.3) / 2.0), 0.95);
 });
@@ -326,9 +326,11 @@ add(64.03, 66.75, 'wings', (ctx, lt, t, fx) => {
   WD.setCam([0, 36, 140 - lt * 8], [0, 40, 0], 38);
   vbars(ctx, t, { top: '#b8281a', bot: '#f07a24' });
   const c = WD.project(UA('chest'));
-  A.wings(ctx, c[0], c[1], 620 * clamp((lt - 0.3) / 0.6), 0.9, lt);
+  const wk = clamp((lt - 0.3) / 0.6);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], 700); gg.addColorStop(0, `rgba(255,236,160,${0.75 * wk})`); gg.addColorStop(0.35, `rgba(255,170,60,${0.35 * wk})`); gg.addColorStop(1, 'rgba(255,120,20,0)'); ctx.fillStyle = gg; ctx.fillRect(c[0] - 700, c[1] - 700, 1400, 1400); ctx.restore();
+  A.wings(ctx, c[0], c[1], 620 * wk, 0.9, lt);
   render3d(ctx, null);
-  fx.bloom = 0.6; fx.thr = 0.7;
+  fx.bloom = 0;                                                     // wings are painted light; credits stay crisp
 });
 // CHORUS — rapid montage (2–6 frame cuts on the original rhythm)
 const cityDay = (ctx, camP, look, fov = 40, o = {}) => { WD.mood('day'); vis('terrain', 'city'); if (o.octa) vis('octa'); if (o.unit) unitPose({ ...o.unit, x: UNIT_CITY[0], y: G(UNIT_CITY[0], UNIT_CITY[2]) - 1, z: UNIT_CITY[2] }); WD.setCam(camP, look, fov, o.roll || 0); render3d(ctx, 'day', { shadow: { s: 300 }, skyO: o.skyO }); };
@@ -391,7 +393,7 @@ add(74.83, 74.93, 'c_sketch2', (ctx, lt) => { WD.mood('day'); unitPose({ eyes: 0
 const swap = (pal) => { OBJ.unit.traverse((o) => { if (o.material && o.material.uniforms && o.material.uniforms.uSwap) o.material.uniforms.uSwap.value = pal; }); };
 add(74.93, 75.47, 'c_unit00', (ctx, lt) => { WD.mood('day'); unitPose({ eyes: 1, look: -0.2, cable: false }); U.uSwap.value = 1; camAt('head', [7, 0.8, 14 - lt * 3], [0, -0.3, 0], 34); render3d(ctx, null, { bg: '#5d86b8' }); });
 add(75.47, 75.57, 'c_card_proto', (ctx) => A.card(ctx, 'PROTOTYPE'));
-add(75.57, 75.97, 'c_unit02', (ctx, lt) => { WD.mood('day'); unitPose({ eyes: 1, spread: 0.3, lean: 0.2, look: 0.25 }); U.uSwap.value = 2; WD.setCam([-18, 38, 44], [0, 46, 0], 40); render3d(ctx, null, { bg: '#1c2a44' }); });
+add(75.57, 75.97, 'c_unit02', (ctx, lt) => { WD.mood('day'); unitPose({ eyes: 1, spread: 0.35, elbow: 1.1, reach: -0.5, reachR: -0.5, lean: 0.22, look: 0.3, hipL: -0.35, kneeL: 0.4, cable: false }); U.uSwap.value = 2; WD.setCam([-36, 54, 58], [0, 47, 0], 40); render3d(ctx, null, { bg: '#1c2a44' }); });
 add(75.97, 76.13, 'c_card_prod', (ctx) => A.card(ctx, 'PRODUCTION'));
 // "classmates" → attention heads, one per cut
 const HEAD_BG = ['#4a86d0', '#e0843a', '#9a62c0', '#3a9a8a'];
@@ -422,8 +424,8 @@ add(78.57, 78.8, 'c_berserk', (ctx, lt, t, fx) => {   // crouched, feral: the lo
   WD.mood('night'); unitPose({ eyes: 1, lean: 0.62, nod: -0.55, hip: -0.75, knee: 1.25, reach: -0.9, reachR: -0.5, elbow: 0.2, spread: 0.25, cable: false }); U.uLed.value = 1;
   camAt('head', [9, -8, 20], [0, -3, 0], 40, 0.3); render3d(ctx, null, { bg: '#120818' }); fx.bloom = 0.6; });
 add(78.8, 79.2, 'c_lance', (ctx, lt, t, fx) => {
-  WD.mood('dusk'); vis('lance', 'octa'); const o = WD.OCTA.pos; const k = ease.in(clamp(lt / 0.4));
-  OBJ.lance.position.set(lerp(o.x + 400, o.x + 60, k), o.y + 4, o.z + 20); OBJ.lance.rotation.set(0, 0.15, 0);
+  WD.mood('dusk'); vis('lance', 'octa'); const o = WD.OCTA.pos; const k = ease.io(clamp(lt / 0.3));
+  OBJ.lance.position.set(lerp(o.x + 230, o.x + 60, k), o.y + 4, o.z + 20); OBJ.lance.rotation.set(0, 0.15, 0);
   WD.setCam([o.x + 120, o.y - 30, o.z + 200], [o.x + 40, o.y, o.z], 36); render3d(ctx, 'dusk');
   ctx.font = '700 44px "Roboto Condensed"'; ctx.fillStyle = '#fff'; ctx.fillText('clip_grad_norm_(max_norm=1.0)', 110, 980);
   ctx.font = '400 30px "Share Tech Mono"'; ctx.fillText(`g ← g · min(1, 1.0/${M.CLIP.norm.toFixed(1)}) = g · ${M.CLIP.scale.toFixed(5)}`, 112, 1024);

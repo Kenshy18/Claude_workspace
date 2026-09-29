@@ -120,7 +120,7 @@ function slabStack(B, x, y, s, n = 12, o = {}) {
     B.line(x, Y, x, Y + th, { w, a }); B.line(x + depth, Y + depth * 0.32, x + depth, Y + depth * 0.32 + th, { w, a });
     B.line(x + dx + depth, Y + dy + depth * 0.32, x + dx + depth, Y + dy + depth * 0.32 + th, { w, a: a * 0.8 });
     B.line(x, Y + th, x + depth, Y + depth * 0.32 + th, { w, a }); B.line(x + depth, Y + depth * 0.32 + th, x + dx + depth, Y + dy + depth * 0.32 + th, { w, a: a * 0.8 });
-    if (o.labels && i % 3 === 2) B.text('L' + (i + 1), x - 52 * s, Y + th, { size: 20 * s, a });
+    if (o.labels && i % 2 === 1) B.text('L' + (i + 1) / 2, x - 52 * s, Y + th, { size: 20 * s, a });
   }
   if (o.stream) {  // residual stream: a line through all slabs
     const x0 = x + depth / 2 + dx / 2, y0 = y + depth * 0.16 + dy / 2 + th;
@@ -313,21 +313,21 @@ function mechaHand(B, x, y, s, o = {}) {
   // big armoured hand, fingers down: palm, 4 three-segment fingers (curl by o.spread), thumb; red tips, orange studs
   const a = o.a ?? 0.88, w = o.w ?? 3;
   const S = (px, py) => [x + px * s, y + py * s];
-  const palm = [S(-190, 0), S(190, -20), S(210, 250), S(-200, 280)];
+  const palm = [S(-160, 20), S(160, 0), S(180, 230), S(-170, 250)];
   B.marker(palm, COL.mPurple, { a: 0.8, mode: 'wash' });
   const parts = [];
   for (let i = 0; i < 4; i++) {
-    let px = -150 + i * 100, py = 262 - Math.abs(i - 1.5) * 6, ang = (i - 1.5) * 0.08 + (o.spread || 0) * (i - 1.5) * 0.16;
-    const lens = [150, 120, 92].map((l) => l * (1 - Math.abs(i - 1.5) * 0.07)), wid = [50, 44, 38, 30];
+    let px = -126 + i * 84, py = 238 - Math.abs(i - 1.5) * 6, ang = (i - 1.5) * 0.1 + (o.spread || 0) * (i - 1.5) * 0.16;
+    const lens = [120, 96, 74].map((l) => l * (1 - Math.abs(i - 1.5) * 0.07)), wid = [76, 68, 58, 44];
     for (let k = 0; k < 3; k++) {
       const p0 = S(px, py), p1 = S(px + Math.sin(ang) * lens[k], py + Math.cos(ang) * lens[k]);
       parts.push({ poly: taperLimb(p0, p1, wid[k] * s * 0.5, wid[k] * s * 0.55, wid[k + 1] * s * 0.5), tip: k === 2, k, p0 });
       px += Math.sin(ang) * lens[k]; py += Math.cos(ang) * lens[k];
-      ang -= 0.12 * (1 - (o.spread || 0)) * (k + 1) * 0.6;
+      ang -= 0.22 * (1 - (o.spread || 0) * 0.7) * (k + 1) * 0.6;
     }
   }
-  const th0 = S(-190, 80), th1 = S(-330, 250), th2 = S(-360, 380);
-  parts.push({ poly: taperLimb(th0, th1, 30 * s, 34 * s, 26 * s) }, { poly: taperLimb(th1, th2, 26 * s, 26 * s, 20 * s), tip: true });
+  const th0 = S(-160, 90), th1 = S(-290, 230), th2 = S(-320, 340);
+  parts.push({ poly: taperLimb(th0, th1, 40 * s, 44 * s, 34 * s) }, { poly: taperLimb(th1, th2, 34 * s, 34 * s, 26 * s), tip: true });
   for (const pt of parts) {
     B.marker(pt.poly, pt.tip ? COL.mRed : COL.mPurple, { a: pt.tip ? 0.85 : 0.8, mode: pt.tip ? 'accent' : 'wash', streak: 0.3 });
     const [cx] = centroid(pt.poly);
@@ -338,9 +338,9 @@ function mechaHand(B, x, y, s, o = {}) {
   const half = clipHalf(palm, 1, 0, x + 40 * s);
   if (half.length > 2) B.hatch(half, 0.8, 10, { w: 1.5, a: a * 0.5 });
   B.poly(palm, { w: w * 1.3, a });
-  B.stroke([S(-170, 120), S(0, 104), S(180, 110)], { w: w * 0.6, a: a * 0.8, passes: 1 });
-  B.line(...S(-150, 190), ...S(170, 172), { w: 6 * s + 2, col: COL.mGreen, a: 0.85, passes: 1 });
-  for (const i of [1, 2]) { const [sx, sy] = S(-150 + i * 100, 330); B.marker(ellipsePts(sx, sy, 20 * s, 20 * s, 0, 7, 0, 16), COL.mOrange, { a: 0.95, streak: 0, mode: 'accent' }); B.circle(sx, sy, 20 * s, { w: 2, a: 0.85, passes: 1 }); }
+  B.stroke([S(-150, 120), S(0, 104), S(160, 110)], { w: w * 0.6, a: a * 0.8, passes: 1 });
+  B.line(...S(-130, 180), ...S(150, 164), { w: 6 * s + 2, col: COL.mGreen, a: 0.85, passes: 1 });
+  for (const i of [1, 2]) { const [sx, sy] = S(-126 + i * 84, 300); B.marker(ellipsePts(sx, sy, 20 * s, 20 * s, 0, 7, 0, 16), COL.mOrange, { a: 0.95, streak: 0, mode: 'accent' }); B.circle(sx, sy, 20 * s, { w: 2, a: 0.85, passes: 1 }); }
 }
 // ── attention heatmap (pencil shading per cell) ─────────────────────────────
 function attnGrid(B, x, y, cell, mat, o = {}) {

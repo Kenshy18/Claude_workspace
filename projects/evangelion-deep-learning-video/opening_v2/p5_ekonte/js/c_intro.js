@@ -124,7 +124,7 @@ SPEC['C-002'] = {
     const rng = mulberry32(21);
     for (let i = 0; i < 12; i++) {
       const cx = rng() * 1440, cy = rng() * 1080, r = 110 + rng() * 280;
-      B.marker(blob(cx, cy, r * 1.3, r * (0.45 + rng() * 0.35), 300 + i, 0.45, 40, rng() * 0.6 - 0.3), i % 3 ? '#7d1414' : '#a51d18', { a: 0.3 + rng() * 0.25, streak: 0.5 });
+      B.marker(blob(cx, cy, r * 1.3, r * (0.45 + rng() * 0.35), 300 + i, 0.45, 40, rng() * 0.6 - 0.3), i % 3 ? '#7d1414' : '#a51d18', { a: 0.2 + rng() * 0.16, streak: 0.5 });
     }
     for (let i = 0; i < 6; i++) {
       const cx = rng() * 1440, cy = rng() * 1080, r = 60 + rng() * 120;
@@ -219,7 +219,7 @@ SPEC['C-003'] = {
     note(B, 'T.U. → 7+22 から', ACT.y + 68);
     note(B, '5コマ毎にカット割り (明滅)', ACT.y + 100, { col: COL.red });
     B.at(1.4, 1.2);
-    rnote(B, '8 頭 × d_k 64 = 512 = d_model', ACT.y + 170);
+    rnote(B, '8 頭 × dₖ 64 = 512 = d_model', ACT.y + 170);
     rnote(B, 'ラテン語: Query=QVAESTIO', ACT.y + 214, { size: 24 });
     rnote(B, 'Key=CLAVIS, Value=VALOR', ACT.y + 244, { size: 24 });
   },
@@ -263,7 +263,7 @@ SPEC['C-004'] = {
       const a = clamp(lt / 0.3);
       credit(ctx, [{ s: '企画', x: 230, y: 330, size: 46, role: true }, { s: '掲載', x: 230, y: 575, size: 46, role: true }], { alpha: a });
       credit(ctx, [{ s: 'Chinchilla', x: 420, y: 340, size: 88, fam: FONT.minchoN, w: 900 }, { s: '(Hoffmann et al., 2022)', x: 424, y: 404, size: 34, fam: FONT.minchoN, w: 700, sx: 0.9 }, { s: 'arXiv:1706.03762', x: 420, y: 585, size: 80, fam: FONT.minchoN, w: 900, sx: 0.8 },
-        { s: 'NeurIPS 2017', x: 420, y: 720, size: 80, fam: FONT.minchoN, w: 900, sx: 0.84 }], { alpha: a });
+        { s: 'NIPS 2017', x: 420, y: 720, size: 80, fam: FONT.minchoN, w: 900, sx: 0.84 }], { alpha: a });
     }, { cred: [0.05, 9] });
     B.at(0.2, 0.8);
     note(B, '青い水面の光 (透過光)', ACT.y + 4);

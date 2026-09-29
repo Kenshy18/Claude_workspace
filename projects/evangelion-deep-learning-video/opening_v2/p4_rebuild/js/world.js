@@ -690,14 +690,14 @@ function buildGeofront() {
 // ── LANCE (gradient clipping): long red rod with a twisted fork ───────────────────────────
 function buildLance() {
   const b = new Builder(); const R = col('#c8201e'), Rd = col('#8e1414');
-  const L = 150, w = 1.1;
+  const L = 150, w = 2.0;
   const sq = (y, s, rot = 0) => [0, 1, 2, 3].map((i) => { const a = rot + (i * Math.PI) / 2 + Math.PI / 4; return [Math.cos(a) * s, y, Math.sin(a) * s]; });
   b.prism(sq(-L / 2, w), sq(L / 2 - 30, w), R);
   // fork: two prongs spiralling around each other
   for (const ph of [0, Math.PI]) {
     let prev = null;
     for (let k = 0; k <= 10; k++) {
-      const t = k / 10, y = L / 2 - 30 + t * 36, a = ph + t * 2.6, r = 0.9 + t * 3.2;
+      const t = k / 10, y = L / 2 - 30 + t * 40, a = ph + t * 2.6, r = 1.6 + t * 5.2;
       const c = [Math.cos(a) * r, y, Math.sin(a) * r];
       const ring = [0, 1, 2, 3].map((i) => { const aa = (i * Math.PI) / 2 + Math.PI / 4; const s = w * (1 - t * 0.75); return [c[0] + Math.cos(aa) * s, y, c[2] + Math.sin(aa) * s]; });
       if (prev) b.prism(prev, ring, k % 2 ? R : Rd, [0, 0, 0, 0], false);

@@ -11,8 +11,25 @@ const CACHE = {};
 // ── engraving: iso-contours + gradient streamlines + medallions at every critical point ────────
 export function initArt() {
   CACHE.lines = M.streamlines(24, 0.04, 500);
-  const lv = []; for (let L = 0.5; L <= 8.5; L += 0.5) lv.push(L);
+  const lv = []; for (let L = 0.25; L <= 8.5; L += 0.25) lv.push(L);   // copper-plate density: quarter levels, majors on integers
   CACHE.contours = M.contours(lv, 150, -6.5, 6.5);
+  // static world-space copies (heights computed once). Marching-squares segments are chained into polylines so the
+  // rasteriser strokes a few hundred paths instead of ~20k capped fragments.
+  const key = (p) => `${Math.round(p[0] * 1e4)},${Math.round(p[1] * 1e4)}`;
+  CACHE.cW = CACHE.contours.map((c) => {
+    const adj = new Map(); c.segs.forEach((sg, i) => { for (const e of [0, 1]) { const k = key(sg[e]); if (!adj.has(k)) adj.set(k, []); adj.get(k).push(i); } });
+    const used = new Uint8Array(c.segs.length), polys = [];
+    for (let i = 0; i < c.segs.length; i++) {
+      if (used[i]) continue; used[i] = 1; let line = [c.segs[i][0], c.segs[i][1]];
+      for (const dir of [1, 0]) {            // grow forward from the tail, then backward from the head
+        for (;;) { const end = dir ? line[line.length - 1] : line[0]; const cand = (adj.get(key(end)) || []).find((j) => !used[j]); if (cand === undefined) break;
+          used[cand] = 1; const sg = c.segs[cand]; const nxt = key(sg[0]) === key(end) ? sg[1] : sg[0]; if (dir) line.push(nxt); else line.unshift(nxt); }
+      }
+      const a = new Float32Array(line.length * 3); line.forEach((q, k) => a.set(M.toWorld(q[0], q[1]), k * 3)); polys.push(a);
+    }
+    return polys;
+  });
+  CACHE.lW = CACHE.lines.map((L) => { const n = Math.ceil(L.length / 3), a = new Float32Array(n * 3); for (let i = 0, k = 0; i < L.length; i += 3, k++) a.set(M.toWorld(L[i][0], L[i][1]), k * 3); return a; });
   CACHE.attn = [0, -1, -2, -3].map((k) => M.attention(10, k, 3));
   paintMasses();
 }
@@ -20,33 +37,39 @@ const LAT = { min: 'MINIMVM', saddle: 'SELLA', max: 'MAXIMVM LOCALE' };
 const ROMAN = ['I', 'II', 'III', 'IV'];
 // project a loss-plane point (u,v) at relief height through the three camera
 const P3 = (u, v, lift = 0) => WD.project(M.toWorld(u, v, lift));
+const mixInk = (bg, ink, a) => { const b = [1, 3, 5].map((i) => parseInt(bg.slice(i, i + 2), 16)), c = ink.split(',').map(Number); return `rgb(${b.map((v, i) => Math.round(v + (c[i] - v) * a)).join(',')})`; };
+// fast projector: one view-projection matrix per frame, no allocations per point
+function projector() {
+  const cam = WD.camera; cam.updateMatrixWorld(); const m = new WD.THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse).elements;
+  const out = [0, 0, 0];
+  return (x, y, z) => { const w = m[3] * x + m[7] * y + m[11] * z + m[15]; if (w <= 1e-6) { out[2] = 2; return out; }
+    out[0] = ((m[0] * x + m[4] * y + m[8] * z + m[12]) / w * 0.5 + 0.5) * W; out[1] = (-(m[1] * x + m[5] * y + m[9] * z + m[13]) / w * 0.5 + 0.5) * H; out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w; return out; };
+}
 export function engraving(ctx, t, o = {}) {
   ctx.fillStyle = o.bg || '#061a4a'; ctx.fillRect(0, 0, W, H);
-  const ink = o.ink || '200,225,255';
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const ink = o.ink || '200,225,255'; const bgc = o.bg || '#061a4a';
+  ctx.lineCap = 'butt'; ctx.lineJoin = 'bevel';
+  const pr = projector();
+  const poly = (a, n) => { let pen = false; for (let k = 0; k < n; k++) { const p = pr(a[k * 3], a[k * 3 + 1], a[k * 3 + 2]);
+    if (p[2] > 1 || p[0] < -600 || p[0] > W + 600 || p[1] < -600 || p[1] > H + 600) { pen = false; continue; } if (!pen) { ctx.moveTo(p[0], p[1]); pen = true; } else ctx.lineTo(p[0], p[1]); } };
   // contours
-  for (const c of CACHE.contours) {
-    const major = Math.abs((c.level * 2) % 2) < 1e-6;
-    ctx.strokeStyle = `rgba(${ink},${major ? 0.8 : 0.42})`; ctx.lineWidth = major ? 1.8 : 1.0;
-    ctx.beginPath();
-    for (const [a, b] of c.segs) { const p = P3(a[0], a[1]), q = P3(b[0], b[1]); if (p[2] > 1 || q[2] > 1) continue; ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); }
-    ctx.stroke();
-  }
+  CACHE.contours.forEach((c, ci) => {
+    const major = Math.abs(c.level % 1) < 1e-6, half = Math.abs(c.level % 0.5) < 1e-6;
+    ctx.strokeStyle = mixInk(bgc, ink, major ? 0.8 : half ? 0.45 : 0.26); ctx.lineWidth = 1;   // opaque 1 px strokes take the rasteriser's fast hairline path
+    ctx.beginPath(); for (const a of CACHE.cW[ci]) poly(a, a.length / 3); ctx.stroke();
+    if (major) { ctx.save(); ctx.translate(0.8, 0.6); ctx.stroke(); ctx.restore(); }            // majors: doubled line = heavier engraving
+  });
   // streamlines (engraved hatching of the gradient flow)
   const reveal = o.reveal ?? 1;
-  ctx.strokeStyle = `rgba(${ink},0.55)`; ctx.lineWidth = 1.1;
-  ctx.beginPath();
-  for (const L of CACHE.lines) {
-    const n = Math.floor(L.length * reveal);
-    for (let i = 0; i < n; i += 2) { const p = P3(L[i][0], L[i][1]); if (p[2] > 1) continue; if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]); }
-    ctx.moveTo(0, 0);
-  }
-  ctx.stroke();
+  ctx.strokeStyle = mixInk(bgc, ink, 0.55); ctx.lineWidth = 1;
+  ctx.beginPath(); for (const a of CACHE.lW) poly(a, Math.floor((a.length / 3) * reveal)); ctx.stroke();
+  ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
   // medallions
   let mi = 0;
   for (const c of M.CRIT) {
     const p = P3(c.u, c.v); if (p[2] > 1) continue;
     const q = P3(c.u + 0.45, c.v); const r = Math.max(18, Math.hypot(q[0] - p[0], q[1] - p[1]));
+    if (r > 520 || p[0] < -r || p[0] > W + r || p[1] < -r || p[1] > H + r) continue;   // off-screen or too close: skip (huge glyphs are slow)
     ctx.strokeStyle = `rgba(${ink},0.95)`; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, Math.PI * 2); ctx.stroke();
     ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p[0], p[1], r * 0.84, 0, Math.PI * 2); ctx.stroke();

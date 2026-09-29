@@ -31,3 +31,11 @@
   converged (f(3,2)=0 + arrival steps), 監督 138px. Shader warm-up in main.js (WD.warmup()).
 - Perf (bench.mjs, load ~3.6): mean 274 ms, worst non-first frame ~490 ms. First frame of a run ~700 ms (warm-up).
 - NEXT: NOTES.md; ≥60-timestamp compare review; remaining polish (lance shot, sunset_touch hand, c_unit02 read).
+- 22:25 DONE NOTES.md (concept, shot map, every number + source, weaknesses). Compare review A+B done (scratchpad
+  p4cmp.sh → p4_A_*.jpg, p4_B_*.jpg): intro credits enlarged (block1 70/150, block2 72/118), credits t0>20 ×1.3,
+  theme block titles re-spaced, kana VH .95 + strokes ×1.3 + overlaps wordmark, no bloom under credits (blue_core,
+  wings: painted glows), AlexNet label = TEST error, sunset_touch = Unit silhouette reaching over the sunset.
+- NEXT: compare batches C, D, E (52.7→90), then perf re-measure and final report.
+- 22:35 compare C reviewed (cage/silhouette/63 s head/wings/eyes match well; cut timings verified vs 8 fps sheet).
+  Code-only while queue busy: Lance thicker (w 2.0, bigger fork), EVAL-02 guard pose, production card larger,
+  engraving contours at quarter levels (tiered weights). Compare D running, then E, then bench.

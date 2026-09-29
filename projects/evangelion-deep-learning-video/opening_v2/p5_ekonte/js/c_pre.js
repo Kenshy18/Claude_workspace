@@ -98,6 +98,11 @@ SPEC['C-022'] = {
     B.stroke(catmull([[200, 520], [360, 470], [560, 500]], 6), { w: 5, a: 0.9 });     // brows
     B.stroke(catmull([[880, 500], [1080, 470], [1240, 520]], 6), { w: 5, a: 0.9 });
     const eyes = [[380, 640], [1060, 640]];
+    // nose bridge, shading under the fringe, cheek hatching (storyboard-level detail)
+    B.stroke(catmull([[720, 560], [740, 720], [760, 860], [730, 890]], 5), { w: 2.6, a: 0.75 });
+    B.hatch([[760, 700], [820, 760], [800, 900], [750, 890]], 0.8, 8, { w: 1.4, a: 0.5 });
+    B.hatch([[-20, 330], [1460, 330], [1460, 420], [-20, 440]], 0.9, 9, { w: 1.6, a: 0.45 });
+    for (const x of [300, 1140]) B.hatch([[x - 90, 760], [x + 90, 740], [x + 70, 820], [x - 70, 830]], 1.0, 10, { w: 1.4, a: 0.35, col: COL.red });
     const open = (lt) => lt >= 0.8;
     B.group({ alpha: (lt) => (open(lt) ? 0 : 1) });
     for (const [x, y] of eyes) {
@@ -125,9 +130,10 @@ SPEC['C-022'] = {
     B.text('t = 0 : softmax(0) = 1/n', bx + 16, by + 34, { size: 24, col: COL.red, a: 0.9 });
     B.ungroup();
     B.group({ alpha: (lt) => (open(lt) ? 1 : 0) });
-    const wts = [0.02, 0.03, 0.05, 0.02, 0.36, 0.2, 0.06, 0.03, 0.08, 0.05, 0.06, 0.04];
-    wts.forEach((w, i) => B.rectMarker(bx + 20 + i * 39, by + bh + 20 - w * 300, 26, w * 300, COL.mRed, { a: 0.8, streak: 0 }));
-    B.text('学習後 : 鋭い注意', bx + 16, by + 34, { size: 24, col: COL.red, a: 0.9 });
+    // keys 35..46 of the real attention row used for the C-014 iris (query 40): peak 0.318
+    const wts = window.D5.eyeRow.slice(35, 47);
+    wts.forEach((w, i) => B.rectMarker(bx + 20 + i * 39, by + bh + 20 - w * 300, 26, Math.max(2, w * 300), COL.mRed, { a: 0.8, streak: 0 }));
+    B.text('学習後 : 鋭い注意 (q = 40)', bx + 16, by + 34, { size: 24, col: COL.red, a: 0.9 });
     B.ungroup();
     fixLast(B, n0);
     note(B, '目 閉 → 開 (0+19 で開く)', ACT.y + 2, { size: 22 });
@@ -221,14 +227,19 @@ SPEC['C-027'] = {
     const rng = mulberry32(2701), nx = 48, ny = 36, cw = 1440 / nx, chh = 1080 / ny, vals = [];
     for (let i = 0; i < nx * ny; i++) vals.push(gauss(rng) * Math.sqrt(2 / 512));
     const sd = Math.sqrt(2 / 512);
-    B.custom((ctx) => {     // each cell shaded in pencil, darkness = value
-      const pat = ctx.createPattern(hatchTile(COL.graph, 'graphite'), 'repeat');
-      ctx.fillStyle = pat;
-      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-        const v = clamp(0.5 - vals[j * nx + i] / sd * 0.18, 0.05, 0.95);
-        ctx.globalAlpha = 0.08 + 0.6 * v;
-        ctx.fillRect(i * cw, j * chh, cw - 1, chh - 1);
+    let wall = null;          // each cell shaded in pencil (darkness = value), rendered once and reused
+    B.custom((ctx) => {
+      if (!wall) {
+        wall = mkCanvas(1440, 1080);
+        const g = wall.getContext('2d', CTX_OPT);
+        g.fillStyle = g.createPattern(hatchTile(COL.graph, 'graphite'), 'repeat');
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+          const v = clamp(0.5 - vals[j * nx + i] / sd * 0.18, 0.05, 0.95);
+          g.globalAlpha = 0.08 + 0.6 * v;
+          g.fillRect(i * cw, j * chh, cw - 1, chh - 1);
+        }
       }
+      ctx.drawImage(wall, 0, 0);
     }, { layer: 'marker', weight: 10 });
     for (let j = 1; j < 4; j++) B.line(0, j * 270 + 4, 1440, j * 270 - 3, { w: 2, a: 0.35, passes: 1 });
     // histogram of the same values (pale blue pencil) — the "pale child"
@@ -325,7 +336,7 @@ SPEC['C-032'] = {
     mecha(B, 720, -120, 1.9, { arms: 0.15 });
     prodCredit(B);
     note(B, '上半身 (T.B. 気味)', ACT.y + 2, { size: 22 });
-    rnote(B, '12層 = 緑が12回 ⊕ される', ACT.y + 70, { size: 22 });
+    rnote(B, '6層 × 2サブ層 = ⊕ が12回', ACT.y + 70, { size: 22 });
   },
 };
 SPEC['C-033'] = {
@@ -360,14 +371,14 @@ SPEC['C-034'] = {
     B.paste((ctx, p, lt) => {     // the wings are light (透過光), as in the reference
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       const g = ctx.createRadialGradient(cx, cy, 30, cx, cy, 1000);
-      g.addColorStop(0, 'rgba(255,236,170,0.6)'); g.addColorStop(0.5, 'rgba(255,170,60,0.22)'); g.addColorStop(1, 'rgba(255,140,30,0)');
+      g.addColorStop(0, 'rgba(255,236,170,0.32)'); g.addColorStop(0.5, 'rgba(255,170,60,0.14)'); g.addColorStop(1, 'rgba(255,140,30,0)');
       ctx.fillStyle = g; ctx.fillRect(-400, -400, 2240, 1880);
       const r2 = mulberry32(3403);
       ctx.lineCap = 'round';
       for (let k = 0; k < 13; k++) for (const sgn of [-1, 1]) {
         const a = -Math.PI / 2 + sgn * (0.22 + k * 0.105), L3 = 760 + r2() * 380;
         const lg = ctx.createLinearGradient(cx, cy, cx + Math.cos(a) * L3, cy + Math.sin(a) * L3);
-        lg.addColorStop(0, 'rgba(255,250,210,0.75)'); lg.addColorStop(1, 'rgba(255,190,60,0)');
+        lg.addColorStop(0, 'rgba(255,250,210,0)'); lg.addColorStop(0.2, 'rgba(255,245,200,0.5)'); lg.addColorStop(1, 'rgba(255,190,60,0)');
         ctx.strokeStyle = lg; ctx.lineWidth = 16 + r2() * 20;
         ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * 60, cy + Math.sin(a) * 60); ctx.lineTo(cx + Math.cos(a) * L3, cy + Math.sin(a) * L3); ctx.stroke();
       }

@@ -156,7 +156,7 @@ flip('C-039', {
     for (const x of [1210, 1330]) B.marker([[x, 80], [x + 70, 60], [x + 80, 720], [x + 10, 740]], COL.mRed, { a: 0.8 });
     B.marker([[0, 820], [1440, 760], [1440, 1080], [0, 1080]], '#e8e8ea', { a: 0.6 });
     const poses = [[0, 0.0, 0.14], [0.35, 0.14, 0.27], [0.6, 0.27, 9]];
-    for (const [sp, a0, a1] of poses) { B.group({ alpha: (lt) => (lt >= a0 && lt < a1 ? 1 : 0) }); mechaHand(B, 640, 40, 1.35, { spread: sp }); B.ungroup(); }
+    for (const [sp, a0, a1] of poses) { B.group({ m: () => [Math.cos(-0.26), Math.sin(-0.26), -Math.sin(-0.26), Math.cos(-0.26), -60, 330], alpha: (lt) => (lt >= a0 && lt < a1 ? 1 : 0) }); mechaHand(B, 700, -40, 1.8, { spread: sp }); B.ungroup(); }
     note(B, '手 アップ。指が開く (3枚)', ACT.y + 2, { size: 22 });
   },
 });
@@ -195,14 +195,11 @@ flip('C-043', { build(B) {
 } });
 flip('C-044', { build(B) {
   B.done(); bg(B, '#8fb5dd', 0.45);
-  const P = [[-40, -20], [1480, -20], [1480, 1100], [-40, 1100]];
-  B.marker([[-40, -20], [1100, -20], [1300, 400], [900, 1100], [-40, 1100]], PURP, { a: 0.72 });
-  B.marker([[520, 220], [980, 180], [760, 700]], ORNG, { a: 0.85 });
-  B.poly([[520, 220], [980, 180], [760, 700]], { w: 3, a: 0.9 });
-  B.marker([[1060, -20], [1480, -20], [1480, 260], [1180, 180]], GRN, { a: 0.85 });
-  for (const [x, y] of [[300, 380], [300, 600], [360, 820]]) { B.circle(x, y, 60, { w: 3, a: 0.85 }); B.marker(ellipsePts(x, y, 56, 56, 0, 7, 0, 20), COL.mBlueDeep, { a: 0.7 }); }
-  B.stroke([[1100, -20], [1300, 400], [900, 1100]], { w: 3.4, a: 0.9 });
-  note(B, '胸 アップ (橙の装甲)', ACT.y + 2, { size: 22 });
+  // chest and shoulder pylon, very close (the unit's own armour, cropped)
+  B.group({ m: () => [Math.cos(0.18), Math.sin(0.18), -Math.sin(0.18), Math.cos(0.18), 60, -80] });
+  mecha(B, 620, -480, 3.1, { arms: 0.1, guides: false });
+  B.ungroup();
+  note(B, '胸〜肩 アップ', ACT.y + 2, { size: 22 });
 } });
 flip('C-045', { build(B) {
   B.done(); bg(B, COL.mBlueDeep, 0.55);
@@ -513,7 +510,7 @@ flip('C-073', { build(B) {
   for (let k = 0; k < 5; k++) B.curve([[180 + k * 250, 110 - (k % 2) * 30], [230 + k * 250, 330], [210 + k * 245, 600]], { w: 2.4, a: 0.8 });
   for (let k = 0; k < 9; k++) B.stroke([[200 + k * 130, 380 + (k % 3) * 30], [240 + k * 130, 400 + (k % 3) * 30]], { w: 2, a: 0.6, passes: 1 });
   B.hatch([[900, 560], [1480, 560], [1480, 600], [1180, 600]], 0.9, 7, { w: 1.6, a: 0.6 });
-  B.marker([[560, 520], [760, 500], [720, 560], [600, 570]], '#e0552e', { a: 0.85, mode: 'accent' });
+  B.marker([[560, 520], [760, 500], [720, 560], [600, 570]], '#d9a07a', { a: 0.8, mode: 'accent' });
   note(B, '手袋のアップ (司令)', ACT.y + 2, { size: 22 });
 } });
 function unit00Head(B, cx, cy, s, o = {}) {
@@ -536,12 +533,11 @@ flip('C-075', { build(B) {
 } });
 flip('C-076', { build(B) {
   B.done(); bg(B, '#2f4f78', 0.6);
-  const P = mechaParts({ arms: 0.3 });
-  const T = (pts) => pts.map(([x, y]) => [720 + x * 2.2, -120 + y * 2.2]);
-  for (const sh of [P.torso, P.pylL, P.pylR, P.head, P.armL.upper, P.armR.upper, P.neck]) { B.marker(T(sh), COL.mRed, { a: 0.8 }); B.poly(T(sh), { w: 3, a: 0.9 }); }
-  for (let i = 0; i < 4; i++) B.marker(T([[-36 + i * 20, 104], [-24 + i * 20, 100], [-22 + i * 20, 112], [-34 + i * 20, 114]]), '#bff28a', { a: 1, streak: 0 });
-  B.marker([[200, 900], [1300, 700], [1320, 760], [220, 960]], '#8a8f98', { a: 0.85 }); B.poly([[200, 900], [1300, 700], [1320, 760], [220, 960]], { w: 2.6, a: 0.9 });
-  B.marker(T([[-90, 300], [90, 300], [60, 420], [-60, 420]]), ORNG, { a: 0.85 });
+  // the production unit: same body, red, four eyes (= four heads), holding a weapon
+  mecha(B, 720, -150, 2.15, { arms: 0.32, col: COL.mRed, green: false, guides: false });
+  for (let i = 0; i < 4; i++) { const ex = 720 + (-33 + i * 22) * 2.15, ey = -150 + 108 * 2.15; B.marker([[ex - 16, ey - 8], [ex + 16, ey - 10], [ex + 14, ey + 8], [ex - 14, ey + 10]], '#bff28a', { a: 1, streak: 0, mode: 'accent' }); }
+  const W2 = [[160, 930], [1320, 700], [1340, 760], [180, 990]];
+  B.marker(W2, '#8a8f98', { a: 0.85, mode: 'accent' }); B.poly(W2, { w: 2.6, a: 0.9 });
   const it = B.text('4 眼 = 4 heads', 1080, 1040, { size: 32, col: '#ffd0c4', a: 0.9 }); it.fixed = true;
   note(B, '弐号機 (赤)。武器を構える', ACT.y + 2, { size: 22 });
 } });
@@ -663,14 +659,23 @@ flip('C-092', {
   pcam(lt) { const s = 1.0 + 0.08 * lt; return [s, 0, 0, s, 720 * (1 - s), 420 * (1 - s)]; },
   build(B) {
     B.done(); bg(B, '#1e1e2e', 0.95);
-    const G = catmull([[120, 1100], [170, 860], [230, 700], [300, 560], [420, 470], [500, 330], [560, 200], [640, 150], [720, 170], [770, 250], [790, 360], [900, 400], [1060, 430], [1190, 520], [1260, 700], [1300, 900], [1340, 1100], [1180, 1100], [1150, 900], [1090, 760], [1020, 800], [960, 1100], [800, 1100], [760, 880], [640, 860], [560, 1100], [400, 1100], [380, 900], [320, 820], [280, 1100]], 4);
+    // the giant of light: a humanoid silhouette (long arms hanging, small head), white with a glow
+    const P = mechaParts({ arms: 0.08 });
+    const X = (pts) => pts.map(([px, py]) => [720 + px * 1.25, 60 + py * 1.25]);
+    const head = X(ellipsePts(0, 105, 46, 58, 0, Math.PI * 2, 0, 24));
+    const parts = [head, X(P.neck), X(P.torso), X(P.waist), X(P.hips), X(P.armL.upper), X(P.armL.fore), X(P.armR.upper), X(P.armR.fore), X(P.armL.palm), X(P.armR.palm), X(P.legL.thigh), X(P.legR.thigh), X(P.legL.knee), X(P.legR.knee)]
+      .concat(P.armL.hand.map(X), P.armR.hand.map(X), [X([[-92, 196], [-150, 200], [-190, 240], [-150, 250]]), X([[92, 196], [150, 200], [190, 240], [150, 250]])]);
     B.paste((ctx) => {
       ctx.save();
-      ctx.fillStyle = 'rgba(255,230,245,0.35)'; ctx.beginPath(); G.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-      ctx.lineWidth = 60; ctx.strokeStyle = 'rgba(255,220,240,0.18)'; ctx.stroke();
-      ctx.fillStyle = '#fff4fb'; ctx.fill();
-      ctx.fillStyle = '#1e1e2e';
-      for (const [x, y, r] of [[560, 640, 60], [900, 700, 80], [760, 480, 22], [640, 360, 18]]) { ctx.beginPath(); ctx.ellipse(x, y, r, r * 1.3, 0.3, 0, 7); ctx.fill(); }
+      const path = new Path2D();
+      for (const q of parts) { path.moveTo(q[0][0], q[0][1]); for (const p of q) path.lineTo(p[0], p[1]); path.closePath(); }
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 80; ctx.strokeStyle = 'rgba(255,210,236,0.12)'; ctx.stroke(path);
+      ctx.lineWidth = 36; ctx.strokeStyle = 'rgba(255,220,240,0.28)'; ctx.stroke(path);
+      ctx.fillStyle = '#fff4fb'; ctx.fill(path, 'nonzero'); ctx.lineWidth = 10; ctx.strokeStyle = '#fff4fb'; ctx.stroke(path);
+      ctx.fillStyle = '#231f33';
+      for (const [x, y] of [[694, 185], [746, 185]]) { ctx.beginPath(); ctx.ellipse(x, y, 9, 11, 0, 0, 7); ctx.fill(); }
+      for (const [x, y, rx, ry] of [[640, 470, 22, 30], [800, 560, 16, 22]]) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0.2, 0, 7); ctx.fill(); }
       ctx.restore();
     });
     const it = B.text('光の巨人 (透過光)', 70, 1040, { size: 32, col: '#ffc9dc', a: 0.9 }); it.fixed = true;
@@ -699,30 +704,38 @@ flip('C-093', { build(B) {
 flip('C-094', { build(B) {
   B.done(); bg(B, '#1d3f6e', 0.85);
   B.marker(ellipsePts(720, 820, 700, 200, 0, 7, 0, 60), '#9fd0ee', { a: 0.8 });
-  // seated figure, knees up
-  const P = catmull([[860, 560], [900, 600], [930, 700], [1000, 780], [1010, 860], [940, 880], [860, 860], [800, 820], [790, 700], [800, 620], [860, 560]], 4);
-  whiteOut(B, P); B.stroke(P, { w: 2.6, a: 0.85 });
-  B.circle(850, 520, 44, { w: 2.6, a: 0.85 });
+  // seated figure, knees drawn up, arms around the knees (line only, paper white)
+  const body = catmull([[820, 470], [880, 520], [900, 600], [960, 560], [1040, 580], [1070, 660], [1040, 760], [1060, 850], [1010, 880], [930, 870], [860, 880], [800, 860], [780, 760], [790, 640], [800, 540], [820, 470]], 4);
+  whiteOut(B, body); B.stroke(body, { w: 2.6, a: 0.85 });
+  B.circle(850, 440, 52, { w: 2.6, a: 0.85 }); whiteOut(B, ellipsePts(850, 440, 50, 50, 0, 7, 0, 20));
+  B.curve([[800, 420], [820, 380], [880, 380], [905, 430]], { w: 2.4, a: 0.8 });
+  B.curve([[880, 560], [950, 640], [1040, 650]], { w: 2, a: 0.75 }); B.curve([[860, 600], [960, 700], [1050, 700]], { w: 2, a: 0.7 });
+  B.stroke([[1040, 760], [1080, 860]], { w: 2, a: 0.7 });
+  B.hatch([[780, 760], [860, 880], [800, 860]], 0.8, 8, { w: 1.4, a: 0.5 });
   B.circle(520, 800, 26, { w: 2.2, a: 0.9 }); whiteOut(B, ellipsePts(520, 800, 24, 24, 0, 7, 0, 16));
   note(B, '青い虚空に座る', ACT.y + 2, { size: 22 });
 } });
 flip('C-095', { build(B) {
   B.done(); bg(B, '#f2d4ec', 0.35);
   // loose pencil sketch of a boy's profile (the reference itself is a pencil sketch at this cut)
-  const prof = [[980, 180], [900, 170], [760, 220], [700, 330], [690, 420], [650, 480], [690, 500], [680, 560], [700, 600], [690, 640], [740, 700], [820, 720]];
-  for (let k = 0; k < 3; k++) B.curve(prof.map(([x, y]) => [x + k * 4, y + k * 3]), { w: 1.8 - k * 0.4, a: 0.8 - k * 0.2, passes: 1 });
-  for (let i = 0; i < 12; i++) B.curve([[860 + i * 30, 150 + (i % 3) * 20], [900 + i * 32, 260], [880 + i * 30, 420 + (i % 4) * 30]], { w: 1.4, a: 0.55, passes: 1 });
-  B.curve([[820, 720], [860, 860], [980, 1080]], { w: 2, a: 0.7 }); B.curve([[1120, 560], [1150, 800], [1260, 1080]], { w: 2, a: 0.7 });
-  B.stroke([[760, 400], [800, 395]], { w: 2.2, a: 0.8 });
-  B.hatch([[900, 800], [1100, 760], [1200, 1080], [940, 1080]], 0.7, 11, { w: 1.4, a: 0.5, col: '#7a3050' });
+  const prof = [[1040, 120], [900, 110], [760, 170], [640, 290], [600, 400], [590, 470], [540, 560], [590, 590], [575, 650], [600, 700], [585, 740], [650, 800], [760, 830]];
+  for (let k = 0; k < 3; k++) B.curve(prof.map(([x, y]) => [x + k * 4, y + k * 3]), { w: 2.0 - k * 0.5, a: 0.85 - k * 0.22, passes: 1 });
+  for (let i = 0; i < 16; i++) B.curve([[700 + i * 36, 90 + (i % 3) * 18], [760 + i * 38, 230 + (i % 2) * 30], [720 + i * 37 - (i % 4) * 30, 420 + (i % 4) * 40]], { w: 1.5, a: 0.6, passes: 1 });
+  B.curve([[640, 400], [700, 385], [740, 400]], { w: 2.6, a: 0.85 });
+  B.curve([[660, 440], [700, 430], [730, 445], [700, 458], [665, 452]], { w: 2, a: 0.85 });
+  B.circle(700, 445, 9, { w: 2, a: 0.9, passes: 1 });
+  B.curve([[900, 420], [940, 440], [945, 500], [915, 530], [895, 510]], { w: 2, a: 0.8 });
+  B.curve([[760, 830], [800, 950], [860, 1080]], { w: 2.2, a: 0.75 }); B.curve([[1000, 700], [1030, 880], [1100, 1080]], { w: 2.2, a: 0.75 });
+  B.hatch([[800, 850], [1030, 800], [1100, 1080], [860, 1080]], 0.7, 10, { w: 1.4, a: 0.5, col: '#7a3050' });
+  B.hatch([[880, 520], [1000, 500], [1010, 700], [900, 720]], 0.9, 9, { w: 1.3, a: 0.4 });
   note(B, '少年の横顔 (鉛筆ラフ)', ACT.y + 2, { size: 22 });
 } });
 flip('C-096', { build(B) {
   B.done(); bg(B, '#3a2a40', 0.8);
-  const H = [[300, 200], [900, 160], [1200, 420], [1100, 800], [700, 980], [360, 820]];
-  B.marker(H, '#8a6068', { a: 0.8 }); B.poly(H, { w: 3, a: 0.9 });
-  B.marker(ellipsePts(760, 520, 60, 40, 0, 7, -0.2, 24), GRN, { a: 0.95, streak: 0 }); B.ellipse(760, 520, 62, 42, { w: 2.6, a: 0.9, rot: -0.2 });
-  B.marker([[1100, 400], [1480, 300], [1480, 700], [1150, 760]], COL.mRed, { a: 0.8 });
+  B.group({ m: () => [Math.cos(0.38), Math.sin(0.38), -Math.sin(0.38), Math.cos(0.38), 251, -229] });
+  mechaHead(B, 700, 430, 0.8, { eyeCol: GRN });
+  B.ungroup();
+  B.marker([[1060, 820], [1480, 700], [1480, 1100], [1000, 1100]], COL.mRed, { a: 0.8, mode: 'accent' });
   note(B, '頭部アップ 緑の目', ACT.y + 2, { size: 22 });
 } });
 flip('C-097', { build(B) {
@@ -768,26 +781,30 @@ flip('C-099', { build(B) {
 } });
 flip('C-100', { build(B) {
   B.done(); bg(B, '#a7a0c8', 0.5);
-  // operations director = the LR schedule; she "turns" = warmup then decay, drawn on during the cut
-  B.marker([[180, 1100], [300, 760], [600, 700], [900, 700], [1200, 780], [1300, 1100]], COL.mRed, { a: 0.8 });
-  B.poly([[180, 1100], [300, 760], [600, 700], [900, 700], [1200, 780], [1300, 1100]], { w: 3, a: 0.9 });
-  B.marker(catmull([[520, 700], [460, 400], [560, 180], [760, 140], [940, 220], [1000, 420], [940, 700]], 4), '#4a3a70', { a: 0.85 });
+  // operations director = the LR schedule. She looks down, then turns to camera (0+08); the schedule is drawn on meanwhile
+  const hairM = (B2, T, a) => { B2.marker(T([[-270, 260], [-290, -220], [0, -370], [290, -220], [300, 300], [230, 420], [240, 60], [150, -200], [-150, -200], [-240, 60], [-230, 420]]), '#4a3a78', { a: 0.8, mode: 'wash' }); hairLong(B2, T, a); };
+  for (const [rot, dy, a0, a1] of [[0.22, 40, -1, 0.27], [0, 0, 0.27, 9]]) {
+    B.group({ m: () => [Math.cos(rot), Math.sin(rot), -Math.sin(rot), Math.cos(rot), 720 - 720 * Math.cos(rot) + 520 * Math.sin(rot), dy + 520 - 720 * Math.sin(rot) - 520 * Math.cos(rot)], alpha: (lt) => (lt >= a0 && lt < a1 ? 1 : 0) });
+    bust(B, 720, 520, 1.0, { hair: hairM, suit: COL.mRed });
+    if (rot === 0) for (const sx of [-1, 1]) { B.curve([[720 + sx * 150, 520], [720 + sx * 90, 500], [720 + sx * 40, 515]], { w: 3, a: 0.9 }); B.circle(720 + sx * 92, 522, 14, { w: 2.2, a: 0.9, passes: 1 }); }
+    else for (const sx of [-1, 1]) B.curve([[720 + sx * 150, 540], [720 + sx * 90, 552], [720 + sx * 40, 540]], { w: 3, a: 0.9 });
+    B.ungroup();
+  }
   const lr = window.D5.lr;
   B.at(0.0, 0.62);
-  B.stroke(plotPts(lr.s, lr.lr, 140, 180, 1160, 420, [0, 100000], [0, lr.peak * 1.1]), { w: 6, col: '#fff3e8', a: 0.95, step: 3, over: 0, passes: 1 });
+  B.stroke(plotPts(lr.s, lr.lr, 110, 90, 1220, 300, [0, 100000], [0, lr.peak * 1.1]), { w: 5, col: COL.red, a: 0.92, step: 3, over: 0, passes: 1 });
   B.done();
-  B.text('η(s): warmup 4000 → s^−½', 90, 1040, { size: 32, col: '#fff3e8', a: 0.9 });
-  note(B, '作戦部長 振り向き', ACT.y + 2, { size: 22 });
+  B.text('η(s): warmup 4000 → s^−½', 90, 1040, { size: 32, col: COL.red, a: 0.9 });
+  note(B, '作戦部長 振り向き (0+08)', ACT.y + 2, { size: 22 });
   rnote(B, '= 学習率スケジュール', ACT.y + 40, { size: 22, col: COL.red });
 } });
 flip('C-101', { build(B) {
   B.done(); bg(B, '#e7c9b0', 0.3);
-  // three loose pencil heads (the reference cut is a pencil sketch of three girls) = Q, K, V
-  [[380, 520, 'Q'], [720, 460, 'K'], [1060, 540, 'V']].forEach(([x, y, lab], i) => {
-    for (let k = 0; k < 2; k++) B.ellipse(x + k * 5, y + k * 3, 150, 180, { w: 1.8 - k * 0.5, a: 0.7 - k * 0.2, passes: 1, rot: (i - 1) * 0.1 });
-    for (let j = 0; j < 7; j++) B.curve([[x - 150 + j * 45, y - 160], [x - 170 + j * 50, y - 20], [x - 160 + j * 48, y + 150]], { w: 1.3, a: 0.45, passes: 1 });
-    B.curve([[x - 220, 1080], [x - 180, y + 260], [x, y + 230], [x + 180, y + 260], [x + 220, 1080]], { w: 1.8, a: 0.6, passes: 1 });
-    B.text(lab, x - 20, y + 30, { size: 90, col: '#9a4a3a', a: 0.7 });
+  // three loose pencil heads (the reference cut is a pencil sketch of three characters) = Q, K, V
+  [[380, 470, 'Q'], [720, 420, 'K'], [1060, 480, 'V']].forEach(([x, y, lab], i) => {
+    faceSketch(B, x, y, 0.95, { w: 1.8, a: 0.7, col: '#5a3a2a' });
+    B.curve([[x - 240, 1080], [x - 200, y + 330], [x, y + 300], [x + 200, y + 330], [x + 240, 1080]], { w: 1.8, a: 0.6, passes: 1, col: '#5a3a2a' });
+    B.text(lab, x - 30, y + 470, { size: 90, col: COL.red, a: 0.75 });
   });
   note(B, '3人のラフ (鉛筆)', ACT.y + 2, { size: 22 });
 } });

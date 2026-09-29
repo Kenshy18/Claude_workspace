@@ -191,7 +191,7 @@ shot(23.4, 37.9, 'verseA_main', (ctx, lt, t, fx) => {
   const [sc, sg] = off('main', W, H);
   mainScreen(sg, step, t);
   // double exposure: an operator's profile fades in over the screen (the face over the sky)
-  const pa = 0.5 * E.inOutSine(seg(t, 24.3, 26.0));
+  const pa = 0.66 * E.inOutSine(seg(t, 24.3, 26.0));
   if (pa > 0) { sg.save(); sg.globalAlpha = pa; sil(sg, 'profile', -120 + lt * 6, 60, 1.75, '#061a52'); sg.restore(); }
   fill(ctx, '#020304');
   fx.bloom = 0.3; fx.thr = 0.8;
@@ -380,18 +380,19 @@ shot(51.83, 52.4, 'pre_timer', (ctx, lt, t, fx) => {
   const step = stepAt(t);
   fill(ctx, '#000');
   fx.bloom = 0.55; fx.thr = 0.6;
-  ctx.save(); ctx.translate(90 - lt * 40, 250 + lt * 10); ctx.transform(1, -0.02, -0.06, 1, 0, 0); ctx.scale(0.92, 0.92);
+  if (t < 52.267) { ctx.save(); ctx.translate(90 - lt * 40, 250 + lt * 10); ctx.transform(1, -0.02, -0.06, 1, 0, 0); ctx.scale(0.92, 0.92); }
+  else { const u = t - 52.267; ctx.save(); ctx.translate(-60 - u * 60, 60); ctx.transform(1, -0.02, -0.06, 1, 0, 0); ctx.scale(1.4, 1.4); }   // cut at 52.267: closer on the digits
   timerPanel(ctx, timerSecs(step), lt < 0.14, t);
   ctx.restore();
 });
 // S19 52.40–52.83  neon-green angled bars: Fourier power per frequency (still ~uniform)
-shot(52.4, 52.83, 'pre_greenbars', (ctx, lt, t, fx) => {
+shot(52.4, 52.767, 'pre_greenbars', (ctx, lt, t, fx) => {
   fx.bloom = 0.45; fx.thr = 0.6;
   greenBars(ctx, stepAt(t), lt);
 });
 
 // S20 52.83–54.60  low angle on the ‖W‖ monitor (the unit in its cage), orange/black
-shot(52.83, 54.6, 'pre_wnorm', (ctx, lt, t, fx) => {
+shot(52.767, 54.6, 'pre_wnorm', (ctx, lt, t, fx) => {
   const step = stepAt(t);
   fill(ctx, '#e8560e');
   fx.bloom = 0;

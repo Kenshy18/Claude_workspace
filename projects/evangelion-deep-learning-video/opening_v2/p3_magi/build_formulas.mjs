@@ -13,6 +13,8 @@ const F = {
   task: String.raw`c \equiv a + b \pmod{97}`,
   cosadd: String.raw`\cos\omega_k(a+b) = \cos\omega_k a\,\cos\omega_k b - \sin\omega_k a\,\sin\omega_k b`,
   omega: String.raw`\omega_k = \frac{2\pi k}{97}`,
+  cosadd1: String.raw`\cos\omega_k(a+b) =`,
+  cosadd2: String.raw`\cos\omega_k a\,\cos\omega_k b - \sin\omega_k a\,\sin\omega_k b`,
   adamw: String.raw`\theta \leftarrow \theta - \eta\Big(\frac{\hat m}{\sqrt{\hat v}+\epsilon} + \lambda\,\theta\Big)`,
   logits: String.raw`\mathrm{logits} = W_2\,\mathrm{ReLU}\big(W_1[E_a;E_b] + b_1\big) + b_2`,
   power: String.raw`P_k = \frac{\|\mathbf{c}_k^{\top}E\|^2 + \|\mathbf{s}_k^{\top}E\|^2}{\sum_j \big(\|\mathbf{c}_j^{\top}E\|^2 + \|\mathbf{s}_j^{\top}E\|^2\big)}`,

@@ -29,12 +29,12 @@ function strokePoly(x1, y1, x2, y2, w, e1, e2) {
 // Build katakana polygons in pixel space for a given layout.
 export function kanaPolys(x0, yBase, width) {
   const total = GLYPHS.reduce((a, g) => a + g.adv * (g.small ? 0.72 : 1), 0) - 0.12;
-  const E = width / total, VH = 0.66;     // wide letters: em height = 0.66 × em width
+  const E = width / total, VH = 0.95;     // tall jagged letters: em height = 0.95 × em width
   const polys = []; let pen = 0;
   for (const g of GLYPHS) {
     const sc = g.small ? 0.72 : 1;
     for (const st of g.s) {
-      const p = strokePoly(...st);
+      const p = strokePoly(st[0], st[1], st[2], st[3], st[4] * 1.3, st[5], st[6]);   // heavier strokes
       polys.push(p.map(([x, y]) => {
         let px = x0 + (pen + x * sc) * E, py = yBase - (1 - (y * sc + (1 - sc))) * E * VH;
         px += (yBase - py) * 0.36;                      // lean (italic shear)
@@ -47,7 +47,7 @@ export function kanaPolys(x0, yBase, width) {
   return { polys, E, VH };
 }
 
-export const LOGO = { cx: 960, wordY: 452, wordW: 1180, kanaW: 1270 };
+export const LOGO = { cx: 960, wordY: 440, wordW: 1180, kanaW: 1380 };
 export function wordmark(ctx, a = 1, o = {}) {
   const { cx, wordY, wordW } = LOGO;
   ctx.save(); ctx.globalAlpha = a;
@@ -59,7 +59,7 @@ export function wordmark(ctx, a = 1, o = {}) {
 }
 export function kana(ctx, mode, a = 1, reveal = 1) {
   const { cx, wordY, kanaW } = LOGO;
-  const { polys } = kanaPolys(cx - kanaW / 2 - 60, wordY + 150, kanaW);
+  const { polys } = kanaPolys(cx - kanaW / 2 - 70, wordY + 138, kanaW);
   ctx.save(); ctx.globalAlpha = a;
   const n = Math.ceil(polys.length * reveal);
   const path = () => { ctx.beginPath(); for (let i = 0; i < n; i++) { const p = polys[i]; ctx.moveTo(p[0][0], p[0][1]); for (let k = 1; k < p.length; k++) ctx.lineTo(p[k][0], p[k][1]); ctx.closePath(); } };
@@ -72,7 +72,7 @@ export function kana(ctx, mode, a = 1, reveal = 1) {
     }
     ctx.fillStyle = 'rgba(150,225,255,0.95)'; path(); ctx.fill();
   } else {
-    const g = ctx.createLinearGradient(0, wordY - 60, 0, wordY + 170); g.addColorStop(0, '#ffb13a'); g.addColorStop(0.45, '#ff6a1e'); g.addColorStop(1, '#e0170f');
+    const g = ctx.createLinearGradient(0, wordY - 40, 0, wordY + 150); g.addColorStop(0, '#ffb13a'); g.addColorStop(0.45, '#ff6a1e'); g.addColorStop(1, '#e0170f');
     ctx.fillStyle = g; path(); ctx.fill();
     ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(90,6,4,0.9)'; ctx.stroke();
   }

@@ -93,7 +93,7 @@ function buildPaper() {
   rg.addColorStop(0, 'rgba(40,30,20,0)'); rg.addColorStop(1, 'rgba(40,30,20,0.22)');
   vg.fillStyle = rg; vg.fillRect(0, 0, W, H);
   hatchMask('wash'); hatchMask('graphite');
-  for (const k of ['wash', 'graphite']) { const t = mkCanvas(8, 8).getContext('2d'); t.drawImage(HMASK[k], 0, 0); t.getImageData(0, 0, 1, 1); }
+  for (const k of ['wash', 'graphite']) { const t = mkCanvas(8, 8).getContext('2d', CTX_OPT); t.drawImage(HMASK[k], 0, 0); t.getImageData(0, 0, 1, 1); }
 }
 
 function formText(g, s, x, y, size, o = {}) {
@@ -459,12 +459,13 @@ function wobblePoly(poly, seed, amp = 2.6, step = 22) {
 //  'accent'   small colour shapes           -> alcohol-marker fill with streaks (spot colour)
 //  'solid'    explicit (inked finals, e.g. the logo)
 const PAT = {};
+const WASH_K = 0.9;
 function hexLum(hex) { if (!hex || hex[0] !== '#') return 0.5; const n = parseInt(hex.slice(1, 7), 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }
 const HMASK = {};
 function hatchMask(kind) {
   // one alpha mask per kind (hand hatching: clusters of near-parallel strokes); colourised per colour below
   if (HMASK[kind]) return HMASK[kind];
-  const S = 384, c = mkCanvas(S, S), g = c.getContext('2d');
+  const S = 384, c = mkCanvas(S, S), g = c.getContext('2d', CTX_OPT);
   const rng = mulberry32(strSeed('hatch|' + kind));
   g.strokeStyle = '#000'; g.lineCap = 'round';
   const dense = kind === 'graphite';
@@ -498,7 +499,7 @@ function hatchMask(kind) {
 function hatchTile(col, kind) {
   const key = col + '|' + kind;
   if (PAT[key]) return PAT[key];
-  const m = hatchMask(kind), c = mkCanvas(m.width, m.height), g = c.getContext('2d');
+  const m = hatchMask(kind), c = mkCanvas(m.width, m.height), g = c.getContext('2d', CTX_OPT);
   g.drawImage(m, 0, 0);
   g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
   PAT[key] = c;
@@ -542,12 +543,13 @@ function drawMarker(ctx, it, p) {
   if (it.mode === 'white') { ctx.globalAlpha = ga; ctx.fillStyle = '#ffffff'; ctx.fill(path); ctx.restore(); return; }
   if (it.mode === 'wash' || it.mode === 'graphite') {
     const dense = it.mode === 'graphite';
-    ctx.globalAlpha = ga * (dense ? 0.42 : 0.2);
+    // WASH_K: overall strength of coloured-pencil BG tone (kept light so graphite line work dominates)
+    ctx.globalAlpha = ga * (dense ? 0.42 : 0.15 * WASH_K);
     ctx.fillStyle = it.col; ctx.fill(path);
     const pat = ctx.createPattern(hatchTile(it.col, it.mode), 'repeat');
     const ang = ((it.seed % 7) - 3) * 3 + (it.ang || 0) * 8;
     pat.setTransform(new DOMMatrix().rotateSelf(ang));
-    ctx.globalAlpha = Math.min(1, ga * (dense ? 1.05 : 0.95));
+    ctx.globalAlpha = Math.min(1, ga * (dense ? 1.05 : 0.8 * WASH_K));
     ctx.fillStyle = pat; ctx.fill(path);
     if (dense) { ctx.globalAlpha = ga * 0.25; ctx.lineWidth = 3; ctx.strokeStyle = it.col; ctx.stroke(path); }
     ctx.restore();

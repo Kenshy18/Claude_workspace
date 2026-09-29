@@ -5,6 +5,9 @@ The whole opening is NERV/MAGI monitor footage of **one real training run**: `op
 Film time is mapped non-linearly onto training steps so the run's true story rides the song: memorization in the verses, the plateau and weight decay in the pre-chorus, and **the grokking jump landing on 66.8 s** ("zankoku na tenshi no teeze").
 Every shot is a recreation of the 1995 OP's layout, colour, and cut timing, rebuilt out of real plots of that run; the key Fourier frequencies play "the Angels", and weight decay is the director (監督 荷重減衰).
 
+## Cut timing
+Section hits follow `op_timing.json` (band entry 14.2, logo 15.9–22.9, flare 19.0, ring 21.0, flash 22.9, verse 23.4, B 37.9, build 51.9, chorus 66.8, 監督 82.633, slash 83.6, 製作 88.2). In the pre-chorus and the whole chorus every shot boundary is snapped to a cut in `op_cuts_detected.txt` (e.g. 52.267, 52.4, 52.767, 67.333, 68.067, 68.2, 68.567, … 87.533, 87.767); a few extra detected cuts inside my shots are rendered as in-shot reframes (67.433/67.667, 69.333, 83.967–84.433).
+
 ## Film time → training step
 Monotone cubic (Fritsch–Carlson) through story keyframes (`lib.js`, `TK`):
 0–23.4 → step 0 · 26.3 → 60 · 29.9 → 170 · 33.4 → 250 (train acc locks at 100 %) · 37.9 → 600 · 44.9 → 1,550 (val-loss peak, "unmei sae mada shiranai") ·
@@ -43,16 +46,16 @@ Values between logged points are linearly interpolated (loss on a log scale); th
 | 71.2–72.3 | ANGELS → sunset city → TOKYO-3 → pyramid → red org logo | FOURIER card, `skyline`, MOD-97 card, `magi_verdict`, `emblem` | the spectrum as a sunset skyline; MAGI verdict 承認 ×3 (提訴: 汎化); original parody emblem "MOD XCVII" |
 | 72.3–74.6 | staff mugshots, map, bridge, red eye sketch | `file_12/1/20/34/38/3/28`, `fmap`, `bridge`, `red_sketch`, `commander_cu` | **frequency mugshots**: cos/sin(2πkx/97) sampled on the 97 residues, power and rank at step 30k, KEY-5 vs LATE ARRIVAL; Fourier-power heat map with the G₀ line; operators before three screens |
 | 74.6–74.8 | 極秘 人類補完計画 第17次中間報告 | `document` | 極秘 **汎化補完計画 第56次中間報告** (snapshot 56 = step 14,000, val acc 99.8 %) |
-| 74.8–76.1 | robot heads, PROTOTYPE EVA-00 / PRODUCTION MODEL EVA-02 | `scope_1k`, `scope_30k`, cards, `memorizer_red` | the memorizer (step 1,000: train 100 %, val 0.0 %, val loss 19.11, ‖W‖ 90.6) vs the generalizer (step 30,000: r-CV 0.015); PROTOTYPE CKPT-1k / PRODUCTION MODEL CKPT-30k |
+| 74.8–76.1 | EVA-00 heads → PROTOTYPE EVA-00 → EVA-02 (red) → PRODUCTION MODEL EVA-02 | `scope_1k`, `proto_stats` → PROTOTYPE CKPT-1k → `scope_30k`, `prod_stats` → PRODUCTION MODEL CKPT-30k | same order and colours as the original: the prototype = the memorizer checkpoint in EVA-00 blue/white (step 1,000: scattered embedding r-CV 0.343; train 100 %, val 0.0 %, val loss 19.11, ‖W‖ 90.6), then the production model in EVA-02 red (step 30,000: the circle, r-CV 0.015; train 100 %, val 100 %, val loss 0.00001, ‖W‖ 61.1) |
 | 76.1–78.1 | classmates' mugshots, pink explosion, city explosion | `mug_*`, `red_table`, `pink_burst`, `table_flash` | six "mugshots" of whole-run curves: train acc, val acc, losses, ‖W‖ 21.2 → 95.9 → 61.1, key-5 share 11.2 % → 70.3 %, r-CV 0.47 → 0.015 |
 | 78.1–78.6 | cross-shaped explosion | `plus_explosion` | the "+" whiteout |
-| 78.6–79.5 | berserk unit, young commander, sketch | `berserk_dark`, `commander_young`, `pencil_memo` | pencil memo of the first 3,000 steps: "丸暗記… val = 0 %" |
-| 79.5–80.4 | SECOND IMPACT (red), white giant, crater "TIME +10 sec" | `card_second`, `white_descent`, `crater` | the val-loss curve as the white giant; satellite view of the impact: STEP 9,983 (G₀), "+1,226 STEPS VAL 50 %" |
+| 78.6–79.63 | berserk unit, young commander, crying-child sketch, curled figure on blue | `berserk_dark`, `commander_young`, `pencil_memo`, `lying` | pencil memo of the first 3,000 steps ("丸暗記… val = 0 %"); the model at its worst — the embedding at the val-loss peak (step 1,550, 22.05 nats) as orange cels curled on flat blue |
+| 79.63–80.33 | SECOND IMPACT (red), white giant, crater "TIME +10 sec" | `card_second`, `white_descent`, `crater` | the val-loss curve as the white giant; satellite view of the impact: STEP 9,983 (G₀), "+1,226 STEPS VAL 50 %" |
 | 80.4–81.0 | blue void, pencil boy, green eye | `blue_void`, `pencil_grok`, `purple_eye` | pencil note "grokking! step ≈ 11,210" |
 | 81.0–81.1 | ADAM (black on white) | `card_adam` | **ADAM** with a small **W**: the optimizer actually used (AdamW) |
-| 81.1–82.6 | scientist profile, green data grid, director turning | `profile_cyan`, `green_grid`, `director_turn` | 48-cell green grid: power of every k at 10 snapshots (every 3,000 steps) |
+| 81.13–82.63 | scientist profile, green data grid, director turning (head raised at ~82.0), pencil sketch of three adults | `profile_cyan`, `green_grid`, `director_turn`, `pencil_trio` | 48-cell green grid: power of every k at 10 snapshots (every 3,000 steps); the operations director raises her head as val acc completes; sepia pencil "group portrait" of the embedding at steps 1,000 / 11,250 / 30,000 (暗記 → 汎化) |
 | 82.6–83.7 | 監督 card, green slash 83.6 | `director_card` | 監督 **荷重減 / 衰** (weight decay): without wd = 1.0 this run does not grok |
-| 83.7–86.1 | unit, arms spread, orange light bars | `light_bars` | 96 DFT bins as vertical light columns: exactly the bins of k ∈ {1,3,12,20,28,34,38,41} and their mirrors burn white; the "+" in Unit-01 colours; the converged circle superimposed |
+| 83.7–86.1 | unit close-ups (83.7–84.4), arms spread before orange light bars, pilot superimposed | `light_bars` | four purple/green close-ups of the "+" on the original's cut times (83.967 / 84.133 / 84.3 / 84.433), then the pull-back; 96 DFT bins as vertical light columns: exactly the bins of k ∈ {1,3,12,20,28,34,38,41} and their mirrors burn white; the "+" in Unit-01 colours; the converged circle superimposed |
 | 86.1–87.6 | determined face on blue, then teal | `converged` | 学習完了 table (step 30,000, train/val 100.0 %, ‖W‖ 61.1, key freqs, key-5 power 70.3 %, r-CV 0.015); teal close-up of VAL ACC 100.0 |
 | 87.6–88.2 | black → smile on green | `black`, `smile` | the converged circle on green |
 | 88.2–90.5 | 製作 on red with scrawls | `seisaku_red` | 製作 grokking.py / NumPy; scrawled cos(2π·12x/97) samples and "(a+b) mod 97"; fade out |

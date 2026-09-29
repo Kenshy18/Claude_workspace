@@ -36,7 +36,7 @@ SPEC['C-010'] = {
     B.at(2.6, 1.6);
     slabStack(B, 290, 880, 1.32, 12, { a: 0.9, labels: true, stream: true, fill: true });
     B.at(4.0, 0.5);
-    B.text('横顔 = 12層', 250, 1030, { size: 30, col: COL.red, a: 0.85 });
+    B.text('横顔 = 6層 × 2サブ層 (Attn / FFN)', 200, 1030, { size: 30, col: COL.red, a: 0.85 });
     B.ungroup();
     // silhouettes slide in: LSTM (right, 26+12) and a CNN pyramid (left, 30+12), black marker
     B.group({ m: (lt) => [1, 0, 0, 1, 380 * (1 - E.outCubic(clamp((lt - 3.1) / 0.8))), 0], alpha: (lt) => (lt > 3.1 ? 1 : 0) });
@@ -76,13 +76,13 @@ SPEC['C-010'] = {
     note(B, 'テロップ③〜⑥ 歌詞の行ごと', ACT.y + 32, { size: 22 });
     note(B, '24+12〜 顔 = Transformer 図 (W)', ACT.y + 62, { size: 22 });
     B.at(2.6, 0.9);
-    note(B, '26+00 振り向き → 横顔 (12層)', ACT.y + 92, { size: 22 });
+    note(B, '26+00 振り向き → 横顔 (12サブ層)', ACT.y + 92, { size: 22 });
     note(B, 'シルエット S.I. (LSTM → CNN)', ACT.y + 122, { size: 22 });
-    B.at(3.6, 0.6); rnote(B, 'なぜ √d_k で割る?', ACT.y + 182, { col: COL.red, size: 30 });
+    B.at(3.6, 0.6); rnote(B, 'なぜ √dₖ で割る?', ACT.y + 182, { col: COL.red, size: 30 });
     B.at(4.3, 0.7); mnote(B, 'sd1', ACT.y + 236, 34);
     B.at(5.1, 1.0); mnote(B, 'sd2', ACT.y + 318, 32);
     B.at(6.3, 1.1); mnote(B, 'sd3', ACT.y + 412, 30);
-    B.at(7.5, 0.6); rnote(B, '(q_i, k_i 独立・平均0・分散1)', ACT.y + 458, { size: 22 });
+    B.at(7.5, 0.6); rnote(B, '(qᵢ, kᵢ 独立・平均0・分散1)', ACT.y + 458, { size: 22 });
     B.at(8.2, 0.6); mnote(B, 'sd4', ACT.y + 512, 34);
     B.at(8.9, 0.8); rnote(B, '→ softmax 飽和、勾配 ≈ 0 ?!', ACT.y + 560, { size: 26 });
     B.at(9.8, 0.4); mnote(B, 'sd5a', ACT.y + 630, 34);
@@ -179,7 +179,7 @@ SPEC['C-012'] = {
     for (let i = 0; i < 7; i++) { const cx = rng() * 1440, cy = 80 + rng() * 900; B.marker(blob(cx, cy, 170 + rng() * 200, 36 + rng() * 40, 800 + i, 0.5, 40, -0.08), '#d0641f', { a: 0.45, streak: 0.4 }); }
     // silhouette -> GPU module (the second character's face = the GPU that houses the model)
     B.group({ m: (lt) => [1, 0, 0, 1, 300 * (1 - E.outCubic(clamp(lt / 0.4))), 0], alpha: (lt) => 1 - clamp((lt - 0.5) / 0.6) });
-    B.marker([[330, 220], [1020, 150], [1110, 860], [380, 960]], COL.mBlack, { a: 0.95 });
+    B.marker(blob(760, 600, 360, 470, 1201, 0.14), COL.mBlack, { a: 0.95 });
     B.ungroup();
     const gm = (lt) => [Math.cos(-0.12), Math.sin(-0.12) * 0.9, -Math.sin(-0.12), Math.cos(-0.12) * 0.9, 330, 230];
     B.group({ m: gm, alpha: (lt) => clamp((lt - 0.4) / 0.5) });
@@ -217,7 +217,7 @@ SPEC['C-012'] = {
     B.at(2.7, 0.8); mnote(B, 'ce2', ACT.y + 250, 32);
     B.at(3.6, 0.9); mnote(B, 'ce3', ACT.y + 340, 30);
     B.at(4.5, 0.6); mnote(B, 'ce4', ACT.y + 420, 30);
-    B.at(5.0, 0.3); rnote(B, '(Σ y_i = 1)', ACT.y + 416, { x: ACT.x + 250, size: 22 });
+    B.at(5.0, 0.3); rnote(B, '(Σ yᵢ = 1)', ACT.y + 416, { x: ACT.x + 250, size: 22 });
     B.at(5.25, 0.3); mnote(B, 'ce5a', ACT.y + 486, 32);
     B.at(5.55, 0.15); snote(B, ACT.x - 4, ACT.y + 468, ACT.x + 108, ACT.y + 494);
     B.at(5.6, 0.2); rnote(B, '符号!', ACT.y + 488, { x: ACT.x + 130, col: COL.red, size: 26 });
@@ -412,7 +412,7 @@ SPEC['C-019'] = {
     const bars = (col) => { for (let i = 0; i < 6; i++) { const y = 140 + i * 150; B.marker([[80, y + 120], [1300, y - 110], [1340, y - 20], [120, y + 210]], col, { a: 0.9, streak: 0.4 }); } };
     B.group({ alpha: (lt) => (lt < 0.17 ? 1 : 0) }); bars(COL.mRed); B.ungroup();
     B.group({ alpha: (lt) => (lt >= 0.17 ? 1 : 0) }); bars(COL.mGreen); B.ungroup();
-    B.paste((ctx) => { ctx.save(); ctx.fillStyle = '#e8f7d0'; ctx.font = `700 44px ${FONT.cond}`; ctx.fillText('L17', 1180, 330); ctx.fillText('H23', 1090, 860); ctx.font = `700 26px ${FONT.cond}`; ctx.fillText('ATTN·SCORES', 150, 1000); ctx.restore(); });
+    B.paste((ctx) => { ctx.save(); ctx.fillStyle = '#e8f7d0'; ctx.font = `700 44px ${FONT.cond}`; ctx.fillText('L6', 1180, 330); ctx.fillText('H8', 1090, 860); ctx.font = `700 26px ${FONT.cond}`; ctx.fillText('ATTN·SCORES', 150, 1000); ctx.restore(); });
     note(B, '緑のグリッド (斜め)', ACT.y + 2, { size: 22 });
     note(B, '赤 5コマ → 緑', ACT.y + 32, { size: 22 });
   },
