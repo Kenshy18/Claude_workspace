@@ -277,15 +277,10 @@ const PRODCREDIT = [
   { s: 'アニメーション制作', x: 720, y: 420, size: 36, role: true, align: 'center' },
 ];
 function prodCredit(B) {
-  B.paste((ctx, p, lt) => {
-    credit(ctx, PRODCREDIT, { col: WHITE });
-    ctx.save();
-    ctx.font = `800 118px "Barlow Condensed"`; ctx.textAlign = 'center'; ctx.fillStyle = WHITE;
-    ctx.lineWidth = 16; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(60,20,10,0.35)';
-    ctx.strokeText('PyTorch', 720, 548); ctx.fillText('PyTorch', 720, 548);
-    ctx.font = `800 132px "Barlow Condensed"`;
-    ctx.strokeText('JAX', 720, 688); ctx.fillText('JAX', 720, 688);
-    ctx.restore();
+  B.paste((ctx) => {
+    credit(ctx, PRODCREDIT);
+    credit(ctx, [{ s: 'PyTorch', x: 720, y: 548, size: 118, fam: '"Barlow Condensed"', w: 800, align: 'center', sx: 1 },
+      { s: 'JAX', x: 720, y: 688, size: 132, fam: '"Barlow Condensed"', w: 800, align: 'center', sx: 1 }]);
   });
 }
 SPEC['C-029'] = {

@@ -2,12 +2,14 @@
 const WHITE = '#fbfaf4';
 function creditF(lines, a0, a1, o = {}) {
   // paste-up credit visible during [a0, a1) with short F.I./F.O. (the reference cross-fades its telops)
-  return (ctx, p, lt) => {
+  const fn = (ctx, p, lt) => {
     const fi = clamp((lt - a0) / 0.25), fo = 1 - clamp((lt - (a1 - 0.2)) / 0.2);
     const a = Math.min(fi, fo);
     if (a <= 0) return;
-    credit(ctx, lines, { col: o.col || WHITE, alpha: a, halo: o.halo });
+    credit(ctx, lines, { col: o.col || INK, alpha: a, halo: o.halo });
   };
+  fn.win = [a0, a1];
+  return fn;
 }
 
 SPEC['C-010'] = {

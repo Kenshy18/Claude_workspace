@@ -22,7 +22,9 @@ class PostFX {
       uniform sampler2D src; uniform sampler2D b1;
       uniform float bloom, ca, grain, vig, time, flash, soft, contrast, lift;
       uniform vec3 flashCol; uniform vec2 res;
-      float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+      // sin-free hash (Hoskins): sin() of large arguments loses precision in SwiftShader and
+      // left a diagonal grain-free band on late frames
+      float h(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
       void main(){
         vec2 u = uv; vec2 px = 1.0/res;
         vec2 d = u - 0.5; float r2 = dot(d,d);
@@ -38,7 +40,7 @@ class PostFX {
         c *= mix(1.0, smoothstep(1.05, 0.2, r2*1.8), vig);
         // grain: per-frame, luma-weighted, 2px clumps
         float gt = floor(time*30.0);
-        float g = h(floor(u*res/1.6) + vec2(gt*61.0, gt*17.0)) - 0.5;
+        float g = h(floor(u*res/1.6) + vec2(mod(gt*61.0, 1009.0), mod(gt*17.0, 997.0))) - 0.5;
         float lum = dot(c, vec3(0.299,0.587,0.114));
         c += g * grain * (0.55 + 0.9*lum*(1.0-lum)*2.0);
         c = mix(c, flashCol, clamp(flash,0.0,1.0));

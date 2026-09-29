@@ -21,7 +21,7 @@ const PAGE = arg('--page', `${FILM}.html`);
 const OUT = arg('--out') ? path.resolve(ROOT, arg('--out')) : path.join(OUT0, FILM);
 fs.mkdirSync(OUT, { recursive: true });
 
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.ttf': 'font/ttf', '.json': 'application/json', '.png': 'image/png' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.ttf': 'font/ttf', '.otf': 'font/otf', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.wav': 'audio/wav' };
 function serve() {
   return new Promise((res) => {
     const srv = http.createServer((req, rsp) => {

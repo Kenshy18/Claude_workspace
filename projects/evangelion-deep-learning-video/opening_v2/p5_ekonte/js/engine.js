@@ -5,7 +5,7 @@
 //  写植 paste-ups, 2D post (grain, weave, flash). Every frame is a pure function of t.
 // ─────────────────────────────────────────────────────────────────────────────
 const COL = {
-  graph: '#34333a', blue: '#3a73c6', red: '#d0372c', green: '#2c8a4e', sepia: '#8a5a3c',
+  graph: '#222125', blue: '#3a73c6', red: '#d0372c', green: '#2c8a4e', sepia: '#8a5a3c',
   form: '#7f95ab', formInk: '#6d8298', paper: '#f3efe5',
   mOrange: '#f0882e', mSky: '#86bde8', mPurple: '#7a58a8', mGreen: '#93d44e', mRed: '#d8352a',
   mBlack: '#1c1b1f', mYellow: '#f3c62f', mGrey: '#a3a6ab', mPink: '#ec9fb0', mTeal: '#6fb8b0', mBlueDeep: '#3d6fc0',
@@ -52,7 +52,7 @@ function buildPaper() {
   const id = g.getImageData(0, 0, w, h), d = id.data;
   const r2 = mulberry32(5);
   for (let i = 0; i < d.length; i += 4) {
-    const n = (r2() - 0.5) * 9;
+    const n = (r2() - 0.5) * 15;
     d[i] += n; d[i + 1] += n; d[i + 2] += n * 0.9;
   }
   g.putImageData(id, 0, 0);
@@ -201,7 +201,7 @@ function xf(pts, m) { return pts.map(([x, y]) => [m[0] * x + m[2] * y + m[4], m[
 // A stroke = up to 2 passes; each pass is a wobbly polyline with per-vertex width (pressure).
 function buildStroke(pts, o) {
   const rng = mulberry32(o.seed);
-  const w = o.w ?? 2.4, wob = o.wob ?? 1.6, passes = o.passes ?? 2;
+  const w = (o.w ?? 2.4) * 1.12, wob = o.wob ?? 1.6, passes = o.passes ?? 2;
   let base = resample(pts, o.step || 5);
   if (base.length < 2) base = [pts[0], pts[pts.length - 1]];
   // overshoot at ends (pencil runs past the corner)
@@ -255,7 +255,7 @@ function drawStroke(ctx, st, p, color, alpha) {
   ctx.fillStyle = color;
   for (const ps of st) {
     const n = ps.xs.length;
-    ctx.globalAlpha = alpha * ps.alpha;
+    ctx.globalAlpha = Math.min(1, alpha * 1.12) * ps.alpha;
     if (p >= 1) { if (!ps.path) ps.path = passPath(ps, n); ctx.fill(ps.path); }
     else {
       const upto = Math.max(2, Math.ceil(p * n));
@@ -407,7 +407,7 @@ class Builder {
   }
   // ── marker (flat colour with streaks), revealed as a sweep ──
   marker(poly, col, o = {}) {
-    const it = { kind: 'marker', poly, col, alpha: o.a ?? 0.82, ang: o.ang ?? -0.35, streak: o.streak ?? 1, seed: o.seed || this.seed(), blend: o.blend };
+    const it = { kind: 'marker', poly, col, alpha: o.a ?? 0.82, ang: o.ang ?? -0.35, streak: o.streak ?? 1, seed: o.seed || this.seed(), blend: o.blend, mode: o.mode };
     return this.push(it, o.weight ?? 400);
   }
   rectMarker(x, y, w, h, col, o) { return this.marker([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], col, o); }
@@ -429,7 +429,7 @@ class Builder {
   }
   // ── custom / paste-up ──
   custom(fn, o = {}) { return this.push({ kind: 'custom', fn, layer: o.layer || 'pencil', alpha: 1 }, o.weight ?? 100); }
-  paste(fn, o = {}) { return this.push({ kind: 'custom', fn, layer: 'paste', alpha: 1 }, o.weight ?? 50); }
+  paste(fn, o = {}) { const it = this.push({ kind: 'custom', fn, layer: 'paste', alpha: 1 }, o.weight ?? 50); if (fn.win || o.cred) it.cred = fn.win || o.cred; return it; }
 }
 
 // ── rendering of items ───────────────────────────────────────────────────────
@@ -451,6 +451,52 @@ function wobblePoly(poly, seed, amp = 2.6, step = 22) {
   }
   return out;
 }
+// Marker rendering modes (storyboard look: graphite first, colour as sparse accents)
+//  'wash'     large areas / full-panel BGs  -> coloured-pencil hatching over a faint tint
+//  'graphite' dark silhouettes              -> dense pencil tone (hatch + cross-hatch)
+//  'accent'   small colour shapes           -> alcohol-marker fill with streaks (spot colour)
+//  'solid'    explicit (inked finals, e.g. the logo)
+const PAT = {};
+function hexLum(hex) { if (!hex || hex[0] !== '#') return 0.5; const n = parseInt(hex.slice(1, 7), 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }
+function hatchTile(col, kind) {
+  // hand hatching: clusters of 4-9 near-parallel strokes, direction varies per cluster
+  const key = col + '|' + kind;
+  if (PAT[key]) return PAT[key];
+  const S = 384, c = mkCanvas(S, S), g = c.getContext('2d');
+  const rng = mulberry32(strSeed(key));
+  g.strokeStyle = col; g.lineCap = 'round';
+  const dense = kind === 'graphite';
+  const nc = dense ? 150 : 62;
+  for (let q = 0; q < nc; q++) {
+    const cx = rng() * S, cy = rng() * S;
+    const ang = -0.9 + (rng() - 0.5) * 0.5 + (dense && q % 2 ? 1.4 : 0);
+    const len = 34 + rng() * 60, k = 4 + Math.floor(rng() * 6), sp = 3.2 + rng() * 2.6;
+    const ca = Math.cos(ang), sa = Math.sin(ang), aBase = dense ? 0.45 + rng() * 0.4 : 0.3 + rng() * 0.45;
+    for (let j = 0; j < k; j++) {
+      const off = (j - k / 2) * sp, sh = (rng() - 0.5) * 14, l2 = len * (0.7 + rng() * 0.4);
+      const x0 = cx - sa * off + ca * sh, y0 = cy + ca * off + sa * sh;
+      g.globalAlpha = aBase * (0.75 + rng() * 0.3);
+      g.lineWidth = 1.0 + rng() * (dense ? 1.9 : 1.4);
+      const dx = ca * l2, dy = sa * l2, bow = (rng() - 0.5) * 5;
+      for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) {
+        g.beginPath(); g.moveTo(x0 + ox, y0 + oy); g.quadraticCurveTo(x0 + dx / 2 + ox - sa * bow, y0 + dy / 2 + oy + ca * bow, x0 + dx + ox, y0 + dy + oy); g.stroke();
+      }
+    }
+  }
+  PAT[key] = c;
+  return c;
+}
+function markerMode(it) {
+  if (it.mode) return it.mode;
+  if (it.col === '#ffffff') return 'white';
+  const [x0, y0, x1, y1] = it.bb;
+  const area = (x1 - x0) * (y1 - y0);
+  const lum = hexLum(it.col);
+  if (lum < 0.24) return 'graphite';
+  if (it.poly === FULL || area > 0.05 * 1440 * 1080) return 'wash';
+  if (lum > 0.86) return 'accent';
+  return 'accent';
+}
 function drawMarker(ctx, it, p) {
   if (p <= 0) return;
   ctx.save();
@@ -463,24 +509,40 @@ function drawMarker(ctx, it, p) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const [x, y] of it.poly) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
     it.bb = [x0, y0, x1, y1];
+    it.mode = markerMode(it);
   }
   const path = it.path, [x0, y0, x1, y1] = it.bb;
   if (p < 1) { ctx.beginPath(); ctx.rect(x0 - 20, y0 - 20, (x1 - x0 + 40) * p, y1 - y0 + 40); ctx.clip(); }
-  ctx.globalAlpha *= it.alpha;
-  const ga = ctx.globalAlpha;
+  const ga = ctx.globalAlpha * it.alpha;
+  if (it.mode === 'white') { ctx.globalAlpha = ga; ctx.fillStyle = '#ffffff'; ctx.fill(path); ctx.restore(); return; }
+  if (it.mode === 'wash' || it.mode === 'graphite') {
+    const dense = it.mode === 'graphite';
+    ctx.globalAlpha = ga * (dense ? 0.42 : 0.2);
+    ctx.fillStyle = it.col; ctx.fill(path);
+    const pat = ctx.createPattern(hatchTile(it.col, it.mode), 'repeat');
+    const ang = ((it.seed % 7) - 3) * 3 + (it.ang || 0) * 8;
+    pat.setTransform(new DOMMatrix().rotateSelf(ang));
+    ctx.globalAlpha = Math.min(1, ga * (dense ? 1.05 : 0.95));
+    ctx.fillStyle = pat; ctx.fill(path);
+    if (dense) { ctx.globalAlpha = ga * 0.25; ctx.lineWidth = 3; ctx.strokeStyle = it.col; ctx.stroke(path); }
+    ctx.restore();
+    return;
+  }
+  const acc = it.mode === 'accent' ? 0.78 : 1;
+  ctx.globalAlpha = ga * acc;
+  const g2 = ctx.globalAlpha;
   ctx.fillStyle = it.col;
   ctx.fill(path);
-  if (it.col === '#ffffff') { ctx.restore(); return; }
   // ink pooling at the edge
-  if (it.streak) { ctx.lineWidth = 5; ctx.strokeStyle = it.col; ctx.globalAlpha = ga * 0.22; ctx.stroke(path); }
+  if (it.streak) { ctx.lineWidth = 5; ctx.strokeStyle = it.col; ctx.globalAlpha = g2 * 0.28; ctx.stroke(path); }
   ctx.clip(path);
   // marker passes: parallel strokes that overlap a little -> darker seams
   if (it.streak) {
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, R = Math.hypot(x1 - x0, y1 - y0) / 2 + 20;
     ctx.translate(cx, cy); ctx.rotate(it.ang);
-    ctx.globalAlpha = ga * 0.1 * it.streak;
+    ctx.globalAlpha = g2 * 0.16 * it.streak;
     for (let y = -R; y < R;) {
-      const bw = 26 + rng() * 22;
+      const bw = 22 + rng() * 20;
       ctx.fillRect(-R + rng() * 30 - 15, y, 2 * R, bw + 5);
       y += bw;
     }
@@ -535,7 +597,7 @@ function drawMath(ctx, it, p) {
   // interleave rules (fraction bars) by x position into the glyph order
   const order = [];
   f.g.forEach((g, i) => order.push({ t: 'g', g, x: g.m[0] * g.b[0] + g.m[4] }));
-  f.r.forEach((r) => order.push({ t: 'r', r, x: r[0] + 1 }));
+  f.r.forEach((r, ri) => order.push({ t: 'r', r, ri, x: r[0] + 1 }));
   order.sort((a, b) => a.x - b.x);
   for (const e of order) {
     const jr = (rng() - 0.5) * 0.09 * jit, jx = (rng() - 0.5) * 18 * jit, jy = (rng() - 0.5) * 22 * jit, js = 1 + (rng() - 0.5) * 0.08 * jit;
@@ -547,8 +609,10 @@ function drawMath(ctx, it, p) {
       ctx.setTransform(base);
       const [rx, ry, rw, rh] = e.r;
       const X = x0 + (rx - vb[0]) * k, Y = it.y + (ry + rh / 2) * k;
-      if (!e.r.st) e.r.st = buildStroke([[X, Y + jy * k * 0.3], [X + rw * k, Y - jy * k * 0.3]], { seed: it.seed + idx, w: Math.max(1.5, rh * k * 1.1), wob: 0.5, passes: 1, over: 3 });
-      drawStroke(ctx, e.r.st, vis, it.col, it.alpha);
+      // per-item cache (the rule list is shared by every item that uses this formula)
+      const rs = it.rst || (it.rst = {});
+      if (!rs[e.ri]) rs[e.ri] = buildStroke([[X, Y + jy * k * 0.3], [X + rw * k, Y - jy * k * 0.3]], { seed: it.seed + idx, w: Math.max(1.5, rh * k * 1.1), wob: 0.5, passes: 1, over: 3 });
+      drawStroke(ctx, rs[e.ri], vis, it.col, it.alpha);
       continue;
     }
     const g = e.g;
@@ -615,9 +679,13 @@ function renderItems(items, lt, ctxs, mats, layerFilter) {
 }
 
 // ── 写植 paste-up credits (typeset heavy mincho) ─────────────────────────────
-// lines: [{s, x, y, size, role?, align?, sx?}] in panel units; o.col, o.label (white label behind)
+// lines: [{s, x, y, size, role?, align?, sx?}] in panel units; o.col, o.alpha.
+// Dark type is set on cut strips of white photo paper pasted onto the board (slight tilt, thin shadow);
+// light type (on the black cards) is printed straight on.
+const INK = '#141215';
 function credit(ctx, lines, o = {}) {
-  const col = o.col || '#111';
+  const col = o.col || INK;
+  const strip = o.strip ?? hexLum(col) < 0.3;
   ctx.save();
   if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
   for (const L2 of lines) {
@@ -627,6 +695,31 @@ function credit(ctx, lines, o = {}) {
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = L2.align || 'left';
     const sx = L2.sx ?? 0.86;
+    const hs = strSeed(L2.s + L2.x + L2.y);
+    const rot = ((hs % 1000) / 1000 - 0.5) * 0.014;
+    if (strip) {
+      let bx, by, bw, bh;
+      const pad = L2.size * 0.2;
+      if (L2.vert) {
+        const n = [...L2.s].length;
+        bw = L2.size * sx + pad * 2; bh = n * L2.size * (L2.lh || 1.02) + pad * 1.2;
+        bx = L2.x - bw / 2; by = L2.y - L2.size * 0.92 - pad * 0.4;
+      } else {
+        if (L2.ls) ctx.letterSpacing = L2.ls + 'px';
+        const tw = ctx.measureText(L2.s).width * sx;
+        ctx.letterSpacing = '0px';
+        const al = L2.align || 'left';
+        const x0 = al === 'center' ? L2.x - tw / 2 : al === 'right' ? L2.x - tw : L2.x;
+        bx = x0 - pad; by = L2.y - L2.size * 0.9 - pad * 0.5; bw = tw + pad * 2; bh = L2.size * 1.12 + pad;
+      }
+      ctx.save();
+      ctx.translate(bx + bw / 2, by + bh / 2); ctx.rotate(rot); ctx.translate(-bx - bw / 2, -by - bh / 2);
+      const a0 = ctx.globalAlpha;
+      ctx.fillStyle = 'rgba(50,38,26,1)'; ctx.globalAlpha = a0 * 0.2; ctx.fillRect(bx + 3, by + 4, bw, bh);
+      ctx.globalAlpha = a0; ctx.fillStyle = '#fbfaf6'; ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = 'rgba(80,70,60,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
+      ctx.restore();
+    }
     if (L2.vert) {
       [...L2.s].forEach((ch, i) => {
         ctx.save(); ctx.translate(L2.x, L2.y + i * L2.size * (L2.lh || 1.02)); ctx.scale(sx, 1);
@@ -634,9 +727,9 @@ function credit(ctx, lines, o = {}) {
       });
       continue;
     }
-    ctx.save(); ctx.translate(L2.x, L2.y); ctx.scale(sx, 1);
+    ctx.save(); ctx.translate(L2.x, L2.y); if (strip) ctx.rotate(rot); ctx.scale(sx, 1);
     if (L2.ls) ctx.letterSpacing = L2.ls + 'px';
-    if (o.halo) { ctx.lineJoin = 'round'; ctx.lineWidth = L2.size * 0.16; ctx.strokeStyle = o.halo; ctx.strokeText(L2.s, 0, 0); }
+    if (o.halo && !strip) { ctx.lineJoin = 'round'; ctx.lineWidth = L2.size * 0.16; ctx.strokeStyle = o.halo; ctx.strokeText(L2.s, 0, 0); }
     ctx.fillStyle = col; ctx.fillText(L2.s, 0, 0);
     ctx.restore();
   }

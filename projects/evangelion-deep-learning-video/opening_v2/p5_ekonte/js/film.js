@@ -49,6 +49,68 @@ function buildCut(c) {
   B.flush();
   c.items = B.items;
   c.S = S;
+  c.camKeys = buildCamKeys(c);
+  c.camFrom = camFromList(c.camKeys);
+}
+
+// ── rostrum camera: push in on the panel, slide to the notes column while a derivation is written,
+//    pull back to the whole sheet at section boundaries. Keys are derived from the cut's own items. ──
+const CAM_P = { s: 1.3, cx: 700, cy: L.panel.y + L.panel.h / 2 };
+function camNotesY(y) { const s = 1.42, vh = H / s; return { s, cx: 1946 - W / (2 * s), cy: clamp(y, L.hdrY0 - 8 + vh / 2, L.rowY1 + 28 - vh / 2) }; }
+const SECTION_START = new Set(['C-001', 'C-010', 'C-011', 'C-020', 'C-103']);
+function buildCamKeys(c) {
+  const S = c.S;
+  if (S.camKeys) return S.camKeys(c);
+  const P = S.camPanel || CAM_P;
+  const keys = [];
+  if (SECTION_START.has(c.id)) { keys.push({ t: 0, cam: CAM_ROW }); keys.push({ t: S.pushAt ?? Math.min(0.8, c.dur * 0.25), cam: P, tr: 1.0 }); }
+  else keys.push({ t: 0, cam: P });
+  if (c.dur < 1.2 || S.noNotesCam) return keys;
+  const notes = c.items.filter((it) => it.note === 'r' && it.t0 > 0.05 && it.t0 < c.dur - 0.25).sort((a, b) => a.t0 - b.t0);
+  const bursts = [];
+  for (const it of notes) {
+    const b = bursts[bursts.length - 1];
+    if (b && it.t0 - b.t1 < 0.9) { b.t1 = Math.max(b.t1, it.t1); b.items.push(it); }
+    else bursts.push({ t0: it.t0, t1: it.t1, items: [it] });
+  }
+  const must = [];
+  for (const it of c.items) if (it.cred) must.push([Math.max(0, it.cred[0] - 0.15), it.cred[0] + 1.4]);
+  for (const w of S.panelWins || []) must.push(w);
+  if (keys.length > 1) must.push([0, keys[1].t + 0.9]);
+  const segs = [];
+  for (const b of bursts) {
+    let pieces = [[b.t0 - 0.3, Math.min(c.dur, b.t1 + 0.7)]];
+    for (const [m0, m1] of must) {
+      const nx = [];
+      for (const [a, z] of pieces) { if (m1 <= a || m0 >= z) nx.push([a, z]); else { if (m0 > a) nx.push([a, m0]); if (m1 < z) nx.push([m1, z]); } }
+      pieces = nx;
+    }
+    for (const [a, z] of pieces) if (z - a >= 0.85) segs.push([a, z, b.items.filter((it) => it.t1 > a && it.t0 < z)]);
+  }
+  for (const [a, z, its] of segs) {
+    let cy = null;
+    for (const it of its) {
+      const y = it.ny;
+      if (cy === null) { cy = y; keys.push({ t: Math.max(0.01, a), cam: camNotesY(y + 90), tr: 0.45 }); }
+      else if (Math.abs(y - cy) > 220 && it.t0 - 0.2 > a + 0.5) { cy = y; keys.push({ t: it.t0 - 0.2, cam: camNotesY(y + 60), tr: 0.5 }); }
+    }
+    if (z < c.dur - 0.2) keys.push({ t: z, cam: P, tr: 0.45 });
+  }
+  keys.sort((a, b) => a.t - b.t);
+  return keys;
+}
+function camInterp(a, b, k) { return { s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), k)), cx: lerp(a.cx, b.cx, k), cy: lerp(a.cy, b.cy, k) }; }
+function camSeg(from, key, t) { return camInterp(from, key.cam, E.inOutCubic(clamp((t - key.t) / (key.tr || 0.45)))); }
+function camFromList(K) {
+  const from = [K[0].cam];
+  for (let i = 1; i < K.length; i++) from.push(camSeg(from[i - 1], K[i - 1], K[i].t));
+  return from;
+}
+function camAt(c, lt) {
+  const K = c.camKeys;
+  let i = 0;
+  while (i + 1 < K.length && K[i + 1].t <= lt) i++;
+  return i === 0 && K.length === 1 ? K[0].cam : camSeg(c.camFrom[i], K[i], lt);
 }
 
 // ── frame render ─────────────────────────────────────────────────────────────
@@ -78,7 +140,7 @@ function renderFrameP5(f) {
   const S = c.S;
   const lt = t - c.t0;
   const fx = { grain: 0.06, flash: 0, black: 0 };
-  let cam = CAM_ROW;
+  let cam = camAt(c, lt);
   if (S.cam) cam = typeof S.cam === 'function' ? S.cam(lt, c) : S.cam;
   const [wx, wy] = weave(f);
   const M = camMatrix(cam, wx, wy);
@@ -151,7 +213,7 @@ window.getCues = () => ({ total: TOTAL_F / 30, fps: 30, scenes: CUTS.map((c) => 
 window.READY = (async () => {
   const fams = ['400 24px "Klee One"', '600 24px "Klee One"', '400 24px "Zen Kurenaido"', '800 24px "Shippori Mincho B1"',
     '900 24px "Noto Serif CJK JP"', '700 24px "Noto Serif CJK JP"', '700 24px "Roboto Condensed"', '700 24px "Cinzel"', '400 24px "Cinzel"',
-    '500 24px "EB Garamond"', 'italic 500 24px "EB Garamond"', '500 24px "Noto Sans CJK JP"', '900 24px "Noto Sans CJK JP"', '700 24px "Liberation Sans"'];
+    '500 24px "EB Garamond"', 'italic 500 24px "EB Garamond"', '500 24px "Noto Sans CJK JP"', '900 24px "Noto Sans CJK JP"', '700 24px "Liberation Sans"', '800 24px "Barlow Condensed"', '700 24px "Barlow Condensed"'];
   await Promise.all(fams.map((f) => document.fonts.load(f, 'Aあ使徒αβ∂√∇∈∑')));
   buildPaper();
   return { total: TOTAL_F / 30, frames: TOTAL_F, w: W, h: H };

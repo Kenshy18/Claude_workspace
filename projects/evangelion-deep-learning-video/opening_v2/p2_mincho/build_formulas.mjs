@@ -40,6 +40,7 @@ const F = {
   resfwd: String.raw`\mathbf{x}_{L}=\mathbf{x}_{\ell}+\sum_{i=\ell}^{L-1}\mathcal{F}(\mathbf{x}_{i})`,
   one: String.raw`1`,
   lora: String.raw`W=W_{0}+BA`,
+  loraBA: String.raw`\Delta W=BA`,
   relu: String.raw`\mathrm{ReLU}(x)=\max(0,x)`,
   fgsm: String.raw`\tilde{\mathbf{x}}=\mathbf{x}+\epsilon\,\mathrm{sign}\big(\nabla_{\mathbf{x}}\mathcal{L}(\theta,\mathbf{x},y)\big)`,
   ln10: String.raw`\mathcal{L}=-\log\tfrac{1}{10}=\ln 10\approx 2.303`,

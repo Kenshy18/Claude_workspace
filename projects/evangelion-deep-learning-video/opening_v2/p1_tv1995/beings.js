@@ -30,8 +30,9 @@ function transformerBoxes(o = {}) {
     side: (g, d, h) => { g.fillStyle = 'rgba(35,38,58,0.85)'; g.font = `italic 400 ${h * 0.12}px ${ROMAN}`; g.textAlign = 'center'; g.fillText('N×', d * 0.5, h * 0.56);
       g.strokeStyle = 'rgba(35,38,58,0.35)'; g.lineWidth = 3; for (let i = 1; i < 6; i++) { g.beginPath(); g.moveTo(d * 0.12, h * i / 6); g.lineTo(d * 0.88, h * i / 6); g.stroke(); } },
     decal: (g, w, h) => { g.fillStyle = 'rgba(35,38,58,0.55)'; g.font = `400 ${h * 0.03}px ${GROT}`; g.textAlign = 'left'; g.fillText('Encoder', w * 0.06, h * 0.05); } });
-  const slab = (y, h, d, col, label, x = 10) => B.push({ c: [x, y, zf - d / 2], s: [300, h, d], col: T(col), decal: (g, w, hh) => paperLabel(g, label, w, hh) });
-  slab(215, 120, 120, PAPER.orange, 'Multi-Head|Attention');
+  const slab = (y, h, d, col, label, x = 10, dec = null) => B.push({ c: [x, y, zf - d / 2], s: [300, h, d], col: T(col), decal: dec || ((g, w, hh) => paperLabel(g, label, w, hh)) });
+  // o.face: the MHA block is the being's face (two attention-map eyes go on it), so its label shrinks to the chin
+  slab(215, 120, 120, PAPER.orange, 'Multi-Head|Attention', 10, o.face ? (g, w, hh) => { g.save(); g.fillStyle = 'rgba(35,38,58,0.85)'; g.font = `400 ${hh * 0.105}px ${GROT}`; g.textAlign = 'center'; g.fillText('Multi-Head Attention', w / 2, hh * 0.95); g.restore(); } : null);
   slab(100, 56, 96, PAPER.yellow, 'Add & Norm');
   slab(-30, 120, 120, PAPER.blue, 'Feed|Forward');
   slab(-150, 56, 96, PAPER.yellow, 'Add & Norm');

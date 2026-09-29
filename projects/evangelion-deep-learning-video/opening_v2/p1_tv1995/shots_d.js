@@ -42,19 +42,63 @@ const CHORUS = {};
   // front-face point of the card (decal coords u,v in 0..1) → screen
   const cardPt = (cam, u, v) => v3proj([-150 + u * 300, -420 + v * 840, -56], cam);
   CHORUS.cardPt = cardPt;
+  // the card's two LED slits, blown up into the OP's white diamond eyes (tight glow, no whiteout)
   function eyeGlow(ctx, cam, a, o = {}) {
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a;
-    for (const u of [0.31, 0.69]) {
-      const p = cardPt(cam, u, 0.072), q = cardPt(cam, u + 0.1, 0.072);
-      const r = Math.hypot(q[0] - p[0], q[1] - p[1]) * (o.k || 1.6);
-      fillPts(ctx, [[p[0] - r, p[1]], [p[0], p[1] - r * 0.28], [p[0] + r, p[1]], [p[0], p[1] + r * 0.28]], o.col || 'rgba(255,255,240,0.95)');
-      const g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], r * 1.4);
-      g.addColorStop(0, 'rgba(255,255,230,0.8)'); g.addColorStop(1, 'rgba(255,240,200,0)');
-      ctx.fillStyle = g; ctx.fillRect(p[0] - r * 1.5, p[1] - r * 1.5, r * 3, r * 3);
+    const k = o.k || 1.6;
+    ctx.save(); ctx.globalAlpha = a;
+    for (const side of [0, 1]) {
+      const q = side ? [[0.8, 0.055], [0.58, 0.075], [0.6, 0.09], [0.78, 0.078]] : [[0.2, 0.055], [0.42, 0.075], [0.4, 0.09], [0.22, 0.078]];
+      const P = q.map(([u, v]) => cardPt(cam, u, v));
+      const cx = P.reduce((s, p) => s + p[0], 0) / 4, cy = P.reduce((s, p) => s + p[1], 0) / 4;
+      const D = P.map(([x, y]) => [cx + (x - cx) * k * 0.8, cy + (y - cy) * k * 1.9]);
+      const r = Math.hypot(D[0][0] - D[1][0], D[0][1] - D[1][1]);
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.9);
+      g.addColorStop(0, o.halo || 'rgba(190,220,255,0.55)'); g.addColorStop(1, 'rgba(120,160,255,0)');
+      ctx.fillStyle = g; ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+      ctx.globalCompositeOperation = 'source-over';
+      fillPts(ctx, D, o.col || '#fbfdff');
+      // the short red strokes the OP draws around the lit eyes
+      if (o.ticks) { ctx.strokeStyle = '#e8203a'; ctx.lineWidth = Math.max(3, r * 0.03); ctx.beginPath();
+        for (const [ax, ay, bx, by] of [[-0.75, -0.35, -0.5, -0.28], [0.55, -0.45, 0.8, -0.52], [-0.7, 0.35, -0.48, 0.5], [0.6, 0.3, 0.82, 0.38]]) { ctx.moveTo(cx + ax * r, cy + ay * r); ctx.lineTo(cx + bx * r, cy + by * r); }
+        ctx.stroke(); }
     }
     ctx.restore();
   }
   CHORUS.eyeGlow = eyeGlow;
+
+  // ── the protagonist's face: the Multi-Head Attention block, its eyes two attention maps (as at 55.9 s) ──
+  const ATTN = attnPE(8, 64, 5, 1);
+  function tfEye(ctx, x, y, s, ang, mode, flip) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    ctx.lineCap = 'round'; ctx.strokeStyle = '#1b1020';
+    if (mode === 'open') {
+      const n = 8, cs = s / n;
+      ctx.fillStyle = '#1b1020'; ctx.fillRect(-s / 2 - s * 0.05, -s / 2 - s * 0.05, s * 1.1, s * 1.1);
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+        const v = Math.pow(ATTN[i][flip ? n - 1 - j : j] / 0.5, 0.55);
+        ctx.fillStyle = `rgb(${Math.round(lerp(30, 250, v))},${Math.round(lerp(20, 240, v * v))},${Math.round(lerp(60, 200, v * v * v))})`;
+        ctx.fillRect(-s / 2 + j * cs, -s / 2 + i * cs, cs * 0.9, cs * 0.9);
+      }
+    } else if (mode === 'closed') {
+      ctx.lineWidth = s * 0.09; ctx.beginPath(); ctx.moveTo(-s * 0.55, -s * 0.05); ctx.quadraticCurveTo(0, s * 0.22, s * 0.55, -s * 0.05); ctx.stroke();
+    } else if (mode === 'smile') {
+      ctx.lineWidth = s * 0.1; ctx.beginPath(); ctx.moveTo(-s * 0.5, s * 0.12); ctx.quadraticCurveTo(0, -s * 0.34, s * 0.5, s * 0.12); ctx.stroke();
+    } else if (mode === 'strain') {
+      const d = flip ? -1 : 1;
+      ctx.lineWidth = s * 0.1; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(-s * 0.45 * d, -s * 0.28); ctx.lineTo(s * 0.4 * d, 0); ctx.lineTo(-s * 0.45 * d, s * 0.24); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // camera for a face close-up: MHA front face centre (10, 200, -140) lands on screen (sx, sy)
+  const faceCam = (yaw, pitch, roll, scale, sx, sy) => aimCam(yaw, pitch, roll, scale, 10, 196, sx, sy, { f: 1700, dist: 2400, uz: -140 });
+  function tfFace(ctx, cam, mode, o = {}) {
+    drawTransformer(ctx, cam, { light: [0.5, 0.45, 0.75], ...o, face: true });
+    const L = v3proj([-68, 196, -140], cam), R = v3proj([88, 196, -140], cam);
+    const s = Math.hypot(R[0] - L[0], R[1] - L[1]) * 0.56, ang = Math.atan2(R[1] - L[1], R[0] - L[0]);
+    tfEye(ctx, L[0], L[1], s, ang, mode, false); tfEye(ctx, R[0], R[1], s, ang, mode, true);
+  }
+  CHORUS.tfFace = tfFace; CHORUS.faceCam = faceCam;
 
   // ── painted debris shards flying out of the frame centre (66.8) ───────────
   function shards(ctx, t, n, seed, cols) {
@@ -100,8 +144,9 @@ const CHORUS = {};
     fill(ctx, '#0c0616');
     const cam = aimCam(0.0, 0.18, 0.0, 4.6 + t * 0.6, 0, -350, 720, 560);
     drawCard(ctx, cam, { eyes: 0, fanRot: T });
+    ctx.fillStyle = 'rgba(12,6,30,0.42)'; ctx.fillRect(0, 0, W, H);      // the head is in shadow; only the eyes are lit
     const on = seg(T, fr(2021), fr(2022));
-    if (on > 0) { eyeGlow(ctx, cam, on, { k: 1.9 }); fx.bloom = 0.8; fx.thr = 0.6; }
+    if (on > 0) { eyeGlow(ctx, cam, on, { k: 1.5, ticks: true }); fx.bloom = 0.45; fx.thr = 0.8; }
   });
   CUT(2030, 2042, 'c_hand', (ctx, t, fx, T) => {
     bands(ctx, [[0, '#eef2f4'], [1, '#b8c6d4']], 6, 12);
@@ -110,7 +155,7 @@ const CHORUS = {};
     fillPts(ctx, [[1180, 0], [1230, 0], [1300, 1080], [1260, 1080]], '#8a1c10');
     for (const y of [180, 480, 780]) { ctx.fillStyle = '#f2f0ea'; ctx.fillRect(1330, y, 36, 120); ctx.fillRect(1330, y + 140, 36, 36); }
     const k = E.outCubic(seg(t, 0, 0.4));
-    purpleHand(ctx, lerp(-60, 60, k), lerp(1260, 1120, k), 2.3, -0.62, 0.05);
+    purpleHand(ctx, lerp(760, 700, k), lerp(40, 150, k), 1.9, 1.78, 0.02);
   });
   CUT(2042, 2046, 'card_pretrained', (ctx) => wordCard(ctx, [['PRE-TRAINED', 0.5, 0.62, 0.23, 0.84]]));
   CUT(2046, 2057, 'c_back_bay', (ctx, t, fx, T) => {
@@ -138,13 +183,15 @@ const CHORUS = {};
     drawCard(ctx, aimCam(0.25, 0.1, -0.25, 3.6, 0, -330, 740, 520), { fanRot: T, eyes: 0 });
   });
   CUT(2075, 2082, 'c_dark', (ctx, t, fx, T) => {
-    fill(ctx, '#0e0c22');
+    bands(ctx, [[0, '#1c2458'], [1, '#0c0e2a']], 6, 34);
     const cam = aimCam(-0.6, 0.05, 0.2, 2.8, 0, -150, 700 + t * 60, 560);
-    drawCard(ctx, cam, { silhouette: '#1a1638' });
-    // rim light on the right edges only
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5;
-    drawCard(ctx, { ...cam, cx: cam.cx + 6 }, { silhouette: '#2a2458' }); ctx.restore();
-    drawCard(ctx, { ...cam, cx: cam.cx - 4 }, { silhouette: '#0b0a1a' });
+    drawCard(ctx, cam, { fanRot: T, eyes: 0 });
+    // night: the whole unit sits in the dark tone, a cold rim on its right edge
+    ctx.fillStyle = 'rgba(14,10,44,0.55)'; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35;
+    drawCard(ctx, { ...cam, cx: cam.cx + 7 }, { silhouette: '#5a5ab8' }); ctx.restore();
+    drawCard(ctx, { ...cam, cx: cam.cx - 3 }, { fanRot: T, eyes: 0 });
+    ctx.fillStyle = 'rgba(14,10,44,0.5)'; ctx.fillRect(0, 0, W, H);
   });
   CUT(2082, 2086, 'c_crouch', (ctx, t, fx, T) => {
     bands(ctx, [[0, '#f0e8f6'], [1, '#c8b8e0']], 6, 15);
@@ -361,17 +408,7 @@ const CHORUS = {};
   CUT(2198, 2206, 'tf_pink', (ctx, t, fx, T) => {
     bands(ctx, [[0, '#f6d0dc'], [0.5, '#f0a8c0'], [1, '#e080a0']], 8, 23);
     const PINK = (c) => c.map((x) => mixHex(x, '#f07a98', 0.35));
-    const cam = { yaw: 0.05, pitch: 0.08, roll: 0, cx: 720, cy: 860, f: 1700, dist: 2400, scale: 2.8 };
-    drawTransformer(ctx, cam, { tint: PINK, light: [0.5, 0.45, 0.75] });
-    // eyes open: the Softmax crown catches the light
-    if (T >= fr(2202)) {
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (const [u, v] of [[-90, -535], [90, -535]]) { const p = v3proj([u, v, -26], cam); fillPts(ctx, [[p[0] - 60, p[1]], [p[0], p[1] - 14], [p[0] + 60, p[1]], [p[0], p[1] + 14]], 'rgba(255,255,255,0.9)'); }
-      ctx.restore();
-    } else {
-      ctx.strokeStyle = '#3a2030'; ctx.lineWidth = 8;
-      for (const u of [-90, 90]) { const p = v3proj([u, -535, -26], cam); ctx.beginPath(); ctx.moveTo(p[0] - 60, p[1]); ctx.quadraticCurveTo(p[0], p[1] + 16, p[0] + 60, p[1]); ctx.stroke(); }
-    }
+    tfFace(ctx, faceCam(0.05, 0.08, 0.0, 3.0, 720, 600), T >= fr(2202) ? 'open' : 'closed', { tint: PINK });
   });
   // the fleet carrier → a container ship (docker) under a blue sky
   CUT(2206, 2211, 'container_ship', (ctx, t, fx, T) => {
@@ -449,7 +486,10 @@ const CHORUS = {};
   // ═════ 74.83 – 76.13 · the units ═══════════════════════════════════════════
   CUT(2245, 2248, 'tf_navy', (ctx, t, fx, T) => {
     bands(ctx, [[0, '#0a2a4a'], [1, '#2a6a8a']], 6, 25);
-    drawTransformer(ctx, { yaw: -0.25, pitch: 0.05, roll: 0.05, cx: 760, cy: 760, f: 1700, dist: 2400, scale: 2.5 }, { tint: (c) => c.map((x) => mixHex(x, '#1a3a6a', 0.62)), light: [0.6, 0.3, 0.7] });
+    tfFace(ctx, faceCam(-0.25, 0.05, 0.12, 3.1, 760, 560), 'open', { tint: (c) => c.map((x) => mixHex(x, '#1a3a6a', 0.55)), light: [0.6, 0.3, 0.7] });
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.strokeStyle = 'rgba(140,200,255,0.25)'; ctx.lineWidth = 5;   // water caustic lines
+    for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.moveTo(-20, 140 + i * 150); ctx.bezierCurveTo(400, 100 + i * 150, 900, 200 + i * 150, 1460, 130 + i * 150); ctx.stroke(); }
+    ctx.restore();
   });
   CUT(2248, 2254, 'c_white', (ctx, t, fx, T) => {
     bands(ctx, [[0, '#f8f6fa'], [1, '#d8d0e6']], 5, 26);
@@ -465,27 +505,42 @@ const CHORUS = {};
     for (let i = 0; i < 400; i++) on.push(d[i * 4] > 110);
     return on;
   }
+  // the Mark I's head, drawn in Unit-00's construction: a tall domed helmet, one big eye socket,
+  // the eye being the machine's real 20×20 photocell retina (here reading the letter A)
+  function helmetPath(ctx) {
+    ctx.beginPath(); ctx.moveTo(0, -500);
+    ctx.bezierCurveTo(250, -500, 405, -350, 415, -90); ctx.lineTo(385, 230);
+    ctx.bezierCurveTo(365, 340, 250, 430, 125, 480); ctx.lineTo(-125, 480);
+    ctx.bezierCurveTo(-250, 430, -365, 340, -385, 230); ctx.lineTo(-415, -90);
+    ctx.bezierCurveTo(-405, -350, -250, -500, 0, -500); ctx.closePath();
+  }
   function markOne(ctx, T, pal) {
     if (!RETINA) RETINA = buildRetina();
     fill(ctx, pal.bg);
     if (pal.bg2) fillPts(ctx, [[0, 700], [1440, 560], [1440, 1080], [0, 1080]], pal.bg2);
-    // helmet housing
-    ctx.save(); ctx.translate(720, 560);
-    rrect(ctx, -430, -420, 860, 900, 180); ctx.fillStyle = pal.shell[0]; ctx.fill();
-    ctx.save(); rrect(ctx, -430, -420, 860, 900, 180); ctx.clip(); ctx.fillStyle = pal.shell[1]; ctx.beginPath(); ctx.moveTo(160, -440); ctx.lineTo(460, -440); ctx.lineTo(460, 500); ctx.lineTo(60, 500); ctx.fill(); ctx.restore();
-    rrect(ctx, -430, -420, 860, 900, 180); ctx.strokeStyle = '#0c0e18'; ctx.lineWidth = 8; ctx.stroke();
-    // vent slots
-    for (let i = 0; i < 5; i++) { ctx.fillStyle = pal.vent; ctx.fillRect(-300 + i * 130, 360, 70, 80); }
-    // the lens: 20×20 photocells
-    const r = 290;
-    circle(ctx, 0, -30, r + 40, '#10121a');
-    ctx.save(); ctx.beginPath(); ctx.arc(0, -30, r, 0, Math.PI * 2); ctx.clip();
-    fill(ctx, '#061a0e');
-    const cs = (2 * r) / 20;
-    for (let i = 0; i < 20; i++) for (let j = 0; j < 20; j++) { ctx.fillStyle = RETINA[i * 20 + j] ? pal.lit : '#0e3a1e'; ctx.fillRect(-r + j * cs + 2, -30 - r + i * cs + 2, cs - 4, cs - 4); }
-    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.ellipse(-110, -170, 120, 60, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(720, 580);
+    // side pods (the ear housings)
+    for (const sx of [-1, 1]) { fillPts(ctx, [[sx * 400, -160], [sx * 500, -130], [sx * 500, 170], [sx * 395, 210]], sx > 0 ? pal.shell[1] : pal.shell[0]); strokePts(ctx, [[sx * 400, -160], [sx * 500, -130], [sx * 500, 170], [sx * 395, 210]], '#0c0e18', 7);
+      ctx.fillStyle = pal.vent; ctx.fillRect(sx > 0 ? 430 : -470, -80, 40, 180); }
+    helmetPath(ctx); ctx.fillStyle = pal.shell[0]; ctx.fill();
+    ctx.save(); helmetPath(ctx); ctx.clip();
+    fillPts(ctx, [[130, -560], [480, -560], [480, 560], [40, 560], [120, 120]], pal.shell[1]);          // hard shadow side
+    fillPts(ctx, [[-34, -520], [34, -520], [22, -330], [-22, -330]], pal.crest || '#e8ecf6');            // crest ridge
+    ctx.fillStyle = 'rgba(8,10,20,0.45)'; ctx.fillRect(-420, 250, 840, 14);                              // jaw seam
     ctx.restore();
-    ringS(ctx, 0, -30, r, '#2a2e3a', 10); ringS(ctx, 0, -30, r + 30, pal.shell[1], 8);
+    helmetPath(ctx); ctx.strokeStyle = '#0c0e18'; ctx.lineWidth = 8; ctx.stroke();
+    // chin slits
+    for (let i = 0; i < 4; i++) { ctx.fillStyle = pal.vent; ctx.fillRect(-130 + i * 72, 320, 38, 110); }
+    // the eye socket and the 20×20 retina
+    const r = 250, ey = -90;
+    circle(ctx, 0, ey, r + 44, '#10121a'); ringS(ctx, 0, ey, r + 44, pal.shell[1], 10);
+    ctx.save(); ctx.beginPath(); ctx.arc(0, ey, r, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = '#061a0e'; ctx.fillRect(-r, ey - r, 2 * r, 2 * r);
+    const cs = (2 * r) / 20;
+    for (let i = 0; i < 20; i++) for (let j = 0; j < 20; j++) { ctx.fillStyle = RETINA[i * 20 + j] ? pal.lit : '#0e3a1e'; ctx.fillRect(-r + j * cs + 2, ey - r + i * cs + 2, cs - 4, cs - 4); }
+    ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.beginPath(); ctx.ellipse(-100, ey - 130, 110, 50, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ringS(ctx, 0, ey, r, '#2a2e3a', 9);
     ctx.restore();
   }
   CHORUS.markOne = markOne;
@@ -573,13 +628,17 @@ const CHORUS = {};
   });
   const RED_CITY = { sky: [[0, '#3a0408'], [0.5, '#a8180e'], [1, '#f0602a']], b: ['#5a0c0c', '#300608', '#160204'], s: ['#420808', '#200406', '#0c0102'], led: '#ffb030' };
   CUT(2330, 2334, 'rack_city_red', (ctx, t, fx, T) => rackCity(ctx, T, RED_CITY, { seed: 131 }));
+  // 77.8 · the pink blast: painted bubbling cloud, flat base + one light + one shadow tone
+  const PUFF = (() => { const R = rngFor(141), a = []; for (let i = 0; i < 30; i++) a.push([R() * W, R() * H, 70 + R() * 170, R()]); return a.sort((p, q) => p[2] - q[2]).reverse(); })();
   CUT(2334, 2337, 'pink_blast', (ctx, t, fx, T) => {
-    fill(ctx, '#f0a0c0');
-    const R = rngFor(141);
-    for (const [r, c] of [[900, '#f8c8dc'], [620, '#ff90c0'], [380, '#ffd8ec'], [180, '#ffffff']]) {
-      ctx.beginPath(); for (let i = 0; i <= 28; i++) { const a = i / 28 * Math.PI * 2, rr = r * (1 + (i % 2 ? 0.18 : -0.05) + (R() - 0.5) * 0.1) * (1 + t * 1.5); ctx.lineTo(620 + Math.cos(a) * rr, 520 + Math.sin(a) * rr * 0.8); } ctx.closePath(); ctx.fillStyle = c; ctx.fill();
+    bands(ctx, [[0, '#f2a2c0'], [0.5, '#ee88ae'], [1, '#d8608e']], 7, 33);
+    for (const [x, y, r0, q] of PUFF) {
+      const r = r0 * (1 + t * 1.4), X = 620 + (x - 620) * (1 + t * 0.8), Y = 520 + (y - 520) * (1 + t * 0.8);
+      circle(ctx, X + r * 0.12, Y + r * 0.14, r, '#d86892');
+      circle(ctx, X, Y, r * 0.94, q < 0.5 ? '#f8b8d0' : '#f6c6da');
+      circle(ctx, X - r * 0.22, Y - r * 0.24, r * 0.5, '#fde4ee');
     }
-    fx.bloom = 0.6; fx.thr = 0.7;
+    fx.bloom = 0.2; fx.thr = 0.9;
   });
   CUT(2337, 2342, 'c_city_blast', (ctx, t, fx, T) => {
     rackCity(ctx, T, { sky: [[0, '#8ab8e8'], [1, '#e8f0f8']], b: ['#8a96b0', '#5a6680', '#303a50'], s: ['#6a7690', '#46506a', '#20283a'], led: '#7cff9a' }, { seed: 151 });

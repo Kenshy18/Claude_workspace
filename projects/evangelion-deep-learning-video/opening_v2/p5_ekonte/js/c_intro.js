@@ -153,10 +153,10 @@ SPEC['C-002'] = {
     B.at(0.6, 0.01);
     B.paste((ctx, p, lt) => {
       const a = clamp((lt - 0.6) / 0.45);
-      credit(ctx, [{ s: '原作', x: 720, y: 400, size: 50, role: true, align: 'center' }], { col: '#fbf6ec', alpha: a });
-      credit(ctx, [{ s: 'Attention Is All You Need', x: 720, y: 530, size: 84, align: 'center', fam: FONT.minchoN, w: 900, sx: 0.82 }], { col: '#fbf6ec', alpha: a });
-      credit(ctx, [{ s: '(Vaswani et al., 2017)', x: 720, y: 600, size: 34, align: 'center', fam: FONT.minchoN, w: 700, sx: 0.9 }], { col: '#fbf6ec', alpha: a * 0.9 });
-    });
+      credit(ctx, [{ s: '原作', x: 720, y: 400, size: 50, role: true, align: 'center' }], { alpha: a });
+      credit(ctx, [{ s: 'Attention Is All You Need', x: 720, y: 530, size: 84, align: 'center', fam: FONT.minchoN, w: 900, sx: 0.82 }], { alpha: a });
+      credit(ctx, [{ s: '(Vaswani et al., 2017)', x: 720, y: 600, size: 34, align: 'center', fam: FONT.minchoN, w: 700, sx: 0.9 }], { alpha: a * 0.9 });
+    }, { cred: [0.6, 9] });
     // notes: storyboard + research (compute-optimal planning = 企画)
     B.at(0.2, 1.2);
     note(B, '赤い雲 (うねり)。BG のみ', ACT.y + 4);
@@ -261,10 +261,10 @@ SPEC['C-004'] = {
     B.at(0.05, 0.01);
     B.paste((ctx, p, lt) => {
       const a = clamp(lt / 0.3);
-      credit(ctx, [{ s: '企画', x: 230, y: 330, size: 46, role: true }, { s: '掲載', x: 230, y: 575, size: 46, role: true }], { col: '#fbf8f0', alpha: a });
+      credit(ctx, [{ s: '企画', x: 230, y: 330, size: 46, role: true }, { s: '掲載', x: 230, y: 575, size: 46, role: true }], { alpha: a });
       credit(ctx, [{ s: 'Project Eval.', x: 420, y: 340, size: 88, fam: FONT.minchoN, w: 900 }, { s: 'arXiv:1706.03762', x: 420, y: 585, size: 80, fam: FONT.minchoN, w: 900, sx: 0.8 },
-        { s: 'NeurIPS 2017', x: 420, y: 720, size: 80, fam: FONT.minchoN, w: 900, sx: 0.84 }], { col: '#fbf8f0', alpha: a });
-    });
+        { s: 'NeurIPS 2017', x: 420, y: 720, size: 80, fam: FONT.minchoN, w: 900, sx: 0.84 }], { alpha: a });
+    }, { cred: [0.05, 9] });
     B.at(0.2, 0.8);
     note(B, '青い水面の光 (透過光)', ACT.y + 4);
     note(B, '光の粒 = (a+b) mod 97 の埋め込み', ACT.y + 36, { size: 22 });
@@ -281,6 +281,7 @@ SPEC['C-004'] = {
 };
 
 SPEC['C-005'] = {
+  noNotesCam: true,
   dlg: [{ s: 'BAND IN !!', y: L.panel.y + 120, col: COL.red, font: 'cond', size: 24 }, { s: '14+05', y: L.panel.y + 150, size: 16 }],
   fx(lt, fx) { fx.flash = lt < 0.07 ? 1 : 1 - clamp((lt - 0.07) / 0.2); },
   pcam(lt) {
@@ -324,6 +325,7 @@ SPEC['C-005'] = {
 };
 
 SPEC['C-006'] = {
+  noNotesCam: true,
   dlg: [{ s: '♪ イントロ', y: L.panel.y + 120 }],
   build(B) {
     B.done();
@@ -345,6 +347,7 @@ SPEC['C-006'] = {
 };
 
 SPEC['C-007'] = {
+  noNotesCam: true,
   dlg: [{ s: '♪', y: L.panel.y + 120 }],
   build(B) {
     B.done();
@@ -365,11 +368,12 @@ SPEC['C-007'] = {
 };
 
 SPEC['C-008'] = {
+  noNotesCam: true,
   dlg: [{ s: '♪', y: L.panel.y + 120 }, { s: '19+00 フレア', y: L.panel.y + 200, t: 0.77, size: 16, col: COL.blue }, { s: '21+00 リング', y: L.panel.y + 240, t: 2.8, size: 16, col: COL.blue }],
   build(B) {
     // inked: black marker ground, poster-colour wordmark + katakana
     B.at(0.0, 0.1);
-    B.marker(FULL, COL.mBlack, { a: 0.96, ang: -0.1, streak: 0.5 });
+    B.marker(FULL, COL.mBlack, { a: 0.96, ang: -0.1, streak: 0.5, mode: 'solid' });
     B.done();
     wordmarkPencil(B, { a: 0.35 });
     B.at(0.0, 0.01);
@@ -414,6 +418,7 @@ SPEC['C-008'] = {
 };
 
 SPEC['C-009'] = {
+  noNotesCam: true,
   fx(lt, fx) { fx.flash = lt < 0.1 ? 1 - lt / 0.1 * 0.4 : lt > 0.28 ? clamp((lt - 0.28) / 0.14) * 0.92 : 0.25; },
   build(B) {
     B.done();

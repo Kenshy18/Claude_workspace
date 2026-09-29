@@ -181,6 +181,10 @@ void main(){
     float px = 0.9 / max(fwidth(u), 1e-4);
     float fin = step(0.55, fract(u / 0.9)) * smoothstep(2.0, 5.0, px);
     base = mix(base, base * 0.55, fin);
+  } else if (pat > 5.5 && pat < 6.5) {     // horizontal heatsink fins (distance from the ring edge)
+    float px = 0.8 / max(fwidth(v), 1e-4);
+    float fin = step(0.5, fract(v / 0.8)) * smoothstep(2.0, 5.0, px);
+    base = mix(base, base * 0.6, fin);
   } else if (pat > 4.5 && pat < 5.5) {     // emissive panel (eyes, core, pyramid seams)
     emis = 1.0; ecol = uEmisCol;
   }
@@ -398,7 +402,10 @@ function buildOcta() {
   return g;
 }
 
-// ── UNIT-01: an original purple/green GPU tower-mech (tapered armour, Eva-like proportions) ─────
+// ── UNIT-01: an original purple/green mech (Eva proportions; the GPU joke is kept to heatsink-fin pylons,
+//    a 1U-slotted waist, a 12V-2×6 umbilical socket and a small TYPE-01 stencil) ─────────────────────────
+//    Jointed: hips/knees/ankles, waist, neck, shoulders/elbows. Silhouette ink = inverted hull; creases =
+//    analytic face-edge ink (loft seams unmasked only where the armour really breaks).
 export const UNIT = {};
 function frustum(b, c, wb, db, wt, dt, h, colr, o = {}) {
   // bottom rect (wb×db) at y=-h/2, top rect (wt×dt) at +h/2 (optionally shifted forward by o.shift), rotated by o.m, placed at c
@@ -417,83 +424,197 @@ function frustum(b, c, wb, db, wt, dt, h, colr, o = {}) {
   b.face([T[0], T[1], T[2], T[3]], cs[4], [0, 0, pat[4], 0]);
   b.face([B[3], B[2], B[1], B[0]], cs[5], [0, 0, pat[5], 0]);
 }
+const centroid = (P) => { const c = [0, 0, 0]; for (const p of P) { c[0] += p[0]; c[1] += p[1]; c[2] += p[2]; } return c.map((v) => v / P.length); };
+// face whose winding is fixed so its normal points away from `ctr` (mask bits follow the reversal)
+function faceOut(b, pts, c, ctr, mask = 15, aux = [0, 0, 0, 0]) {
+  const n = nrm(cross(sub(pts[1], pts[0]), sub(pts[2], pts[0])));
+  if (dot(n, sub(centroid(pts), ctr)) < 0) {
+    const k = pts.length; let m2 = 0;
+    for (let j = 0; j < k; j++) if ((mask >> (((k - 2 - j) % k + k) % k)) & 1) m2 |= 1 << j;
+    pts = pts.slice().reverse(); mask = m2;
+  }
+  b.face(pts, c, aux, mask);
+}
+// chamfered-rectangle cross-section (x,z) used for limbs and the torso
+const OCT = [[1, -0.42], [1, 0.42], [0.55, 1], [-0.55, 1], [-1, 0.42], [-1, -0.42], [-0.55, -1], [0.55, -1]];
+const sec = (y, sx, sz, cx = 0, cz = 0, prof = OCT) => prof.map(([x, z]) => [cx + x * sx, y, cz + z * sz]);
+// loft through rings (same point count): ring borders are inked (armour segments), seams only where listed
+function loft(b, rings, c, o = {}) {
+  const ctr = centroid(rings.flat()); const n = rings[0].length; const seam = o.seams || [];
+  const sOn = (i) => (o.allSeams || seam.includes(i % n) ? 1 : 0);
+  for (let k = 0; k < rings.length - 1; k++) for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n, a = rings[k][i], bb = rings[k][j], cc = rings[k + 1][j], d = rings[k + 1][i];
+    const col_ = o.cols ? o.cols(k, i) : c;
+    const nn = nrm(cross(sub(bb, a), sub(cc, a))), off = Math.abs(dot(sub(d, a), nn)), sz = Math.hypot(...sub(cc, a)) || 1;
+    const ax = [0, 0, o.pats ? o.pats(k, i) : 0, 0];
+    if (off / sz < 0.015) faceOut(b, [a, bb, cc, d], col_, ctr, 1 | (sOn(j) << 1) | 4 | (sOn(i) << 3), ax);
+    else { faceOut(b, [a, bb, cc], col_, ctr, 1 | (sOn(j) << 1), ax); faceOut(b, [a, cc, d], col_, ctr, 2 | (sOn(i) << 2), ax); }
+  }
+  for (const [R, on] of [[rings[0], o.capBot !== false], [rings[rings.length - 1], o.capTop !== false]]) {
+    if (!on) continue;
+    for (let i = 1; i < n - 1; i++) faceOut(b, [R[0], R[i], R[i + 1]], o.capCol || c, ctr, (i === 1 ? 1 : 0) | 2 | (i === n - 2 ? 4 : 0));
+  }
+}
+// side-profile slab: profile (z,y) extruded along x between x0 and x1 (pylons, blades)
+function slab(b, prof, x0, x1, c, o = {}) {
+  const A = prof.map(([z, y]) => [x0, y, z]), B = prof.map(([z, y]) => [x1, y, z]);
+  const all = [...A, ...B], ctr = centroid(all), n = prof.length;
+  const cs = o.cols || [];
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; faceOut(b, [A[i], A[j], B[j], B[i]], cs[i] || c, ctr); }
+  if (n === 4) { faceOut(b, A, o.capA || c, ctr, 15, [0, 0, o.patA || 0, 0]); faceOut(b, B, o.capB || c, ctr, 15, [0, 0, o.patB || 0, 0]); }
+  else for (const R of [A, B]) for (let i = 1; i < n - 1; i++) faceOut(b, [R[0], R[i], R[i + 1]], c, ctr, (i === 1 ? 1 : 0) | 2 | (i === n - 2 ? 4 : 0));
+}
+// inverted-hull silhouette (constant screen width), colour follows the render mode
+const HULL_VS = /* glsl */`attribute vec3 snormal; uniform float uHullW; uniform vec2 uRes; varying float vDepth;
+void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vDepth = -mv.z; vec4 c = projectionMatrix * mv;
+  vec3 nv = normalize(normalMatrix * snormal); vec2 d = (projectionMatrix * vec4(nv, 0.0)).xy; float l = length(d);
+  if (l > 1e-5) c.xy += d / l * uHullW * 2.0 / uRes * c.w; gl_Position = c; }`;
+const HULL_FS = /* glsl */`uniform vec3 uInk, uSil, uFog; uniform float uMode, uFogA; uniform vec2 uFogR; varying float vDepth;
+void main(){ vec3 c = uMode < 0.5 ? uInk : (uMode < 1.5 ? vec3(0.28, 0.26, 0.27) : (uMode < 2.5 ? uSil : vec3(0.55, 0.8, 1.0)));
+  gl_FragColor = vec4(mix(c, uFog, smoothstep(uFogR.x, uFogR.y, vDepth) * uFogA), 1.0); }`;
+const hullMat = new THREE.ShaderMaterial({ uniforms: { uInk: U.uInk, uSil: U.uSil, uFog: U.uFog, uMode: U.uMode, uFogA: U.uFogA, uFogR: U.uFogR, uHullW: { value: 1.5 }, uRes: { value: new THREE.Vector2(W * RS, H * RS) } },
+  vertexShader: HULL_VS, fragmentShader: HULL_FS, side: THREE.BackSide });
+function withHull(geo, mat) {
+  const p = geo.attributes.position, nA = geo.attributes.normal, key = (i) => `${p.getX(i).toFixed(3)},${p.getY(i).toFixed(3)},${p.getZ(i).toFixed(3)}`;
+  const acc = new Map();
+  for (let i = 0; i < p.count; i++) { const k = key(i); const a = acc.get(k) || [0, 0, 0]; a[0] += nA.getX(i); a[1] += nA.getY(i); a[2] += nA.getZ(i); acc.set(k, a); }
+  const sn = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) { const a = nrm(acc.get(key(i))); sn[i * 3] = a[0]; sn[i * 3 + 1] = a[1]; sn[i * 3 + 2] = a[2]; }
+  geo.setAttribute('snormal', new THREE.BufferAttribute(sn, 3));
+  const g = new THREE.Group(); g.add(new THREE.Mesh(geo, mat)); const h = new THREE.Mesh(geo, hullMat); h.renderOrder = -1; g.add(h); return g;
+}
+function stencilDecal(text, w, h) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
+  g.clearRect(0, 0, 512, 128); g.font = '700 92px "Roboto Condensed"'; g.textBaseline = 'middle'; g.fillStyle = '#e9f5d8';
+  const tw = g.measureText(text).width; g.save(); g.translate(256 - tw * 0.46, 68); g.scale(0.92, 1); g.fillText(text, 0, 0); g.restore();
+  g.globalCompositeOperation = 'destination-out'; for (let x = 256 - tw * 0.46 + 30; x < 256 + tw * 0.46; x += 47) g.fillRect(x, 50, 5, 14);  // stencil bridges
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.NoColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }));
+  return m;
+}
 function buildUnit() {
   const g = new THREE.Group();
-  // Unit-01 palette: violet armour, darker violet under-plates, green trim, orange details
-  const P = col('#6a48a6'), Pd = col('#45307a'), Pl = col('#7b58bc'), G = col('#8ee04c'), O = col('#f07a2a'), D = col('#25202e'), Gr = col('#9aa0aa');
-  const body = new Builder();
+  // livery: violet armour, darker violet under-plates, lime trim, orange joints, graphite frame
+  const P = col('#6a48a6'), Pd = col('#45307a'), Pl = col('#7d5cc0'), G = col('#8ee04c'), O = col('#f07a2a'), D = col('#25202e'), Gr = col('#9aa0aa');
   const rz = (a) => new THREE.Matrix4().makeRotationZ(a), rx = (a) => new THREE.Matrix4().makeRotationX(a);
-  const rzx = (az, ax) => new THREE.Matrix4().makeRotationZ(az).multiply(new THREE.Matrix4().makeRotationX(ax));
+  const mesh = (b) => withHull(b.geometry(), inkMat());
+  const anchors = {};
+  const anchor = (parent, name, p) => { const o = new THREE.Object3D(); o.position.set(p[0], p[1], p[2]); parent.add(o); anchors[name] = o; };
+  // pelvis (root)
+  const pb = new Builder();
+  frustum(pb, [0, 35.4, 0], 4.6, 4.2, 7.2, 5.0, 3.4, D);
+  frustum(pb, [0, 34.4, 2.35], 1.2, 0.7, 3.0, 0.9, 3.0, Pd, { m: rx(0.12) });                     // groin plate
+  for (const s of [-1, 1]) frustum(pb, [s * 3.5, 35.2, 0], 1.6, 3.4, 1.8, 3.8, 2.8, O);         // hip caps
+  g.add(mesh(pb));
+  // legs: hip → knee → ankle
+  const hips = [], knees = [], ankles = [];
   for (const s of [-1, 1]) {
-    frustum(body, [s * 3.9, 1.4, 1.5], 3.8, 9.6, 3.0, 5.2, 2.8, Pd, { shift: -1.4 });                         // foot (long wedge, toe forward)
-    frustum(body, [s * 3.9, 11.9, 0], 3.0, 3.8, 4.4, 5.2, 18.2, P, { pat: [2, 0, 2, 2, 0, 0] });              // shin (flares to the knee)
-    frustum(body, [s * 3.9, 13.4, 2.45], 2.0, 0.9, 3.3, 1.2, 13, Pl, { shift: 0.35 });                         // shin armour plate
-    frustum(body, [s * (3.9 + 2.05), 12.4, 0.3], 0.35, 1.4, 0.4, 2.4, 12, G);                                  // green stripe (outer)
-    frustum(body, [s * 3.9, 22.2, 2.7], 3.8, 2.6, 2.0, 1.4, 4.2, G, { m: rx(-0.3) });                          // pointed knee pad
-    frustum(body, [s * 3.75, 28.8, 0], 4.2, 5.0, 5.6, 6.2, 11.8, P, { m: rz(s * 0.04), pat: [2, 0, 0, 0, 0, 0] }); // thigh
-    frustum(body, [s * (3.75 + 2.85), 28.8, 0.2], 0.35, 2.0, 0.4, 2.8, 8.5, G, { m: rz(s * 0.04) });
-    frustum(body, [s * 5.2, 36.4, 0], 2.6, 5.4, 3.2, 6.0, 3.2, O);                                             // hip joint cap
-  }
-  frustum(body, [0, 36.4, 0], 9.0, 6.4, 10.4, 7.0, 3.6, D);                                                  // pelvis
-  frustum(body, [0, 36.6, 3.4], 2.2, 0.8, 4.4, 0.8, 3.2, Pd);                                                 // groin plate
-  frustum(body, [0, 41.0, 0], 5.6, 4.8, 7.0, 5.6, 5.6, Pd, { pat: [1, 1, 0, 0, 0, 0] });                      // waist: 1U rack slots
-  frustum(body, [0, 49.0, 0.3], 8.4, 6.0, 15.0, 8.6, 11.4, P, { shift: 0.9 });                                // chest (V)
-  frustum(body, [0, 49.3, 4.9], 6.6, 0.6, 9.6, 0.6, 8.4, D, { shift: 0.4 });                                  // fan bay
-  for (const s of [-1, 1]) {
-    frustum(body, [s * 6.25, 49.2, 4.55], 0.55, 0.6, 0.8, 0.6, 9.6, G, { m: rz(s * -0.3) });                 // chest chevrons
-    frustum(body, [s * 5.6, 45.2, 3.4], 1.6, 1.2, 1.2, 1.2, 2.2, O);                                           // orange rib lamps
-  }
-  frustum(body, [0, 55.8, -0.6], 5.4, 5.4, 3.4, 4.2, 2.8, D);                                                  // collar / neck
-  // head: narrow helmet set low and forward, jaw, chin, horn
-  const hm = rx(0.1);
-  frustum(body, [0, 61.4, 0.9], 3.6, 5.6, 2.9, 6.2, 5.2, P, { shift: 0.9, m: hm });                          // helmet
-  frustum(body, [0, 58.7, 2.6], 3.0, 3.2, 3.6, 3.6, 2.0, Pd, { m: hm });                                      // jaw
-  frustum(body, [0, 57.5, 3.6], 0.8, 1.0, 2.6, 2.2, 1.4, Pd);                                                  // chin
-  frustum(body, [0, 61.75, 4.42], 3.4, 0.24, 3.1, 0.24, 1.3, D, { m: hm });                                     // eye slot
-  frustum(body, [0, 58.9, 4.3], 1.6, 0.25, 2.0, 0.25, 0.8, G, { m: hm });                                      // mouth vent (green)
-  body.prism([[-0.5, 63.6, 3.3], [0.5, 63.6, 3.3], [0, 63.6, 4.4]], [[-0.08, 70.6, 8.2], [0.08, 70.6, 8.2], [0, 70.6, 8.6]], Pl);  // horn
-  frustum(body, [0, 50.5, -5.6], 8, 2.6, 7.4, 2.6, 9, Gr);                                                     // power unit (back)
-  frustum(body, [0, 50.5, -7.2], 3, 0.8, 3, 0.8, 3, O);                                                        // 12-pin socket
-  g.add(new THREE.Mesh(body.geometry(), inkMat()));
-  // eyes (emissive; flash on cue)
-  const eb = new Builder();
-  eb.box([-0.95, 61.78, 4.62], [1.25, 0.42, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: rzx(0.12, 0.1) });
-  eb.box([0.95, 61.78, 4.62], [1.25, 0.42, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: rzx(-0.12, 0.1) });
-  const eyeMat = inkMat({ uEmisCol: { value: new THREE.Vector3(0.85, 1.0, 0.4) } });
-  const eyes = new THREE.Mesh(eb.geometry(), eyeMat); g.add(eyes);
-  // chest fan (the GPU cooler)
-  const fan = new THREE.Group(); fan.position.set(0, 49.4, 5.3);
-  fan.add(new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, 0.5, 40).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x17141e })));
-  fan.add(new THREE.Mesh(new THREE.TorusGeometry(3.35, 0.26, 6, 48), new THREE.MeshBasicMaterial({ color: 0x8ee04c })));
-  const blades = new Builder();
-  for (let i = 0; i < 9; i++) { const a0 = (i / 9) * Math.PI * 2, a1 = a0 + 0.45; blades.face([[0, 0, 0.35], [Math.cos(a0) * 2.9, Math.sin(a0) * 2.9, 0.35], [Math.cos(a1) * 2.9, Math.sin(a1) * 2.9, 0.35]], col('#4d4760'), [0, 0, 0, 0], 7); }
-  fan.add(new THREE.Mesh(blades.geometry(), inkMat()));
-  fan.add(new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.8, 20).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8ee04c })));
-  g.add(fan);
-  // shoulders: tall heatsink pylons rising past the head (the Eva silhouette), arms on shoulder + elbow pivots
-  const arms = [], elbows = [];
-  for (const s of [-1, 1]) {
-    const piv = new THREE.Group(); piv.position.set(s * 8.4, 53.2, 0);
-    const ab = new Builder();
-    frustum(ab, [s * 1.9, 4.6, 0], 5.6, 8.4, 3.6, 5.8, 15.5, P, { m: rz(s * -0.2), pat: [4, 4, 2, 2, 0, 0] });  // heatsink pylon
-    frustum(ab, [s * 4.75, 4.2, 0], 0.5, 5.4, 0.5, 3.8, 12.5, G, { m: rz(s * -0.2) });                        // pylon trim
-    frustum(ab, [s * 1.2, 12.6, 0], 3.4, 5.4, 2.2, 3.4, 1.4, Pd, { m: rz(s * -0.2) });                        // pylon cap
-    frustum(ab, [s * 1.2, -5.4, 0], 3.2, 3.6, 3.8, 4.2, 10.5, P);                                             // upper arm
-    const elb = new THREE.Group(); elb.position.set(s * 1.2, -11.2, 0);
+    const hip = new THREE.Group(); hip.position.set(s * 2.6, 34.4, 0); g.add(hip);
+    const tb = new Builder();
+    loft(tb, [sec(0.6, 1.85, 2.1), sec(-5.5, 2.05, 2.25, 0, 0.1), sec(-12.8, 1.65, 1.85, 0, 0.2), sec(-15.0, 1.45, 1.65, 0, 0.2)], P, { seams: [0, 4] });
+    frustum(tb, [s * 1.98, -7.2, 0.3], 0.3, 1.4, 0.3, 2.0, 8.5, G);                              // outer lime stripe
+    hip.add(mesh(tb));
+    const knee = new THREE.Group(); knee.position.set(0, -15.4, 0.2); hip.add(knee);
+    const kb = new Builder();
+    frustum(kb, [0, 0, -0.2], 2.4, 2.8, 2.4, 2.8, 2.0, D);                                        // knee joint
+    frustum(kb, [0, 0.5, 1.75], 2.5, 1.3, 1.3, 0.7, 4.2, Pl, { m: rx(-0.42) });                   // pointed knee guard
+    loft(kb, [sec(-0.9, 1.45, 1.7), sec(-5.4, 1.75, 2.05, 0, -0.15), sec(-13.2, 1.2, 1.45, 0, 0.05), sec(-15.6, 1.1, 1.35)], P, { seams: [0, 4] });
+    frustum(kb, [0, -6.8, 1.75], 1.7, 0.5, 2.3, 0.5, 9.5, Pl, { shift: 0.25 });                   // shin plate
+    frustum(kb, [s * 1.62, -7.5, -0.2], 0.28, 1.6, 0.28, 2.2, 9, G);                              // shin stripe
+    knee.add(mesh(kb));
+    const ankle = new THREE.Group(); ankle.position.set(0, -16.2, 0); knee.add(ankle);
     const fb = new Builder();
-    frustum(fb, [0, -0.2, 0.2], 2.6, 2.6, 3.0, 3.0, 1.6, O);                                                  // elbow joint
-    frustum(fb, [0, -6.6, 0.3], 3.0, 3.6, 4.0, 4.6, 11.2, P);                                                 // forearm
-    frustum(fb, [s * 2.0, -6.4, 0.3], 0.35, 1.8, 0.4, 2.6, 8, G);                                             // forearm trim
-    frustum(fb, [0, -13.8, 0.5], 2.4, 3.0, 3.2, 3.4, 3.4, Pd);                                                // hand
-    for (let k = 0; k < 4; k++) frustum(fb, [s * (-1.05 + k * 0.7), -16.6, 0.9], 0.5, 0.75, 0.55, 0.85, 2.6, Pd);  // fingers
-    frustum(fb, [s * -1.7, -14.6, 1.4], 0.6, 0.8, 0.7, 0.9, 2.4, Pd, { m: rz(s * 0.5) });                      // thumb
-    elb.add(new THREE.Mesh(fb.geometry(), inkMat()));
-    piv.add(new THREE.Mesh(ab.geometry(), inkMat())); piv.add(elb);
-    g.add(piv); arms.push(piv); elbows.push(elb);
+    frustum(fb, [0, -1.6, 1.15], 2.6, 7.2, 1.9, 3.2, 2.4, Pd, { shift: -1.6 });                   // foot wedge
+    frustum(fb, [0, -2.1, 4.1], 2.2, 1.4, 1.4, 0.8, 1.2, D);                                      // toe cap
+    ankle.add(mesh(fb));
+    hips.push(hip); knees.push(knee); ankles.push(ankle);
   }
-  Object.assign(UNIT, { group: g, arms, elbows, eyes, eyeMat, fan });
+  // torso (waist pivot)
+  const torso = new THREE.Group(); torso.position.set(0, 37.2, 0); g.add(torso);
+  const cb = new Builder();
+  frustum(cb, [0, 2.1, 0], 4.4, 3.8, 5.2, 4.4, 4.4, Pd, { pat: [1, 0, 0, 0, 0, 0] });              // waist: 1U slots
+  loft(cb, [sec(3.8, 2.7, 2.4, 0, 0.2), sec(9.0, 4.4, 3.1, 0, 0.7), sec(13.4, 5.5, 3.3, 0, 0.55), sec(16.0, 4.4, 2.9, 0, 0.1)], P, { seams: [0, 1, 4, 5] });
+  for (const s of [-1, 1]) {
+    frustum(cb, [s * 2.25, 12.3, 3.55], 3.2, 0.7, 3.9, 0.7, 4.6, Pl, { m: rz(s * 0.16).multiply(rx(-0.2)) }); // pectoral plates
+    frustum(cb, [s * 2.3, 7.6, 3.15], 0.45, 0.5, 0.5, 0.5, 5.8, G, { m: rz(s * -0.5).multiply(rx(-0.25)) });   // lime rib chevrons
+    frustum(cb, [s * 4.0, 6.2, 1.9], 0.9, 1.1, 0.9, 1.1, 1.6, O);                                // orange rib lamps
+  }
+  frustum(cb, [0, 17.0, -0.3], 4.8, 4.2, 3.0, 3.2, 2.0, D);                                        // collar
+  frustum(cb, [0, 17.3, 1.2], 3.2, 0.5, 2.6, 0.5, 1.4, G);                                         // neck ring (lime)
+  frustum(cb, [0, 11.6, -3.9], 6.6, 2.2, 6.0, 2.2, 8.0, Gr);                                       // back power unit
+  frustum(cb, [0, 11.6, -5.25], 2.6, 0.6, 2.6, 0.6, 2.2, O);                                       // 12V-2×6 umbilical socket
+  torso.add(mesh(cb));
+  // umbilical plug (white canister) + cable to the ground: the 12V-2×6 power lead
+  const ub = new Builder(); const Wt = col('#e6e4de'), Cb = col('#2a2830');
+  frustum(ub, [0, 11.6, -6.6], 3.0, 2.2, 2.6, 2.0, 3.2, Wt);
+  frustum(ub, [0, 11.6, -7.9], 1.6, 0.8, 1.6, 0.8, 1.6, O);
+  const plug = mesh(ub); torso.add(plug);
+  const cbl = new Builder(); const path = []; for (let k = 0; k <= 16; k++) { const u = k / 16; path.push([Math.sin(u * 2.2) * 3.0, 48.2 * (1 - u) ** 1.7 + 1.0, -8.3 - u * 38 - u * u * 30]); }
+  const rings = path.map((p, k) => { const q = path[Math.min(16, k + 1)], r0 = path[Math.max(0, k - 1)]; const t_ = nrm(sub(q, r0)); const a = nrm(cross(t_, [1, 0, 0])), bb = cross(a, t_);
+    return [0, 1, 2, 3, 4, 5].map((i) => { const th = (i / 6) * Math.PI * 2; return [p[0] + (Math.cos(th) * a[0] + Math.sin(th) * bb[0]) * 0.8, p[1] + (Math.cos(th) * a[1] + Math.sin(th) * bb[1]) * 0.8, p[2] + (Math.cos(th) * a[2] + Math.sin(th) * bb[2]) * 0.8]; }); });
+  loft(cbl, rings, Cb, { capBot: false, cols: (k) => (k % 4 === 0 ? O : Cb) });
+  const cable = mesh(cbl); g.add(cable);
+  // head (neck pivot)
+  const head = new THREE.Group(); head.position.set(0, 17.2, 1.1); head.scale.setScalar(1.3); torso.add(head);
+  const hb = new Builder();
+  frustum(hb, [0, -0.6, -0.3], 2.0, 2.2, 1.8, 2.0, 2.2, D);                                        // neck
+  frustum(hb, [0, 0.9, 1.5], 1.7, 2.3, 2.5, 3.1, 1.8, Pd, { shift: 0.35 });                        // jaw (protrudes)
+  frustum(hb, [0, -0.15, 2.6], 0.5, 0.5, 1.3, 1.1, 1.0, Pd);                                       // chin
+  frustum(hb, [0, 1.05, 3.25], 1.5, 0.2, 1.9, 0.2, 0.7, G);                                        // mouth vent
+  frustum(hb, [0, 2.55, 2.2], 2.3, 0.7, 2.4, 0.7, 1.5, D);                                         // eye slot (recessed face)
+  loft(hb, [sec(1.8, 1.5, 2.7, 0, 0.35), sec(3.6, 1.7, 2.95, 0, 0.5), sec(5.1, 1.15, 2.3, 0, 0.25)], P, { seams: [2, 3, 6, 7] }); // cranium with brow overhang
+  for (const s of [-1, 1]) {
+    frustum(hb, [s * 1.33, 1.25, 1.35], 0.3, 2.5, 0.3, 2.9, 1.9, G);                               // lime cheek guards
+    frustum(hb, [s * 1.65, 3.4, -0.7], 0.7, 2.4, 0.5, 2.0, 1.9, Pl);                               // side fins
+  }
+  loft(hb, [[[-0.62, 4.4, 1.2], [0.62, 4.4, 1.2], [0, 4.4, 3.1]], [[-0.1, 8.6, 5.2], [0.1, 8.6, 5.2], [0, 8.6, 5.6]]], Pl, { allSeams: true });  // horn
+  head.add(mesh(hb));
+  const eb = new Builder();
+  eb.box([-0.72, 2.72, 2.6], [0.95, 0.36, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: new THREE.Matrix4().makeRotationZ(0.2) });
+  eb.box([0.72, 2.72, 2.6], [0.95, 0.36, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: new THREE.Matrix4().makeRotationZ(-0.2) });
+  const eyeMat = inkMat({ uEmisCol: { value: new THREE.Vector3(0.85, 1.0, 0.4) } });
+  const eyes = new THREE.Mesh(eb.geometry(), eyeMat); head.add(eyes);
+  anchor(head, 'eyes', [0, 2.72, 2.7]); anchor(head, 'head', [0, 2.6, 0.6]); anchor(head, 'horn', [0, 8.6, 5.4]);
+  anchor(torso, 'chest', [0, 10.5, 2.5]); anchor(torso, 'socket', [0, 11.6, -6.6]); anchor(g, 'hips', [0, 34, 0]);
+  // shoulders: pylon (partial follow) + arm (shoulder pivot) → elbow → hand
+  const arms = [], elbows = [], pylons = [], decals = [];
+  for (const s of [-1, 1]) {
+    const sh = new THREE.Group(); sh.position.set(s * 6.2, 12.6, 0); torso.add(sh);
+    const sb = new Builder();
+    frustum(sb, [s * 0.9, 0.2, 0], 3.4, 4.4, 3.2, 4.6, 3.6, P);                                     // shoulder block
+    sh.add(mesh(sb));
+    // heatsink pylon: tapered blade rising beside the head (inner edge at |x|≈3.3), sloped top-back
+    const py = new THREE.Group(); py.position.set(s * 3.9, 13.2, -0.3); torso.add(py); UNIT.pyBase = 0.1;
+    const yb = new Builder();
+    const R = [[0, 3.9, -3.7, 3.5], [6.5, 3.5, -3.1, 3.3], [11.2, 2.9, -2.1, 3.0], [13.0, 2.3, -0.5, 2.6]]; // y, width, zBack, zFront
+    const outer = s > 0 ? 0 : 4, lime = s > 0 ? 3 : 1;
+    loft(yb, R.map(([y, w, zb, zf]) => sec(y, w / 2, (zf - zb) / 2, s * w / 2, (zf + zb) / 2)), P,
+      { seams: [0, 1, 2, 3, 4, 5, 6, 7], cols: (k, i) => (i === lime ? G : (i === 6 || i === (s > 0 ? 7 : 5)) ? Pd : P), pats: (k, i) => (i === outer && k >= 1 ? 6 : 0), capCol: Pd });
+    py.add(mesh(yb));
+    const dg = new THREE.Group(); dg.position.set(s * 3.72, 3.3, -0.1); dg.rotation.z = s * Math.atan2(0.4, 6.5); py.add(dg);
+    const dc = stencilDecal('TYPE-01', 4.4, 1.1); dc.position.x = s * 0.04; dc.rotation.y = s * Math.PI / 2; dg.add(dc); decals.push(dc);
+    pylons.push(py);
+    const arm = new THREE.Group(); arm.position.set(s * 1.0, -1.0, 0); sh.add(arm);
+    const ab = new Builder();
+    loft(ab, [sec(0.4, 1.45, 1.65), sec(-3.2, 1.55, 1.75), sec(-9.6, 1.25, 1.45)], P, { seams: [0, 4] });
+    ab.box([0, -1.0, 0], [3.4, 1.0, 3.8], Pd);                                                      // shoulder ring
+    arm.add(mesh(ab));
+    const elb = new THREE.Group(); elb.position.set(0, -10.3, 0); arm.add(elb);
+    const fb = new Builder();
+    frustum(fb, [0, 0, -0.35], 2.1, 2.3, 2.1, 2.3, 1.9, O);                                         // elbow joint
+    loft(fb, [sec(-0.7, 1.3, 1.5), sec(-6.0, 1.5, 1.75), sec(-9.1, 1.7, 1.95), sec(-9.9, 1.3, 1.45)], P, { seams: [0, 4] });
+    frustum(fb, [s * 1.55, -5.0, 0.2], 0.3, 1.3, 0.3, 1.9, 6.0, G);                                // forearm stripe
+    frustum(fb, [0, -11.3, 0.2], 1.9, 1.1, 2.3, 1.5, 2.6, Pd);                                      // palm
+    for (let k = 0; k < 4; k++) frustum(fb, [s * (-0.78 + k * 0.52), -13.7, 0.45], 0.38, 0.6, 0.44, 0.7, 2.6, Pd, { m: rx(0.18) }); // fingers
+    frustum(fb, [s * -1.25, -12.2, 0.9], 0.5, 0.6, 0.55, 0.7, 2.0, Pd, { m: rz(s * 0.55) });      // thumb
+    elb.add(mesh(fb));
+    anchor(elb, s < 0 ? 'handL' : 'handR', [0, -12.5, 0.4]);
+    arms.push(arm); elbows.push(elb);
+  }
+  Object.assign(UNIT, { group: g, arms, elbows, eyes, eyeMat, torso, head, hips, knees, ankles, pylons, decals, anchors, cable, plug });
   return g;
 }
+export function unitAnchor(name) { OBJ.unit.updateMatrixWorld(true); const v = new THREE.Vector3(); UNIT.anchors[name].getWorldPosition(v); return [v.x, v.y, v.z]; }
 
 // ── CAGE: restraint gantry around Unit-01 ────────────────────────────────────────────────
 function buildCage() {
@@ -645,7 +766,7 @@ export function resetWorld(t) {
   OBJ.octa.position.copy(OCTA.pos); OBJ.octa.rotation.set(0, t * 0.12, 0); OBJ.octa.scale.setScalar(1);
   OBJ.octa.userData.mat.uniforms.uSpread.value = 0; OBJ.octa.userData.core.visible = true; OBJ.octa.userData.halo.visible = true; OBJ.octa.userData.haloInk.visible = true;
   OBJ.unit.position.set(0, 0, 0); OBJ.unit.rotation.set(0, 0, 0);
-  UNIT.arms[0].rotation.set(0, 0, 0); UNIT.arms[1].rotation.set(0, 0, 0); UNIT.elbows[0].rotation.set(0, 0, 0); UNIT.elbows[1].rotation.set(0, 0, 0); UNIT.eyeMat.uniforms.uEmis.value = 0; UNIT.fan.rotation.z = t * 5; UNIT.fan.visible = true;
+  for (const o of [...UNIT.arms, ...UNIT.elbows, ...UNIT.hips, ...UNIT.knees, ...UNIT.ankles, ...UNIT.pylons, UNIT.torso, UNIT.head]) o.rotation.set(0, 0, 0); UNIT.eyeMat.uniforms.uEmis.value = 0;
   OBJ.cage.position.set(0, 0, 0);
   OBJ.lance.position.set(0, 0, 0); OBJ.lance.rotation.set(0, 0, 0);
   OBJ.trailSGD.material.uniforms.uHead.value = 0; OBJ.trailAdam.material.uniforms.uHead.value = 0;
@@ -711,6 +832,7 @@ const preMat = new THREE.ShaderMaterial({ uniforms: { uRiseT: U.uRiseT }, colorW
   void main(){ vec3 p = position; if (aux.y > 0.0) { float k = smoothstep(aux.x, aux.x + 2.4, uRiseT); p.y -= aux.y * (1.0 - k); }
   gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`, fragmentShader: `void main(){ gl_FragColor = vec4(0.0); }` });
 export function render() { const a = performance.now();
+  for (const d of UNIT.decals) d.visible = U.uMode.value < 0.5;
   if (OBJ.city.visible || OBJ.terrain.visible || OBJ.geo.visible) {
     const hide = []; for (const k of ['octa', 'unit', 'lance', 'trailSGD', 'trailAdam', 'cage']) if (OBJ[k].visible) { hide.push(k); OBJ[k].visible = false; }
     const gv = OBJ.geo.visible; if (gv) OBJ.geo.children[0].visible = false;   // dome is back-faced; skip it in the pre-pass

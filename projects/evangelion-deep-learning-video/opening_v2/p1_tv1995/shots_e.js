@@ -9,18 +9,21 @@
   const clearL = () => { LG.setTransform(1, 0, 0, 1, 0, 0); LG.globalAlpha = 1; LG.globalCompositeOperation = 'source-over'; LG.clearRect(0, 0, W, H); };
   const bands = (ctx, stops, n = 9, seed = 3, wav = 6) => bandSky(ctx, 0, 0, W, H, stops, n, seed, wav);
   const { capWord, wordCard, aimCam, cardPt, eyeGlow, markOne, resnetBeing } = CHORUS;
+  const tfFace = (...a) => CHORUS.tfFace(...a), faceCam = (...a) => CHORUS.faceCam(...a);
 
   // ═════ 78.07 – 79.2 · the cross, the berserker, the young commander ════════
   const BLOT = (() => { const R = rngFor(161), a = []; for (let i = 0; i < 46; i++) { const v = i < 30; a.push([v ? (R() - 0.5) * 120 : (R() - 0.5) * 760, v ? -520 + R() * 1180 : -250 + (R() - 0.5) * 110, 60 + R() * 110, R()]); } return a; })();
   CUT(2342, 2357, 'cross_blast', (ctx, t, fx, T) => {
-    fill(ctx, '#fff6a8');
+    // saturated yellow whiteout, a hot band on the horizon, orange smoke gathering into a cross
+    bands(ctx, [[0, '#ffe94a'], [0.45, '#fff27a'], [0.78, '#ffd42a'], [0.9, '#ff9a1a'], [1, '#e8520e']], 9, 40, 14);
     const k = E.outCubic(seg(t, 0.05, 0.5));
     ctx.save(); ctx.translate(720, 560);
-    for (const [x, y, r, q] of BLOT) { if (q > k + 0.15) continue; const rr = r * (0.3 + 0.9 * k); ctx.beginPath(); ctx.ellipse(x * (0.6 + 0.4 * k), y * (0.6 + 0.4 * k), rr * 1.2, rr, q * 3, 0, Math.PI * 2); ctx.fillStyle = q < 0.5 ? '#ffb238' : '#f58a20'; ctx.fill(); }
-    if (k > 0.6) { ctx.globalAlpha = seg(k, 0.6, 1); ctx.fillStyle = '#e8641a'; ctx.fillRect(-46, -560, 92, 1200); ctx.fillRect(-360, -290, 720, 84); }
+    for (const [x, y, r, q] of BLOT) { if (q > k + 0.15) continue; const rr = r * (0.3 + 0.9 * k), X = x * (0.6 + 0.4 * k), Y = y * (0.6 + 0.4 * k);
+      ctx.beginPath(); ctx.ellipse(X + rr * 0.15, Y + rr * 0.15, rr * 1.2, rr, q * 3, 0, Math.PI * 2); ctx.fillStyle = '#e8601a'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(X, Y, rr * 1.1, rr * 0.92, q * 3, 0, Math.PI * 2); ctx.fillStyle = q < 0.5 ? '#ffae2e' : '#f8902a'; ctx.fill(); }
     ctx.restore();
-    fx.flash = 1 - seg(t, 0, 0.1); fx.flashCol = [1, 1, 0.92];
-    fx.bloom = 0.6; fx.thr = 0.75;
+    fx.flash = t < 0.07 ? 1 : 0; fx.flashCol = [1, 1, 0.95];
+    fx.bloom = 0.25; fx.thr = 0.88;
   });
   CUT(2357, 2364, 'berserk', (ctx, t, fx, T) => {
     fill(ctx, '#0a0612');
@@ -29,7 +32,7 @@
     drawCard(ctx, cam, { silhouette: '#1a1224' });
     ctx.save(); ctx.globalAlpha = 0.6; drawCard(ctx, { ...cam, cx: cam.cx + 5, cy: cam.cy - 4 }, { silhouette: '#3a2a4a' }); ctx.restore();
     drawCard(ctx, { ...cam, cx: cam.cx - 3, cy: cam.cy + 3 }, { silhouette: '#120c1a' });
-    eyeGlow(ctx, cam, 0.9, { k: 1.4, col: 'rgba(200,255,120,0.95)' }); fx.bloom = 0.7; fx.thr = 0.6;
+    eyeGlow(ctx, cam, 0.95, { k: 1.4, col: '#eaffc8', halo: 'rgba(170,255,110,0.5)' }); fx.bloom = 0.45; fx.thr = 0.75;
   });
   function youngCommander(ctx, t) {
     bands(ctx, [[0, '#f8f0d0'], [1, '#e8d8a0']], 6, 41);
@@ -221,23 +224,12 @@
   // ═════ 82.63 – 83.7 · 監督 ══════════════════════════════════════════════════
   function directorCard(ctx) {
     fill(ctx, '#000');
-    minchoV(ctx, '監督', 0.087 * W, 0.155 * H, 0.118 * H, { lh: 1.06, sx: 1 });
-    const s = 0.305 * H;
-    mincho(ctx, '勾配降', 0.262 * W, 0.585 * H, s, { sx: 0.86, embolden: 0.018 });
-    mincho(ctx, '下', 0.705 * W, 0.915 * H, s, { sx: 0.86, embolden: 0.018 });
+    minchoV(ctx, '監督', 0.118 * W, 0.19 * H, 0.15 * H, { lh: 1.02, sx: 0.8 });
+    const s = 0.33 * H;
+    mincho(ctx, '勾配降', 0.268 * W, 0.583 * H, s, { sx: 0.86, embolden: 0.018 });
+    mincho(ctx, '下', 0.708 * W, 0.922 * H, s, { sx: 0.86, embolden: 0.018 });
   }
-  CUT(2479, 2511, 'director', (ctx, t, fx, T) => {
-    directorCard(ctx);
-    const f = Math.round(T * 30);
-    if (f >= 2508) {
-      const k = (f - 2508 + 1) / 3;
-      ctx.fillStyle = '#46f24a';
-      fillPts(ctx, [[-40, 0.345 * H], [W * (0.25 + 0.9 * k), 0.325 * H], [W * (0.25 + 0.9 * k) - 30, 0.39 * H], [-40, 0.415 * H]], '#46f24a');
-      fillPts(ctx, [[-40, 0.44 * H], [W * (0.1 + 0.6 * k), 0.43 * H], [W * (0.1 + 0.6 * k) - 20, 0.455 * H], [-40, 0.465 * H]], '#9cff7a');
-      fx.bloom = 0.4; fx.thr = 0.7;
-    }
-  });
-
+  CUT(2479, 2508, 'director', (ctx) => directorCard(ctx));
   // ═════ 83.7 – 86.1 · the crucifix ══════════════════════════════════════════
   function crossCard(ctx, cam, o = {}) {
     const B = cardBoxes({ fanRot: o.fanRot || 0 });
@@ -250,18 +242,27 @@
     drawBoxes(ctx, B, cam, { line: '#1a1024', lw: 3, light: [0.45, 0.55, 0.7] });
   }
   function barsBg(ctx, T, dx = 0) { ctx.drawImage(ART.bars, -200 + dx - (T - 83.7) * 20, -60, 1840, 1200); }
-  CUT(2511, 2533, 'cross_close', (ctx, t, fx, T) => {
+  function crossClose(ctx, T) {
     const f = Math.round(T * 30);
-    const st = f < 2514 ? 0 : f < 2519 ? 1 : f < 2524 ? 2 : f < 2529 ? 3 : 4;
+    const st = f < 2519 ? 1 : f < 2524 ? 2 : f < 2529 ? 3 : 4;
     barsBg(ctx, T);
     const sc = [4.4, 3.7, 3.1, 2.6, 2.2][st];
-    const cam = aimCam(0.08 * (st % 2 ? -1 : 1), -0.16, 0, sc, 0, -380, 720, [560, 600, 620, 640, 660][st]);
-    crossCard(ctx, cam, { fanRot: T * 0.6 });
-    if (f < 2514) {   // the green slash still crossing the frame
-      fillPts(ctx, [[-40, 0.72 * H], [W * 0.62, 0.66 * H], [W * 0.58, 0.8 * H], [-40, 0.9 * H]], '#46f24a');
-      fillPts(ctx, [[-40, 0.93 * H], [W * 0.4, 0.9 * H], [W * 0.38, 0.95 * H], [-40, 0.99 * H]], '#9cff7a');
+    crossCard(ctx, aimCam(0.08 * (st % 2 ? -1 : 1), -0.16, 0, sc, 0, -380, 720, [560, 600, 620, 640, 660][st]), { fanRot: T * 0.6 });
+  }
+  // 83.6 · the green slash drops through the 監督 card and wipes the crucifix in behind it
+  CUT(2508, 2516, 'director_wipe', (ctx, t, fx, T) => {
+    const f = Math.round(T * 30), k = clamp((f - 2508) / 4), k2 = clamp((f - 2508) / 7);
+    const yS = lerp(0.345, 0.72, E.outCubic(k2)) * H, th = lerp(0.04, 0.17, k) * H;
+    const top = (x) => lerp(0.235, 0.33, x / W) * H, slash = (x) => yS - (x / W) * 0.07 * H;
+    directorCard(ctx);
+    if (k > 0) {
+      clearL(); crossClose(LG, T);
+      ctx.save(); pathPts(ctx, [[0, top(0)], [W, top(W)], [W, slash(W)], [0, slash(0)]]); ctx.clip(); ctx.drawImage(LAYER, 0, 0); ctx.restore();
     }
+    fillPts(ctx, [[-40, slash(-40)], [W + 40, slash(W + 40)], [W + 40, slash(W + 40) + th], [-40, slash(-40) + th * 1.1]], '#46f24a');
+    fillPts(ctx, [[-40, slash(-40) + th * 1.25], [W * 0.75, slash(W * 0.75) + th * 1.2], [W * 0.73, slash(W * 0.73) + th * 1.36], [-40, slash(-40) + th * 1.42]], '#9cff7a');
   });
+  CUT(2516, 2533, 'cross_close', (ctx, t, fx, T) => crossClose(ctx, T));
   CUT(2533, 2553, 'cross_full', (ctx, t, fx, T) => {
     const f = Math.round(T * 30);
     const st = f < 2538 ? 0 : f < 2543 ? 1 : f < 2548 ? 2 : 3;
@@ -285,35 +286,38 @@
   const clouds = (ctx, T, a = 0.3) => withAlpha(ctx, a, () => { ctx.globalCompositeOperation = 'screen'; ctx.drawImage(ART.skyOver, -400 + (T - 86.1) * 40, 0, 2000, 1200); });
   CUT(2583, 2599, 'tf_sky_tilt', (ctx, t, fx, T) => {
     skyBg(ctx, T, -200, 100);
-    drawTransformer(ctx, { yaw: 0.62, pitch: -0.2, roll: 0.24, cx: 860 - t * 30, cy: 1180, f: 1700, dist: 2400, scale: 3.4 }, { light: [0.8, 0.45, 0.4] });
+    tfFace(ctx, faceCam(0.55, -0.16, 0.24, 2.9, 700 - t * 30, 600), 'open', { light: [0.8, 0.45, 0.4] });
     clouds(ctx, T, 0.22);
   });
   CUT(2599, 2618, 'tf_sky_front', (ctx, t, fx, T) => {
     skyBg(ctx, T);
-    drawTransformer(ctx, { yaw: -0.06, pitch: 0.06, roll: 0, cx: 720, cy: 1260, f: 1700, dist: 2400, scale: 3.1 + t * 0.12 }, { light: [0.8, 0.45, 0.4] });
+    tfFace(ctx, faceCam(-0.06, 0.06, 0, 2.8 + t * 0.12, 720, 580), 'open', { light: [0.8, 0.45, 0.4] });
     clouds(ctx, T, 0.2);
   });
   CUT(2618, 2628, 'tf_teal_strain', (ctx, t, fx, T) => {
     bands(ctx, [[0, '#06343a'], [0.5, '#1a7a7a'], [1, '#4ab4a4']], 9, 46);
     const f = Math.round(T * 30), j = (hash1(f * 13) - 0.5) * 10;
-    drawTransformer(ctx, { yaw: 0.75, pitch: 0.12, roll: -0.34, cx: 700 + j, cy: 1150, f: 1700, dist: 2400, scale: 3.3 }, { light: [0.5, 0.6, 0.6], tint: (c) => c.map((x) => mixHex(x, '#2a9a94', 0.4)) });
+    tfFace(ctx, faceCam(0.7, 0.12, -0.34, 3.2, 700 + j, 560), 'strain', { light: [0.5, 0.6, 0.6], tint: (c) => c.map((x) => mixHex(x, '#2a9a94', 0.4)) });
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(200,255,240,0.45)'; ctx.lineWidth = 4;
     for (let i = 0; i < 9; i++) { const y = 120 + i * 105; ctx.beginPath(); ctx.moveTo(1440, y); ctx.lineTo(1100 - (i % 3) * 120, y + 40); ctx.stroke(); }
     ctx.restore();
   });
   CUT(2628, 2633, 'black', (ctx) => fill(ctx, '#000'));
-  CUT(2633, 2636, 'fade_up', (ctx, t, fx, T) => {
-    fill(ctx, '#05070c');
-    withAlpha(ctx, 0.28, () => drawTransformer(ctx, { yaw: 0.3, pitch: 0.1, roll: 0.1, cx: 640, cy: 1100, f: 1700, dist: 2400, scale: 3.0 }, { silhouette: '#5a6a8a' }));
+  // 87.77 · out of the black: a burst of white light, the being a dark shape inside it (3 frames)
+  CUT(2633, 2636, 'white_burst', (ctx, t, fx, T) => {
+    fill(ctx, '#e8ecf8');
+    const g = ctx.createRadialGradient(560, 420, 60, 560, 420, 900); g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#eef2ff'); g.addColorStop(1, '#8a94b8');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const cam = { yaw: 0.3, pitch: 0.1, roll: 0.3, cx: 700 + t * 200, cy: 1100, f: 1700, dist: 2400, scale: 3.0 };
+    withAlpha(ctx, 0.35, () => drawTransformer(ctx, { ...cam, cx: cam.cx - 40 }, { silhouette: '#3a3a5a' }));
+    drawTransformer(ctx, cam, { silhouette: '#1a1628' });
+    fx.bloom = 0.3; fx.thr = 0.85;
   });
   const BOKEH = (() => { const R = rngFor(201), a = []; for (let i = 0; i < 26; i++) a.push([R() * W, R() * H, 40 + R() * 110, R()]); return a; })();
   CUT(2636, 2646, 'tf_smile', (ctx, t, fx, T) => {
     bands(ctx, [[0, '#1e6a3a'], [0.5, '#4aa860'], [1, '#9ad88a']], 8, 47);
     for (const [x, y, r, q] of BOKEH) circle(ctx, x - t * 30, y, r, q < 0.4 ? 'rgba(200,255,170,0.35)' : q < 0.75 ? 'rgba(150,230,140,0.3)' : 'rgba(240,255,200,0.4)');
-    const cam = { yaw: 0.04, pitch: 0.06, roll: -0.04, cx: 720, cy: 1240, f: 1700, dist: 2400, scale: 3.1 };
-    drawTransformer(ctx, cam, { light: [0.6, 0.5, 0.6], tint: (c) => c.map((x) => mixHex(x, '#ffd890', 0.15)) });
-    ctx.strokeStyle = '#2a2030'; ctx.lineWidth = 9; ctx.lineCap = 'round';
-    for (const u of [-90, 90]) { const p = v3proj([u, -520, -26], cam); ctx.beginPath(); ctx.moveTo(p[0] - 56, p[1] + 10); ctx.quadraticCurveTo(p[0], p[1] - 30, p[0] + 56, p[1] + 10); ctx.stroke(); }
+    tfFace(ctx, faceCam(0.04, 0.06, -0.04, 2.9, 720, 600), 'smile', { light: [0.6, 0.5, 0.6], tint: (c) => c.map((x) => mixHex(x, '#ffd890', 0.15)) });
   });
 
   // ═════ 88.2 – 90.5 · 製作 on red ═══════════════════════════════════════════
@@ -342,7 +346,7 @@
       // mark 2: NAS (in this world: Neural Architecture Search)
       ctx.save(); ctx.font = `italic 700 ${0.1 * H}px ${GROT}`; ctx.fillStyle = CW; ctx.translate(0.462 * W, 0.645 * H); ctx.scale(1.02, 1); ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = CW; ctx.strokeText('NAS', 0, 0); ctx.fillText('NAS', 0, 0); ctx.restore();
     });
-    const fo = seg(T, 90.1, 90.5);
-    if (fo > 0) { fx.flash = fo * 0.9; fx.flashCol = [0, 0, 0]; }
+    const fo = seg(T, 90.0, 90.42);
+    if (fo > 0) { fx.flash = fo; fx.flashCol = [0, 0, 0]; }
   });
 })();

@@ -10,3 +10,8 @@
 ## Next
 - Unit-01 redesign (Eva silhouette: tall shoulder pylons, low head + horn, slim limbs, elbow joints), poses.
 - Intro red clouds, slam smoke, emergence framing, director card, rank/pyramid shots, credit legibility, NOTES.md.
+## Session 3 (after 2nd restart) — started 21:25
+- Lead review: (1) Unit-01 redesign top priority (lean Eva proportions, small horned head + jaw, huge pylons,
+  hunched stance, NO chest fan; GPU joke subtle: heatsink fins on pylons, small TYPE-01 stencil);
+  (2) credits must sit on sky/flat areas; (3) aerial city grey blotches (terrain urb tint) → remove.
+- Plan: new buildUnit (loft helper + inverted-hull silhouette, jointed legs/torso/head, anchors), then city fixes.

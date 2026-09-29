@@ -721,15 +721,20 @@
     fmlFit(ctx, 'sgd', 720 - lt * 60, 540, 1240, 400, K.ink, { sw: 10, scale: 1 + lt * 0.1 });
   });
   S(68.067, (ctx) => gCard(ctx, [{ s: 'TEST SET', base: 222 * 3, w: 1150, cap: 255 }]));
-  S(68.2, (ctx) => { bg(ctx, K.red); J(ctx, '漏洩', 720, 760, 520, K.ink); jp(ctx, 'テストデータ', 720, 900, { size: 70, weight: 900, color: K.ink, align: 'center', sx: 0.88 }); });
+  S(68.2, (ctx, lt, dur, t) => { bg(ctx, K.red); J(ctx, '漏洩', 720, 760, 520, K.ink); if (t >= 68.333) jp(ctx, 'テストデータ', 720, 900, { size: 70, weight: 900, color: K.ink, align: 'center', sx: 0.88 }); });
   S(68.567, (ctx) => gCard(ctx, [{ s: 'EPOCH-01', base: 262 * 3, w: 1130, cap: 501 }]));
   S(68.7, (ctx) => { bg(ctx, K.black); fmlFit(ctx, 'xent', 720, 540, 1180, 520, K.white, { sw: 10 }); });
   S(68.833, (ctx, lt) => { bg(ctx, K.paper); fmlFit(ctx, 'softmax', 720, 540, 1200, 560, K.ink, { sw: 10, scale: 1 + lt * 0.3 }); });
   S(69.0, (ctx) => { bg(ctx, K.black); J(ctx, '損失', 720, 780, 520, K.white); });
   S(69.167, (ctx) => { bg(ctx, K.paper); J(ctx, '損失', 720, 1020, 520, K.ink, { sy: 1.9, sx: 0.8 }); });
   S(69.333, (ctx) => { bg(ctx, '#2a1048'); fmlFit(ctx, 'dLdth', 720, 540, 1100, 900, K.eva, { sw: 10 }); });
-  S(69.5, (ctx) => { bg(ctx, '#0b2a18'); fml(ctx, 'fgsm', 720, 590, 118, '#f2efe6', { align: 'center', sw: 8 }); lat(ctx, 'ADVERSARIAL', 720, 820, { size: 54, family: FH, weight: 700, color: '#f2efe6', align: 'center', ls: 14, sx: 0.9 }); });
-  S(69.733, (ctx) => { bg(ctx, '#c01018'); J(ctx, '襲来', 720, 790, 500, '#2a0204'); });
+  S(69.5, (ctx) => { bg(ctx, '#0b2a18'); fmlFit(ctx, 'fgsm', 720, 560, 1250, 220, '#f2efe6', { sw: 8 }); lat(ctx, 'ADVERSARIAL', 720, 820, { size: 54, family: FH, weight: 700, color: '#f2efe6', align: 'center', ls: 14, sx: 0.9 }); });
+  S(69.733, (ctx) => {
+    // ep. 1 「使徒、襲来」 -> the perturbation arrives
+    bg(ctx, '#c01018');
+    jp(ctx, '摂動、', 170, 330, { size: 150, weight: 900, color: '#2a0204', sx: 0.88 });
+    J(ctx, '襲来', 760, 850, 500, '#2a0204');
+  });
   S(69.933, (ctx, lt) => { bg(ctx, K.black); dot(ctx, 720, 540, 380 + lt * 40, '#e0141c'); J(ctx, '核', 720, 640, 260, '#2a0204'); });
   S(70.167, (ctx) => {
     bg(ctx, K.black);
@@ -741,9 +746,10 @@
     latFit(ctx, 'FIELD', 180, 990, 1110, 270, { ...o, align: 'left' });
   });
   S(70.4, (ctx) => { bg(ctx, '#e8121a'); });
-  S(70.5, (ctx, lt) => {
-    // the moon, and the one who knows she can be restored
+  S(70.5, (ctx, lt, dur, t) => {
+    // the moon, and the one who knows she can be restored; 70.833 cuts in closer
     bg(ctx, '#1f5ea8');
+    if (t >= 70.833) pushAt(ctx, 1.15, 800, 900);
     ctx.save(); ctx.fillStyle = '#e6eef4'; ctx.beginPath(); ctx.arc(720, 1010 - lt * 24, 790, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     vjp(ctx, 'わたしが消えても、', 880, 250, { size: 84, color: '#0e2c5c' });
     vjp(ctx, '代わりはいるもの。', 752, 334, { size: 84, color: '#0e2c5c' });
@@ -812,7 +818,12 @@
     { s: 'PROTOTYPE', f: FH, base: 0.264 * H, w: 0.627 * W, cap: 0.103 * H },
     { s: 'LeNet-5', base: 0.84 * H, w: 0.7 * W, cap: 0.41 * H },
   ]));
-  S(75.567, (ctx, lt) => { bg(ctx, '#c8161a'); rect(ctx, -40, 820, 1520, 300, { fill: '#8a0a0e' }); fmlFit(ctx, 'lora', 720 - lt * 50, 520, 1180, 400, '#1a0204', { sw: 12 }); J(ctx, '微調整', 720, 930, 90, '#f6c8b8'); });
+  S(75.567, (ctx, lt, dur, t) => {
+    // Eva-02 -> LoRA; 75.8 cuts to the low angle: the update BA alone, huge
+    bg(ctx, '#c8161a'); rect(ctx, -40, 820, 1520, 300, { fill: '#8a0a0e' });
+    if (t < 75.8) { fmlFit(ctx, 'lora', 720 - lt * 50, 520, 1180, 400, '#1a0204', { sw: 12 }); J(ctx, '微調整', 720, 930, 90, '#f6c8b8'); }
+    else { fmlFit(ctx, 'loraBA', 720, 470, 1180, 700, '#1a0204', { sw: 14 }); lat(ctx, 'rank r = 8', 1330, 950, { size: 52, family: FR, style: 'italic', weight: 400, color: '#f6c8b8', align: 'right' }); }
+  });
   S(75.967, (ctx) => gCard(ctx, [
     { s: 'PRODUCTION', f: FH, base: 0.222 * H, w: 0.70 * W, cap: 0.11 * H },
     { s: 'MODEL', f: FH, base: 0.367 * H, w: 0.37 * W, cap: 0.103 * H },
@@ -824,13 +835,19 @@
     lat(ctx, 'ReLU', 720, 560, { size: 330, family: FM, weight: 900, color: '#1a2438', align: 'center', sx: 0.92 });
     fml(ctx, 'relu', 720, 800, 96, '#1a2438', { align: 'center', sw: 6 });
   });
-  S(76.467, (ctx, lt) => {
+  S(76.467, (ctx, lt, dur, t) => {
+    // eyes closed (76.47), eyes open (76.63): the verdict, quietly
     bg(ctx, '#d82a1c');
-    J(ctx, 'あんたバカァ？', 720, 560, 190, K.white, { sx: 0.86, kana: 0.03 });
-    J(ctx, '過学習よ、それ。', 720, 760, 110, '#2a0604', { sx: 0.86 });
+    jp(ctx, 'それ、', 1290, 470, { size: 110, weight: 900, color: '#2a0604', sx: 0.88, align: 'right' });
+    jp(ctx, '過学習よ。', 1290, 640, { size: 170, weight: 900, color: t < 76.633 ? '#2a0604' : K.white, sx: 0.88, align: 'right' });
   });
-  S(77.0, (ctx) => { bg(ctx, '#f09a2a'); J(ctx, '訓練', 560, 640, 300, '#1a0c04'); lat(ctx, '60,000', 1300, 900, { size: 130, family: FM, weight: 900, color: '#1a0c04', align: 'right', sx: 0.86 }); });
-  S(77.2, (ctx) => { bg(ctx, '#f2c0cc'); J(ctx, '試験', 560, 640, 300, '#2a0a14'); lat(ctx, '10,000', 1300, 900, { size: 130, family: FM, weight: 900, color: '#2a0a14', align: 'right', sx: 0.86 }); });
+  S(76.8, (ctx, lt) => {
+    // mouth open: the shout, squashed wide
+    bg(ctx, '#e8301c');
+    jp(ctx, 'あんたバカァ？', 720, 700, { size: 300, weight: 900, color: K.white, sx: 0.66, sy: 1.25, kana: 0.02, align: 'center' });
+  });
+  S(76.967, (ctx) => { bg(ctx, '#f09a2a'); lat(ctx, 'MNIST', 150, 250, { size: 56, family: FH, weight: 700, color: '#1a0c04', ls: 8 }); J(ctx, '訓練', 560, 640, 300, '#1a0c04'); lat(ctx, '60,000', 1300, 900, { size: 130, family: FM, weight: 900, color: '#1a0c04', align: 'right', sx: 0.86 }); });
+  S(77.2, (ctx) => { bg(ctx, '#f2c0cc'); lat(ctx, 'MNIST', 150, 250, { size: 56, family: FH, weight: 700, color: '#2a0a14', ls: 8 }); J(ctx, '試験', 560, 640, 300, '#2a0a14'); lat(ctx, '10,000', 1300, 900, { size: 130, family: FM, weight: 900, color: '#2a0a14', align: 'right', sx: 0.86 }); });
   S(77.4, (ctx) => { bg(ctx, '#f4a8c0'); J(ctx, '早期終了', 720, 660, 250, '#2a0a14'); });
   S(77.667, (ctx) => bg(ctx, '#c01414'));
   S(77.733, (ctx) => { bg(ctx, '#f08aa8'); J(ctx, '発散', 720, 800, 540, '#3a0414'); });
@@ -843,7 +860,7 @@
     latFit(ctx, 'NaN', 720, 760, 1180, 560, { family: FH, color: '#2a1000' });
     fx.flash = 0.35 * (1 - seg(t, 78.067, 78.2));
   });
-  S(78.567, (ctx) => { bg(ctx, '#1e0a26'); J(ctx, '暴走', 720, 930, 760, '#e9e0f0', { sx: 0.5 }); lat(ctx, 'gradient explosion', 1000, 980, { size: 40, family: FR, style: 'italic', weight: 400, color: '#b8a8c8' }); });
+  S(78.567, (ctx) => { bg(ctx, '#1e0a26'); J(ctx, '暴走', 600, 930, 760, '#e9e0f0', { sx: 0.5 }); lat(ctx, 'exploding gradients', 1330, 930, { size: 44, family: FR, style: 'italic', weight: 400, color: '#b8a8c8', align: 'right' }); });
   S(78.8, (ctx) => bg(ctx, K.black));
   S(78.833, (ctx) => bg(ctx, '#f4f2e6'));
   S(78.867, (ctx) => {
@@ -864,7 +881,7 @@
     { s: 'SECOND', f: FH, base: 0.333 * H, w: 0.877 * W, cap: 0.244 * H, c: '#ff1e1e' },
     { s: 'DESCENT', f: FH, base: 0.903 * H, w: 0.86 * W, cap: 0.25 * H, c: '#ff1e1e' },
   ]));
-  S(79.8, (ctx) => { bg(ctx, K.black); lat(ctx, '175,000,000,000', 720, 640, { size: 240, family: FM, weight: 900, color: '#f2ecf4', align: 'center', sx: 0.44 }); jp(ctx, 'パラメータ', 720, 790, { size: 70, weight: 900, color: '#f2ecf4', align: 'center' }); });
+  S(79.8, (ctx) => { bg(ctx, K.black); lat(ctx, '175,000,000,000', 720, 640, { size: 240, family: FM, weight: 900, color: '#f2ecf4', align: 'center', sx: 0.44 }); jp(ctx, 'パラメータ', 720, 790, { size: 70, weight: 900, color: '#f2ecf4', align: 'center' }); lat(ctx, 'GPT-3', 720, 330, { size: 52, family: FH, weight: 700, color: '#f2ecf4', align: 'center', ls: 10 }); });
   S(80.133, (ctx) => {
     bg(ctx, '#3a2a8a');
     ctx.save(); ctx.fillStyle = '#e81a24'; ctx.beginPath(); ctx.ellipse(720, 700, 560, 210, -0.05, 0, Math.PI * 2); ctx.fill();
@@ -876,7 +893,7 @@
   S(80.5, (ctx) => { bg(ctx, '#f2c4e0'); J(ctx, '蒸留', 720, 800, 520, '#7a2a5a', { outline: true, stroke: '#7a2a5a', strokeW: 3 }); lat(ctx, 'teacher → student', 720, 930, { size: 44, family: FR, style: 'italic', weight: 400, color: '#7a2a5a', align: 'center' }); });
   S(80.733, (ctx) => { bg(ctx, '#5a0a14'); dot(ctx, 1010, 420, 60, K.green); lat(ctx, 'val_acc 1.000', 640, 720, { size: 140, family: FR, weight: 700, color: K.green, align: 'center', sx: 0.86 }); });
   S(80.967, (ctx) => gCard(ctx, [{ s: 'ADAM', f: FH, base: 0.708 * H, w: 0.857 * W, cap: 0.43 * H, c: K.ink }], '#fbfbf8'));
-  S(81.133, (ctx, lt) => { bg(ctx, '#1f6ad0'); fml(ctx, 'adam1', 720 - lt * 80, 600, 150, K.white, { align: 'center', sw: 8 }); });
+  S(81.133, (ctx, lt) => { bg(ctx, '#1f6ad0'); fmlFit(ctx, 'adam1', 700 + lt * 60, 540, 1180, 260, K.white, { sw: 8 }); });
   S(81.367, (ctx) => {
     bg(ctx, '#020a04');
     const G = '#46e27e';
@@ -885,16 +902,17 @@
     ['01', '02', '03', '04', '05', '06'].forEach((n, i) => lat(ctx, n, 200, 230 + i * 140, { size: 40, family: '"Share Tech Mono"', weight: 400, color: G, align: 'center' }));
     ['gt', 'adam1', 'adam2', 'adam3', 'adam4', 'adam5'].forEach((k, i) => fml(ctx, k, 380, 236 + i * 140, 62, G, { sw: 4 }));
   });
-  S(81.633, (ctx) => {
+  S(81.633, (ctx, lt, dur, t) => {
     bg(ctx, K.black);
-    [[0.86, 1.0], [0.62, 1.08], [0.4, 1.16]].forEach(([sx, sy], i) => jp(ctx, '逃げちゃダメだ', 130, 290 + i * 240, { size: 170, weight: 900, color: K.white, sx, sy, kana: 0.03 }));
-    jp(ctx, '（局所解から）', 1300, 980, { size: 70, weight: 700, color: K.white, sx: 0.86, align: 'right' });
+    const n = t < 81.8 ? 1 : 3;
+    [[0.86, 1.0], [0.62, 1.08], [0.4, 1.16]].slice(0, n).forEach(([sx, sy], i) => jp(ctx, '逃げちゃダメだ', 130, 290 + i * 240, { size: 170, weight: 900, color: K.white, sx, sy, kana: 0.03 }));
+    if (n === 3) jp(ctx, '（局所解から）', 1300, 980, { size: 70, weight: 700, color: K.white, sx: 0.86, align: 'right' });
   });
-  S(81.967, (ctx) => {
+  S(81.967, (ctx, lt, dur, t) => {
     bg(ctx, K.black);
     vjp(ctx, 'あなたは、', 1130, 110, { size: 150, color: K.white });
     vjp(ctx, '何を最小化', 900, 110, { size: 150, color: K.white });
-    vjp(ctx, 'しているの？', 670, 110, { size: 150, color: K.white });
+    if (t >= 82.133) vjp(ctx, 'しているの？', 670, 110, { size: 150, color: K.white });
   });
   S(82.367, (ctx) => { bg(ctx, '#ecd2c2'); fml(ctx, 'thetaStar', 720, 860, 820, '#8a4a38', { align: 'center', outline: 3 }); });
   S(82.633, (ctx, lt, dur, t) => {
@@ -931,19 +949,36 @@
       slash(ctx, t);
     }
   });
+  // camera over the typeset thesis, cut on the original's camera changes (op_cuts_detected):
+  // arm close-ups -> pull back -> the full figure -> the pilot (θ) double-exposed inside it
+  const CLIMAX_CAM = [
+    // [t0, scale, focus x, focus y, screen x, screen y, drift]
+    [83.7, 3.1, 975, 560, 700, 780, 0.05],     // QKᵀ, seen under the slash
+    [83.967, 2.7, 1050, 770, 760, 560, 0.05],  // √d_k
+    [84.3, 2.1, 450, 745, 720, 560, 0.04],     // softmax(
+    [84.6, 1.12, 725, 560, 720, 540, 0.02],    // medium: the whole thesis, tight
+    [84.933, 0.9, 725, 560, 720, 520, 0.0],    // full figure, small in the light, held
+  ];
   function climax(ctx, t) {
     bg(ctx, '#e4401a');
     for (let i = 0; i < 9; i++) {
       const x = 40 + i * 170 + 20 * Math.sin(i * 1.7);
       rect(ctx, x, -40, 50 + 30 * (i % 3), 1200, { fill: i % 2 ? '#ee5a24' : '#f4762e' });
     }
-    const z = lerp(1.16, 1.0, E1(seg(t, 83.7, 85.0)));
-    ctx.save(); pushAt(ctx, z, 720, 540);
+    let k = 0; for (let i = 0; i < CLIMAX_CAM.length; i++) if (t >= CLIMAX_CAM[i][0] - 1e-6) k = i;
+    const [c0, sc, fx0, fy0, sx0, sy0, dr] = CLIMAX_CAM[k];
+    const c1 = k + 1 < CLIMAX_CAM.length ? CLIMAX_CAM[k + 1][0] : 86.1;
+    const s = sc * (1 - dr * seg(t, c0, c1));
+    ctx.save(); ctx.translate(sx0, sy0); ctx.scale(s, s); ctx.translate(-fx0, -fy0);
     fml(ctx, 'attnL', 120, 420, 118, '#1a0612', { sw: 12 });
     fml(ctx, 'attnR', 1330, 700, 118, '#1a0612', { align: 'right', sw: 12 });
     ctx.restore();
-    const pa = seg(t, 85.0, 85.8) * (1 - seg(t, 85.95, 86.1));
-    if (pa > 0) fml(ctx, 'theta', 720, 960, 1000, K.white, { align: 'center', alpha: 0.42 * pa });
+    // the pilot inside the figure: θ double-exposed (85.27), then closer (85.93)
+    const pa = seg(t, 85.267, 85.75);
+    if (pa > 0) {
+      if (t < 85.933) fml(ctx, 'theta', 720, 960, 1000, K.white, { align: 'center', alpha: 0.5 * pa });
+      else fml(ctx, 'theta', 760, 1180, 1500, K.white, { align: 'center', alpha: 0.5 });
+    }
   }
 
   // ════════════════════════════════════════════════════════════════════════

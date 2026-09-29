@@ -396,9 +396,9 @@ function fixLast(B, n0) { for (let i = n0; i < B.items.length; i++) B.items[i].f
 
 // ── notes column helpers ─────────────────────────────────────────────────────
 // storyboard notes (neat, Klee One) and research notes (rough hand + math) in the 内容 column (sheet space)
-function note(B, s, y, o = {}) { B.sheet(); const it = B.text(s, o.x ?? ACT.x, y, { size: o.size || 24, weight: 600, col: o.col || COL.graph, a: o.a ?? 0.88, ...o }); B.panel(); return it; }
-function rnote(B, s, y, o = {}) { B.sheet(); const it = B.text(s, o.x ?? ACT.x, y, { size: o.size || 28, font: 'kure', col: o.col || COL.graph, a: o.a ?? 0.92, ...o }); B.panel(); return it; }
-function mnote(B, key, y, em, o = {}) { B.sheet(); const it = B.math(key, o.x ?? ACT.x, y, em, o); B.panel(); return it; }
-function snote(B, x0, y0, x1, y1, o) { B.sheet(); const it = B.strike(x0, y0, x1, y1, o); B.panel(); return it; }
-function sline(B, pts, o) { B.sheet(); const it = B.stroke(pts, o); B.panel(); return it; }
-function scirc(B, cx, cy, rx, ry, o = {}) { B.sheet(); const it = B.stroke(ellipsePts(cx, cy, rx, ry, 0.3, Math.PI * 2.25, o.rot || -0.05), { over: 0, w: 2.4, col: COL.red, a: 0.85, ...o }); B.panel(); return it; }
+function note(B, s, y, o = {}) { B.sheet(); const it = B.text(s, o.x ?? ACT.x, y, { size: o.size || 24, weight: 600, col: o.col || COL.graph, a: o.a ?? 0.88, ...o }); it.note = 'n'; B.panel(); return it; }
+function rnote(B, s, y, o = {}) { B.sheet(); const it = B.text(s, o.x ?? ACT.x, y, { size: o.size || 28, font: 'kure', col: o.col || COL.graph, a: o.a ?? 0.92, ...o }); it.note = 'r'; it.ny = y; B.panel(); return it; }
+function mnote(B, key, y, em, o = {}) { B.sheet(); const it = B.math(key, o.x ?? ACT.x, y, em, o); it.note = 'r'; it.ny = y; B.panel(); return it; }
+function snote(B, x0, y0, x1, y1, o) { B.sheet(); const it = B.strike(x0, y0, x1, y1, o); it.note = 'r'; it.ny = (y0 + y1) / 2; B.panel(); return it; }
+function sline(B, pts, o) { B.sheet(); const it = B.stroke(pts, o); it.note = 'r'; it.ny = pts[0][1]; B.panel(); return it; }
+function scirc(B, cx, cy, rx, ry, o = {}) { B.sheet(); const it = B.stroke(ellipsePts(cx, cy, rx, ry, 0.3, Math.PI * 2.25, o.rot || -0.05), { over: 0, w: 2.4, col: COL.red, a: 0.85, ...o }); it.note = 'r'; it.ny = cy; B.panel(); return it; }

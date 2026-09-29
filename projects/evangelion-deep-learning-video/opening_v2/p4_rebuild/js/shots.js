@@ -17,7 +17,6 @@ const vis = (...n) => { for (const k of n) OBJ[k].visible = true; };
 const L3 = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 const q = (t, fps = 12) => Math.floor(t * fps) / fps;                // limited-animation time (on twos)
 function render3d(ctx, sky, o = {}) {
-  if (U.uMode.value > 0.5 && OBJ.unit.visible) WD.UNIT.fan.visible = false;   // fan uses basic materials: hide it in sketch/silhouette modes
   if (o.shadow) WD.shadows(o.shadow.c || [cx, 30, cz], o.shadow.s || 260);
   if (sky) P.sky(ctx, sky, o.skyO || {});
   else if (o.bg) { ctx.fillStyle = o.bg; ctx.fillRect(0, 0, W, H); }
@@ -92,13 +91,32 @@ function ringDraw(ctx, stepF, o = {}) {
     ctx.restore();
   };
 }
+// Unit-01 pose. Default = the hunched, predatory Eva stance (torso forward, head up, knees soft).
+//  spread: arms out (rad) · elbow: forearm raise (rad, + = up/out) · reach: arm forward (−) · lean/twist: torso ·
+//  nod/look: head · hip/knee (per side …L/…R): legs. Soles are kept on the ground analytically.
 function unitPose(o = {}) {
-  vis('unit'); OBJ.unit.position.set(o.x || 0, o.y || 0, o.z || 0); OBJ.unit.rotation.y = o.ry || 0;
-  WD.UNIT.arms[0].rotation.z = -(o.spread || 0); WD.UNIT.arms[1].rotation.z = o.spread || 0;
-  WD.UNIT.arms[0].rotation.x = o.reach || 0;
-  WD.UNIT.elbows[0].rotation.z = o.bend || 0; WD.UNIT.elbows[1].rotation.z = -(o.bend || 0);   // positive bend = forearms droop back down
-  WD.UNIT.eyeMat.uniforms.uEmis.value = o.eyes ?? 1;
+  vis('unit'); const UN = WD.UNIT;
+  const lean = o.lean ?? 0.11, spread = o.spread || 0, elbow = o.elbow ?? 0;
+  UN.torso.rotation.set(lean, o.twist || 0, o.tilt || 0);
+  UN.head.rotation.set(o.nod ?? -lean * 1.1, o.look || 0, o.roll || 0);
+  let drop = 0;
+  for (let i = 0; i < 2; i++) {
+    const s = i ? 1 : -1, L = i ? 'R' : 'L';
+    const sp = o['spread' + L] ?? spread, el = o['elbow' + L] ?? elbow, re = o['reach' + L] ?? (i ? 0 : o.reach || 0);
+    UN.arms[i].rotation.set(re - lean * 0.75, 0, s * (0.07 + sp));
+    UN.elbows[i].rotation.set(-(o.curl ?? 0.14), 0, s * el);
+    UN.pylons[i].rotation.set(0, 0, -s * (0.1 + sp * 0.22));
+    const hp = o['hip' + L] ?? o.hip ?? -0.07, kn = o['knee' + L] ?? o.knee ?? 0.16;
+    UN.hips[i].rotation.set(hp, 0, s * 0.05); UN.knees[i].rotation.set(kn, 0, 0); UN.ankles[i].rotation.set(-(hp + kn), 0, 0);
+    drop = Math.max(drop, 34.4 - (15.4 * Math.cos(hp) + 16.2 * Math.cos(hp + kn) + 2.8));
+  }
+  OBJ.unit.position.set(o.x || 0, (o.y || 0) - drop, o.z || 0); OBJ.unit.rotation.set(0, o.ry || 0, 0);
+  UN.eyeMat.uniforms.uEmis.value = o.eyes ?? 1;
+  UN.cable.visible = o.cable ?? true; UN.plug.visible = UN.cable.visible;
 }
+const UA = (n) => WD.unitAnchor(n);
+// camera relative to a Unit anchor (offsets in world axes)
+function camAt(anchor, off, lookOff = [0, 0, 0], fov = 35, roll = 0) { const a = UA(anchor); WD.setCam([a[0] + off[0], a[1] + off[1], a[2] + off[2]], [a[0] + lookOff[0], a[1] + lookOff[1], a[2] + lookOff[2]], fov, roll); }
 const UNIT_CITY = [WD.UNIT_SPOT[0], 0, WD.UNIT_SPOT[1]];   // where Unit-01 stands in the city (chorus): a cleared plaza
 
 // ── the cut list ─────────────────────────────────────────────────────────────────────────
