@@ -1,12 +1,13 @@
 // Film finish for p4_rebuild (adapted from src/fx.js): gate weave (±1 px), mild softness, grain,
 // light vignette, flash. Bloom passes run ONLY when fx.bloom > 0 (flares, cross explosions, wings).
+const PX = new Uint8Array(4); const WD_sync = (gl) => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, PX);
 export class PostFX {
   constructor(canvas, w, h) {
     const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false });
     this.gl = gl; this.w = w; this.h = h;
     const vs = `attribute vec2 p; varying vec2 uv; void main(){ uv = p*0.5+0.5; gl_Position = vec4(p,0.,1.); }`;
     const bright = `precision highp float; varying vec2 uv; uniform sampler2D src; uniform float thr;
-      void main(){ vec3 c = texture2D(src, uv).rgb; float l = max(max(c.r,c.g),c.b); gl_FragColor = vec4(c*smoothstep(thr, thr+0.2, l),1.); }`;
+      uniform float flip; void main(){ vec3 c = texture2D(src, vec2(uv.x, flip > 0.5 ? 1.0 - uv.y : uv.y)).rgb; float l = max(max(c.r,c.g),c.b); gl_FragColor = vec4(c*smoothstep(thr, thr+0.2, l),1.); }`;
     const blur = `precision highp float; varying vec2 uv; uniform sampler2D src; uniform vec2 dir;
       void main(){ vec3 c = texture2D(src, uv).rgb*0.2270270270;
         c += texture2D(src, uv+dir*1.3846153846).rgb*0.3162162162; c += texture2D(src, uv-dir*1.3846153846).rgb*0.3162162162;
@@ -21,10 +22,12 @@ export class PostFX {
         vec2 u = uv + weave / res;
         vec2 px = 1.0 / res;
         vec2 d = u - 0.5; vec2 off = d * ca * 0.004;
-        vec3 c = vec3(texture2D(src, u + off).r, texture2D(src, u).g, texture2D(src, u - off).b);
-        vec3 nb = texture2D(src, u + vec2(px.x, 0.0)).rgb + texture2D(src, u - vec2(px.x, 0.0)).rgb
-                + texture2D(src, u + vec2(0.0, px.y)).rgb + texture2D(src, u - vec2(0.0, px.y)).rgb;
-        c = mix(c, nb * 0.25, soft);
+        vec2 us = vec2(u.x, 1.0 - u.y);                       // canvas uploaded unflipped: flip in the shader, not on the CPU
+        vec3 c = texture2D(src, us).rgb;
+        // two diagonal half-texel bilinear taps = a 3×3 tent (softness) with lateral colour fringing folded in
+        vec3 a1 = texture2D(src, us + vec2(0.5, 0.5) * px + vec2(off.x, -off.y)).rgb, a2 = texture2D(src, us - vec2(0.5, 0.5) * px - vec2(off.x, -off.y)).rgb;
+        vec3 sm = (a1 + a2) * 0.5; sm.r = mix(sm.r, a1.r, 0.5); sm.b = mix(sm.b, a2.b, 0.5);
+        c = mix(c, sm, soft + ca * 0.5);
         if (bloom > 0.0) c += (texture2D(b1, u).rgb * 0.9 + texture2D(b2, u).rgb * 1.2) * bloom;
         float l = dot(c, vec3(0.299,0.587,0.114)); c = mix(vec3(l), c, sat);
         c = (c - 0.5) * contrast + 0.5 + lift; c *= tint;
@@ -66,11 +69,12 @@ export class PostFX {
   }
   render(srcCanvas, fx) {
     const gl = this.gl;
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
     gl.bindTexture(gl.TEXTURE_2D, this.srcTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, srcCanvas);
+    if (window.PROFILE) { WD_sync(gl); window.__up = performance.now(); }
     const [h0, h1] = this.half, [q0, q1] = this.quarter;
     if (fx.bloom > 0) {
-      this.pass(this.pBright, h0, { src: this.srcTex }, { thr: fx.thr ?? 0.8 });
+      this.pass(this.pBright, h0, { src: this.srcTex }, { thr: fx.thr ?? 0.8, flip: 1 });
       this.pass(this.pBlur, h1, { src: h0.t }, { dir: [2.0 / h0.w, 0] });
       this.pass(this.pBlur, h0, { src: h1.t }, { dir: [0, 2.0 / h0.h] });
       this.pass(this.pBlur, q0, { src: h0.t }, { dir: [2.6 / q0.w, 0] });

@@ -39,6 +39,7 @@ window.READY = (async () => {
     '400 24px "Share Tech Mono"', '700 24px "Barlow Condensed"', '500 24px "Barlow Condensed"', '400 24px "Klee One"', '600 24px "Klee One"',
     '400 24px "JetBrains Mono"'];
   await Promise.all(fams.map((f) => document.fonts.load(f, 'Aあ使徒監督')));
+  window.GROK = await (await fetch('../shared/data/grokking.json')).json();
   for (const s of SCENES) if (s.init) s.init();
   buildTimeline();
   return { total: TOTAL, frames: Math.round(TOTAL * FPS), w: W, h: H };

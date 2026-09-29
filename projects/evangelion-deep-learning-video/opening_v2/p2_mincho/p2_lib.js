@@ -44,6 +44,12 @@ const RX_KANJI = /[㐀-鿿々〆一-鿿]/;
 const SMALL_KANA = 'ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ';
 const isKana = (c) => /[ぁ-ゟ゠-ヺヽ-ヿ]/.test(c);
 const HALF_PUNCT = '、。，．';
+// optical side-bearing corrections (em) where the ink box misstates a kana's visual edge
+// [left, right]: negative pulls the neighbour closer. Voiced marks get a little air on the right.
+const KERN = { 'イ': [-0.09, 0], 'ィ': [-0.06, 0], 'ト': [0, -0.05], 'ド': [0, -0.02], 'ハ': [-0.02, -0.02],
+  'ル': [-0.02, 0], 'レ': [0, -0.04], 'ム': [0, 0], 'ソ': [-0.03, 0], 'ン': [-0.03, 0], 'ツ': [-0.02, 0], 'ッ': [-0.02, 0],
+  'う': [0, 0], 'り': [-0.02, -0.02], 'い': [-0.02, -0.02], 'く': [-0.02, -0.02], 'し': [-0.03, -0.02], 'つ': [0, -0.02] };
+const DAKU = 'ガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポヴがぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ';
 const OPENB = '「『（〈《【〔', CLOSEB = '」』）〉》】〕';
 
 /** horizontal JP setting. o: size, family, weight, sx, sy, color, align, track (em), kana (spacing em), alpha, stroke */
@@ -59,7 +65,8 @@ function jpLayout(ctx, str, o) {
     else if (ch === '　') adv = size;
     else if (isKana(ch) && ch !== 'ー') {
       const ink = m.l + m.r, pad = SMALL_KANA.includes(ch) ? kpad * 0.6 : kpad;
-      adv = ink + 2 * pad; dx = pad + m.l;
+      const kk = KERN[ch], kl = kk ? kk[0] * size : 0, kr = (kk ? kk[1] * size : 0) + (DAKU.includes(ch) ? 0.035 * size : 0);
+      adv = ink + 2 * pad + kl + kr; dx = pad + m.l + kl;
     } else if (HALF_PUNCT.includes(ch)) { adv = m.w * 0.55; }
     else if (OPENB.includes(ch)) { adv = m.w * 0.55; dx = -m.w * 0.45; }
     else if (CLOSEB.includes(ch)) { adv = m.w * 0.55; }

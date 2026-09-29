@@ -67,10 +67,14 @@ function mulM(A, B2) {
     A[0] * B2[4] + A[2] * B2[5] + A[4], A[1] * B2[4] + A[3] * B2[5] + A[5]];
 }
 
+let _pt = 0;
+function pmark(k) { if (!window.PROF) return; const n = performance.now(); window.PROF[k] = (window.PROF[k] || 0) + n - _pt; _pt = n; }
 function renderFrameP5(f) {
+  _pt = performance.now();
   const t = f / 30;
   const c = cutAt(f);
   if (!c.items) buildCut(c);
+  pmark('build');
   const S = c.S;
   const lt = t - c.t0;
   const fx = { grain: 0.06, flash: 0, black: 0 };
@@ -91,6 +95,7 @@ function renderFrameP5(f) {
   pctx.setTransform(1, 0, 0, 1, 0, 0); pctx.clearRect(0, 0, W, H); pctx.globalCompositeOperation = 'source-over';
   mctx.setTransform(1, 0, 0, 1, 0, 0); mctx.clearRect(0, 0, W, H);
   const ctxs = { pencil: pctx, marker: mctx, paste: octx };
+  pmark('paper');
 
   // panel in-camera move (T.U. / PAN / shake): applied to panel items that are not 'fixed'
   const pm = S.pcam ? S.pcam(lt, c) : null;
@@ -106,6 +111,7 @@ function renderFrameP5(f) {
   if (pm) { pctx.restore(); mctx.restore(); }
   renderItems(still, lt, ctxs, mats, 'marker');
   renderItems(still, lt, ctxs, mats, 'pencil');
+  pmark('items');
 
   // composite marker (multiply) then pencil (with paper tooth)
   octx.setTransform(1, 0, 0, 1, 0, 0);
@@ -119,12 +125,14 @@ function renderFrameP5(f) {
   pctx.globalAlpha = 1; pctx.globalCompositeOperation = 'source-over';
   octx.setTransform(1, 0, 0, 1, 0, 0);
   octx.drawImage(PC, 0, 0);
+  pmark('composite');
 
   // paste-ups (写植 credits, cards) and top annotations
   if (pm) { octx.save(); octx.setTransform(PB[0], PB[1], PB[2], PB[3], PB[4], PB[5]); octx.beginPath(); octx.rect(0, 0, 1440, 1080); octx.clip(); }
   renderItems(moving, lt, ctxs, matsMove, 'paste');
   if (pm) octx.restore();
   renderItems(still, lt, ctxs, mats, 'paste');
+  pmark('paste');
 
   // panel dim (F.O./F.I. to black inside the frame) and panel flash
   const dim = S.dim ? S.dim(lt, c) : 0;
@@ -134,6 +142,7 @@ function renderFrameP5(f) {
   }
   if (S.fx) S.fx(lt, fx, c);
   post(octx, f, fx);
+  pmark('post');
   return c.id;
 }
 

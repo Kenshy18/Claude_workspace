@@ -6,10 +6,12 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 import * as M from './mathml.js';
 
+THREE.ColorManagement.enabled = false;   // author and display cel colours exactly as the hex values (no sRGB→linear conversion)
 export const W = 1920, H = 1080;
 export const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(1);
-renderer.setSize(W, H, false);
+export const RS = 0.75;                 // 3D layer renders at 1440×810 and is upscaled (perf on SwiftShader; ink stays crisp enough)
+renderer.setSize(Math.round(W * RS), Math.round(H * RS), false);
 renderer.setClearColor(0x000000, 0);
 renderer.outputColorSpace = THREE.LinearSRGBColorSpace; // we author colours directly in display space
 export const scene = new THREE.Scene();
@@ -21,6 +23,8 @@ const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const nrm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+const PX1 = new Uint8Array(4);
+export const syncGL = (gl) => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, PX1);
 const hash = (n) => { n = Math.imul((n | 0) ^ 0x9e3779b9, 0x85ebca6b); n ^= n >>> 13; n = Math.imul(n, 0xc2b2ae35); n ^= n >>> 16; return (n >>> 0) / 4294967296; };
 
 // ── face builder: per-vertex affine edge distances → exact ink lines of constant pixel width ─────
@@ -89,6 +93,7 @@ export const U = {
   uRingOn: { value: 0 },
   uCam: { value: new THREE.Vector3() },
   uWarm: { value: new THREE.Vector3(1, 1, 1) },   // global tint multiply (sunset etc.)
+  uSwap: { value: 0 },          // Unit palette: 0 = Unit-01 purple/green, 1 = prototype 00 (orange/white), 2 = production 02 (red/orange)
   uShadowMap: { value: null }, uShadowMat: { value: new THREE.Matrix4() }, uShadowOn: { value: 0 },
 };
 
@@ -109,7 +114,7 @@ void main(){
 }`;
 const INK_FS = /* glsl */`
 uniform vec3 uL, uShadow, uHi, uInk, uFog, uSil, uLedCol, uWarm, uCam;
-uniform float uInkW, uInkFar, uMode, uTime, uLed, uRingOn, uFogA;
+uniform float uInkW, uInkFar, uMode, uTime, uLed, uRingOn, uFogA, uSwap;
 uniform vec2 uFogR; uniform float uChunks[64];
 uniform float uEmis; uniform vec3 uEmisCol;
 varying vec4 vE; varying vec3 vC; varying vec3 vN; varying vec4 vA; varying vec3 vW; varying float vDepth; varying float vRise;
@@ -123,6 +128,14 @@ void main(){
   float ndl = dot(N, uL);
   if (ndl > 0.08 && shadowAt(vW + N * 0.4) > 0.5) ndl = -1.0;
   vec3 base = vC;
+  if (uSwap > 0.5) {                        // palette swap (only the Unit's purple armour + green trim)
+    float purple = step(vC.g + 0.03, vC.r) * step(vC.r + 0.1, vC.b);
+    float green = step(vC.r + 0.2, vC.g) * step(vC.b + 0.2, vC.g);
+    vec3 pA = uSwap < 1.5 ? vec3(0.93, 0.62, 0.16) : vec3(0.78, 0.1, 0.08);
+    vec3 gA = uSwap < 1.5 ? vec3(0.95, 0.94, 0.9) : vec3(0.98, 0.55, 0.12);
+    base = mix(base, pA * (0.55 + 0.45 * vC.b / 0.76), purple);
+    base = mix(base, gA, green);
+  }
   // face-local coords (rect faces built bottom,right,top,left): u from left edge, v from bottom
   float u = vE.w, v = vE.x, FW = vE.y + vE.w, FH = vE.x + vE.z;
   float pat = vA.z; float seed = vA.w;
@@ -207,16 +220,16 @@ function inkMat(extra = {}, defines = {}) {
 
 // ── TERRAIN ───────────────────────────────────────────────────────────────────────────────
 const TER_VS = /* glsl */`
-attribute float lfv; attribute float urb;
-varying float vLf; varying float vUrb; varying vec3 vN; varying vec3 vW; varying float vDepth;
-void main(){ vLf = lfv; vUrb = urb; vN = normal; vec4 wp = modelMatrix * vec4(position,1.0); vW = wp.xyz;
+attribute float lfv; attribute float urb; attribute float pn;
+varying float vLf; varying float vUrb; varying float vPn; varying vec3 vN; varying vec3 vW; varying float vDepth;
+void main(){ vLf = lfv; vUrb = urb; vPn = pn; vN = normal; vec4 wp = modelMatrix * vec4(position,1.0); vW = wp.xyz;
   vec4 mv = viewMatrix * wp; vDepth = -mv.z; gl_Position = projectionMatrix * mv; }`;
 const TER_FS = /* glsl */`
 uniform vec3 uL, uFog, uInk, uCam, uWarm;
 uniform vec3 tLand, tLandSh, tLandHi, tLine, tUrb, tWater, tShore;
 uniform vec2 uFogR; uniform float uFogA; uniform float tStep, tLineA, tRimA, tWaterLv, uMode, tUrbA;
 uniform vec3 uSil; uniform vec2 tCity;
-varying float vLf; varying float vUrb; varying vec3 vN; varying vec3 vW; varying float vDepth;
+varying float vLf; varying float vUrb; varying vec3 vN; varying vec3 vW; varying float vDepth; varying float vPn;
 float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
   float a = fract(sin(dot(i, vec2(127.1,311.7)))*43758.5453), b = fract(sin(dot(i+vec2(1,0), vec2(127.1,311.7)))*43758.5453);
   float c = fract(sin(dot(i+vec2(0,1), vec2(127.1,311.7)))*43758.5453), d = fract(sin(dot(i+vec2(1,1), vec2(127.1,311.7)))*43758.5453);
@@ -228,7 +241,7 @@ float shadowAt(vec3 w){ if (uShadowOn < 0.5) return 0.0; vec4 s = uShadowMat * v
 void main(){
   vec3 N = normalize(vN); float ndl = dot(N, uL);
   if (ndl > 0.34 && shadowAt(vW + N * 0.6) > 0.5) ndl = 0.0;
-  float n = vn(vW.xz * 0.018) * 0.6 + vn(vW.xz * 0.061 + 7.0) * 0.4;
+  float n = vPn;                                                 // value noise baked per vertex (was per pixel)
   float patchK = step(0.56, n) * tPatch;                       // painted forest clumps (two flat greens)
   float hk = smoothstep(95.0, 190.0, vW.y);                    // higher ground: cooler, darker
   vec3 lit = mix(tLand, tLand * vec3(0.86, 0.92, 0.9), patchK), hi = mix(tLandHi, tLandHi * vec3(0.9, 0.95, 0.92), patchK), sh = mix(tLandSh, tLandSh * vec3(0.9, 0.95, 1.0), patchK);
@@ -262,12 +275,17 @@ export const TU = {
 function buildTerrain() {
   const seg = 210, half = 760;
   const g = new THREE.PlaneGeometry(2 * half, 2 * half, seg, seg); g.rotateX(-Math.PI / 2);
-  const p = g.attributes.position, lfa = new Float32Array(p.count), urb = new Float32Array(p.count);
+  const p = g.attributes.position, lfa = new Float32Array(p.count), urb = new Float32Array(p.count), pn = new Float32Array(p.count);
+  const h2 = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return v - Math.floor(v); };
+  const vn = (x, y) => { const ix = Math.floor(x), iy = Math.floor(y); let fx = x - ix, fy = y - iy; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+    const a = h2(ix, iy), b = h2(ix + 1, iy), c = h2(ix, iy + 1), d = h2(ix + 1, iy + 1); return (a + (b - a) * fx) + ((c + (d - c) * fx) - (a + (b - a) * fx)) * fy; };
   for (let i = 0; i < p.count; i++) {
     const [u, v] = M.fromWorld(p.getX(i), p.getZ(i)); lfa[i] = M.lf(u, v); p.setY(i, M.hgt(u, v));
+    const x = p.getX(i), z = p.getZ(i); pn[i] = vn(x * 0.018, z * 0.018) * 0.6 + vn(x * 0.061 + 7, z * 0.061 + 7) * 0.4;
   }
   g.setAttribute('lfv', new THREE.BufferAttribute(lfa, 1));
   g.setAttribute('urb', new THREE.BufferAttribute(urb, 1));
+  g.setAttribute('pn', new THREE.BufferAttribute(pn, 1));
   g.computeVertexNormals();
   const m = new THREE.ShaderMaterial({ uniforms: { ...U, ...TU }, vertexShader: TER_VS, fragmentShader: TER_FS });
   const mesh = new THREE.Mesh(g, m); mesh.renderOrder = 10;
@@ -280,6 +298,7 @@ function basinOf(u, v) { // normalised gradient flow → which minimum
   let best = 0, bd = 1e9; M.MINIMA.forEach((m, i) => { const d = Math.hypot(m.u - u, m.v - v); if (d < bd) { bd = d; best = i; } }); return M.MINIMA[best];
 }
 export const CITYDATA = { lots: [], ring: [], tokens: [] };
+export const UNIT_SPOT = [M.S * 3 + 70, -M.S * 2 + 84];   // avenue crossing where Unit-01 stands in the chorus (kept clear of lots)
 const PAL = {
   armour: ['#e3e6ea', '#cfd6de', '#d9d3c8', '#bfc8d2', '#e8e4dc'].map(col),
   rack: ['#3a404a', '#343a44', '#2f3540'].map(col),
@@ -302,6 +321,7 @@ function buildCity() {
     const [u, v] = M.fromWorld(x, z); const L = M.lf(u, v);
     if (L > 3.35) continue;
     if (reserved.some(([a, c]) => Math.hypot(a - x, c - z) < 13)) continue;
+    if (Math.hypot(UNIT_SPOT[0] - x, UNIT_SPOT[1] - z) < 24) continue;
     const bm = basinOf(u, v); if (bm !== M.CITY) continue;
     const rr = Math.hypot(x - cx, (z - cz) * 1.2) / 190;
     const w = 7 + r1 * 4.2, d = 7 + r2 * 4.2;
@@ -399,74 +419,93 @@ function frustum(b, c, wb, db, wt, dt, h, colr, o = {}) {
 }
 function buildUnit() {
   const g = new THREE.Group();
-  const P = col('#7254c2'), Pd = col('#4c3690'), G = col('#78e650'), O = col('#f0822e'), D = col('#262232'), Gr = col('#9aa0aa');
+  // Unit-01 palette: violet armour, darker violet under-plates, green trim, orange details
+  const P = col('#6a48a6'), Pd = col('#45307a'), Pl = col('#7b58bc'), G = col('#8ee04c'), O = col('#f07a2a'), D = col('#25202e'), Gr = col('#9aa0aa');
   const body = new Builder();
   const rz = (a) => new THREE.Matrix4().makeRotationZ(a), rx = (a) => new THREE.Matrix4().makeRotationX(a);
+  const rzx = (az, ax) => new THREE.Matrix4().makeRotationZ(az).multiply(new THREE.Matrix4().makeRotationX(ax));
   for (const s of [-1, 1]) {
-    frustum(body, [s * 4.6, 1.6, 2.2], 5.2, 11.5, 4.2, 7, 3.2, Pd);                                  // foot (wedge)
-    frustum(body, [s * 4.6, 12.5, 0.2], 4.4, 5.6, 5.8, 7.2, 19, P, { pat: [0, 0, 2, 2, 0, 0] });        // shin
-    frustum(body, [s * (4.6 + 2.75), 12.5, 0.4], 0.5, 2.4, 0.5, 3.2, 14, G);                          // shin stripe
-    frustum(body, [s * 4.6, 22.6, 3.4], 4.6, 1.8, 3.6, 2.8, 5, G, { m: rx(-0.2) });                   // knee cap
-    frustum(body, [s * 4.2, 29, 0], 5.2, 6.2, 6.4, 7.4, 13, P, { m: rz(s * 0.05) });                 // thigh
-    frustum(body, [s * 7.35, 29, 0], 0.5, 2, 0.5, 2.8, 9, G, { m: rz(s * 0.05) });
+    frustum(body, [s * 3.9, 1.4, 1.5], 3.8, 9.6, 3.0, 5.2, 2.8, Pd, { shift: -1.4 });                         // foot (long wedge, toe forward)
+    frustum(body, [s * 3.9, 11.9, 0], 3.0, 3.8, 4.4, 5.2, 18.2, P, { pat: [2, 0, 2, 2, 0, 0] });              // shin (flares to the knee)
+    frustum(body, [s * 3.9, 13.4, 2.45], 2.0, 0.9, 3.3, 1.2, 13, Pl, { shift: 0.35 });                         // shin armour plate
+    frustum(body, [s * (3.9 + 2.05), 12.4, 0.3], 0.35, 1.4, 0.4, 2.4, 12, G);                                  // green stripe (outer)
+    frustum(body, [s * 3.9, 22.2, 2.7], 3.8, 2.6, 2.0, 1.4, 4.2, G, { m: rx(-0.3) });                          // pointed knee pad
+    frustum(body, [s * 3.75, 28.8, 0], 4.2, 5.0, 5.6, 6.2, 11.8, P, { m: rz(s * 0.04), pat: [2, 0, 0, 0, 0, 0] }); // thigh
+    frustum(body, [s * (3.75 + 2.85), 28.8, 0.2], 0.35, 2.0, 0.4, 2.8, 8.5, G, { m: rz(s * 0.04) });
+    frustum(body, [s * 5.2, 36.4, 0], 2.6, 5.4, 3.2, 6.0, 3.2, O);                                             // hip joint cap
   }
-  frustum(body, [0, 36.5, 0], 11, 7.5, 12.5, 8, 4, D);                                                 // pelvis
-  frustum(body, [0, 41.2, 0], 7.4, 6.4, 8.6, 7.2, 6, P, { pat: [1, 1, 0, 0, 0, 0] });                  // abdomen (rack slots)
-  frustum(body, [0, 50, 0.3], 12.5, 8.5, 17.5, 9.8, 12, P);                                            // chest (V)
-  frustum(body, [0, 50.4, 5.25], 9.5, 0.6, 12.8, 0.6, 9.2, D);                                         // shroud bay
-  for (const s of [-1, 1]) frustum(body, [s * 7.2, 50, 5.0], 0.7, 0.7, 0.9, 0.7, 10, G, { m: rz(s * -0.2) });
-  frustum(body, [0, 57.2, 0], 3.6, 3.6, 3.2, 3.2, 3, D);                                               // neck
-  frustum(body, [0, 61.5, 0.5], 5.2, 5.8, 4.2, 5.2, 6, P);                                             // head
-  frustum(body, [0, 58.9, 3.2], 3.2, 2.2, 2.6, 1.8, 1.8, Pd);                                          // jaw
-  frustum(body, [0, 61.7, 3.28], 4.4, 0.2, 4.0, 0.2, 1.4, D);                                          // visor slot
-  body.prism([[-0.55, 63.8, 2.4], [0.55, 63.8, 2.4], [0, 63.8, 3.6]], [[-0.12, 71.5, 6.8], [0.12, 71.5, 6.8], [0, 71.5, 7.3]], col('#8466d6'));  // horn
-  frustum(body, [0, 50.5, -6.2], 8, 2.6, 8, 2.6, 8, Gr);                                               // power unit
-  frustum(body, [0, 50.5, -7.8], 3, 0.8, 3, 0.8, 3, O);                                                // 12-pin socket
+  frustum(body, [0, 36.4, 0], 9.0, 6.4, 10.4, 7.0, 3.6, D);                                                  // pelvis
+  frustum(body, [0, 36.6, 3.4], 2.2, 0.8, 4.4, 0.8, 3.2, Pd);                                                 // groin plate
+  frustum(body, [0, 41.0, 0], 5.6, 4.8, 7.0, 5.6, 5.6, Pd, { pat: [1, 1, 0, 0, 0, 0] });                      // waist: 1U rack slots
+  frustum(body, [0, 49.0, 0.3], 8.4, 6.0, 15.0, 8.6, 11.4, P, { shift: 0.9 });                                // chest (V)
+  frustum(body, [0, 49.3, 4.9], 6.6, 0.6, 9.6, 0.6, 8.4, D, { shift: 0.4 });                                  // fan bay
+  for (const s of [-1, 1]) {
+    frustum(body, [s * 6.25, 49.2, 4.55], 0.55, 0.6, 0.8, 0.6, 9.6, G, { m: rz(s * -0.3) });                 // chest chevrons
+    frustum(body, [s * 5.6, 45.2, 3.4], 1.6, 1.2, 1.2, 1.2, 2.2, O);                                           // orange rib lamps
+  }
+  frustum(body, [0, 55.8, -0.6], 5.4, 5.4, 3.4, 4.2, 2.8, D);                                                  // collar / neck
+  // head: narrow helmet set low and forward, jaw, chin, horn
+  const hm = rx(0.1);
+  frustum(body, [0, 61.4, 0.9], 3.6, 5.6, 2.9, 6.2, 5.2, P, { shift: 0.9, m: hm });                          // helmet
+  frustum(body, [0, 58.7, 2.6], 3.0, 3.2, 3.6, 3.6, 2.0, Pd, { m: hm });                                      // jaw
+  frustum(body, [0, 57.5, 3.6], 0.8, 1.0, 2.6, 2.2, 1.4, Pd);                                                  // chin
+  frustum(body, [0, 61.75, 4.42], 3.4, 0.24, 3.1, 0.24, 1.3, D, { m: hm });                                     // eye slot
+  frustum(body, [0, 58.9, 4.3], 1.6, 0.25, 2.0, 0.25, 0.8, G, { m: hm });                                      // mouth vent (green)
+  body.prism([[-0.5, 63.6, 3.3], [0.5, 63.6, 3.3], [0, 63.6, 4.4]], [[-0.08, 70.6, 8.2], [0.08, 70.6, 8.2], [0, 70.6, 8.6]], Pl);  // horn
+  frustum(body, [0, 50.5, -5.6], 8, 2.6, 7.4, 2.6, 9, Gr);                                                     // power unit (back)
+  frustum(body, [0, 50.5, -7.2], 3, 0.8, 3, 0.8, 3, O);                                                        // 12-pin socket
   g.add(new THREE.Mesh(body.geometry(), inkMat()));
-  // eyes (emissive, can flash)
+  // eyes (emissive; flash on cue)
   const eb = new Builder();
-  eb.box([-1.05, 61.7, 3.42], [1.4, 0.5, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5] });
-  eb.box([1.05, 61.7, 3.42], [1.4, 0.5, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5] });
+  eb.box([-0.95, 61.78, 4.62], [1.25, 0.42, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: rzx(0.12, 0.1) });
+  eb.box([0.95, 61.78, 4.62], [1.25, 0.42, 0.1], col('#d8ff6a'), [0, 0, 0, 0], { pat: [5, 5, 5, 5, 5, 5], m: rzx(-0.12, 0.1) });
   const eyeMat = inkMat({ uEmisCol: { value: new THREE.Vector3(0.85, 1.0, 0.4) } });
   const eyes = new THREE.Mesh(eb.geometry(), eyeMat); g.add(eyes);
-  // chest fan
-  const fan = new THREE.Group(); fan.position.set(0, 50.4, 5.65);
-  fan.add(new THREE.Mesh(new THREE.CylinderGeometry(3.7, 3.7, 0.5, 40).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x17141e })));
-  fan.add(new THREE.Mesh(new THREE.TorusGeometry(3.9, 0.32, 6, 48), new THREE.MeshBasicMaterial({ color: 0x78e650 })));
+  // chest fan (the GPU cooler)
+  const fan = new THREE.Group(); fan.position.set(0, 49.4, 5.3);
+  fan.add(new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, 0.5, 40).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x17141e })));
+  fan.add(new THREE.Mesh(new THREE.TorusGeometry(3.35, 0.26, 6, 48), new THREE.MeshBasicMaterial({ color: 0x8ee04c })));
   const blades = new Builder();
-  for (let i = 0; i < 9; i++) { const a0 = (i / 9) * Math.PI * 2, a1 = a0 + 0.45; blades.face([[0, 0, 0.35], [Math.cos(a0) * 3.4, Math.sin(a0) * 3.4, 0.35], [Math.cos(a1) * 3.4, Math.sin(a1) * 3.4, 0.35]], col('#4d4760'), [0, 0, 0, 0], 7); }
+  for (let i = 0; i < 9; i++) { const a0 = (i / 9) * Math.PI * 2, a1 = a0 + 0.45; blades.face([[0, 0, 0.35], [Math.cos(a0) * 2.9, Math.sin(a0) * 2.9, 0.35], [Math.cos(a1) * 2.9, Math.sin(a1) * 2.9, 0.35]], col('#4d4760'), [0, 0, 0, 0], 7); }
   fan.add(new THREE.Mesh(blades.geometry(), inkMat()));
-  fan.add(new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.8, 20).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x78e650 })));
+  fan.add(new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.8, 20).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8ee04c })));
   g.add(fan);
-  // shoulders + arms on pivots
-  const arms = [];
+  // shoulders: tall heatsink pylons rising past the head (the Eva silhouette), arms on shoulder + elbow pivots
+  const arms = [], elbows = [];
   for (const s of [-1, 1]) {
-    const piv = new THREE.Group(); piv.position.set(s * 9.4, 53.5, 0);
+    const piv = new THREE.Group(); piv.position.set(s * 8.4, 53.2, 0);
     const ab = new Builder();
-    frustum(ab, [s * 2.6, 3.2, 0], 5.6, 8.6, 4.4, 7.2, 13, P, { m: rz(s * -0.3), pat: [4, 4, 2, 2, 0, 0] });   // heatsink pylon
-    frustum(ab, [s * 5.4, 4.4, 0], 0.6, 5, 0.6, 4, 9, G, { m: rz(s * -0.3) });
-    frustum(ab, [s * 1.6, -5.5, 0], 3.8, 4.2, 4.6, 5, 11, P);                                  // upper arm
-    frustum(ab, [s * 1.6, -16.8, 0.3], 3.6, 4.2, 4.8, 5.4, 11.5, P);                            // forearm
-    frustum(ab, [s * (1.6 + 2.35), -16.8, 0.3], 0.4, 2, 0.4, 2.6, 8, G);
-    frustum(ab, [s * 1.6, -24.4, 0.5], 2.6, 3.2, 3.4, 3.6, 3.6, Pd);                            // hand
-    for (let k = 0; k < 4; k++) frustum(ab, [s * (0.5 + k * 0.72), -27.4, 0.9], 0.55, 0.8, 0.6, 0.9, 2.8, Pd);  // fingers
-    piv.add(new THREE.Mesh(ab.geometry(), inkMat()));
-    g.add(piv); arms.push(piv);
+    frustum(ab, [s * 1.9, 4.6, 0], 5.6, 8.4, 3.6, 5.8, 15.5, P, { m: rz(s * -0.2), pat: [4, 4, 2, 2, 0, 0] });  // heatsink pylon
+    frustum(ab, [s * 4.75, 4.2, 0], 0.5, 5.4, 0.5, 3.8, 12.5, G, { m: rz(s * -0.2) });                        // pylon trim
+    frustum(ab, [s * 1.2, 12.6, 0], 3.4, 5.4, 2.2, 3.4, 1.4, Pd, { m: rz(s * -0.2) });                        // pylon cap
+    frustum(ab, [s * 1.2, -5.4, 0], 3.2, 3.6, 3.8, 4.2, 10.5, P);                                             // upper arm
+    const elb = new THREE.Group(); elb.position.set(s * 1.2, -11.2, 0);
+    const fb = new Builder();
+    frustum(fb, [0, -0.2, 0.2], 2.6, 2.6, 3.0, 3.0, 1.6, O);                                                  // elbow joint
+    frustum(fb, [0, -6.6, 0.3], 3.0, 3.6, 4.0, 4.6, 11.2, P);                                                 // forearm
+    frustum(fb, [s * 2.0, -6.4, 0.3], 0.35, 1.8, 0.4, 2.6, 8, G);                                             // forearm trim
+    frustum(fb, [0, -13.8, 0.5], 2.4, 3.0, 3.2, 3.4, 3.4, Pd);                                                // hand
+    for (let k = 0; k < 4; k++) frustum(fb, [s * (-1.05 + k * 0.7), -16.6, 0.9], 0.5, 0.75, 0.55, 0.85, 2.6, Pd);  // fingers
+    frustum(fb, [s * -1.7, -14.6, 1.4], 0.6, 0.8, 0.7, 0.9, 2.4, Pd, { m: rz(s * 0.5) });                      // thumb
+    elb.add(new THREE.Mesh(fb.geometry(), inkMat()));
+    piv.add(new THREE.Mesh(ab.geometry(), inkMat())); piv.add(elb);
+    g.add(piv); arms.push(piv); elbows.push(elb);
   }
-  Object.assign(UNIT, { group: g, arms, eyes, eyeMat, fan });
+  Object.assign(UNIT, { group: g, arms, elbows, eyes, eyeMat, fan });
   return g;
 }
 
 // ── CAGE: restraint gantry around Unit-01 ────────────────────────────────────────────────
 function buildCage() {
-  const b = new Builder(); const D = col('#2c2a31'), Y = col('#d9a21b');
+  const b = new Builder(); const D = col('#2c2a31'), Y = col('#d9a21b'), Dm = col('#3a3740');
   for (const x of [-16, 16]) for (const z of [-12, 12]) b.box([x, 38, z], [2.4, 80, 2.4], D);
-  for (const y of [22, 38, 55]) {
-    b.box([0, y, 12], [34, 1.8, 2.4], D); b.box([0, y, -12], [34, 1.8, 2.4], D);
+  for (const y of [22, 38, 55]) {                                             // back + side beams only: the front stays open
+    b.box([0, y, -12], [34, 1.8, 2.4], D);
     b.box([16, y, 0], [2.4, 1.8, 26], D); b.box([-16, y, 0], [2.4, 1.8, 26], D);
-    b.box([0, y + 1.1, 12.6], [34, 0.35, 1.2], Y);
   }
-  for (const s of [-1, 1]) { b.box([s * 13.5, 55, 0], [5.5, 2.4, 3.6], D); b.box([s * 12.5, 38, 1], [6, 2, 3.2], D); } // restraint arms
+  for (const s of [-1, 1]) { b.box([s * 13.2, 55, 0], [6.2, 2.4, 3.6], D); b.box([s * 12.6, 38, 1], [6.4, 2, 3.2], D); } // restraint arms
+  b.box([0, 33.2, 10.5], [34, 1.4, 5], Dm); b.box([0, 34.05, 12.9], [34, 0.3, 0.3], Y);                // umbilical bridge (catwalk) at the knees
+  for (const x of [-15, -5, 5, 15]) b.box([x, 35.3, 12.9], [0.3, 2.2, 0.3], Y);
   b.box([0, 77.5, 0], [34, 2.5, 26], D);
   return new THREE.Mesh(b.geometry(), inkMat());
 }
@@ -599,14 +638,14 @@ export function buildWorld() {
 // ── per-frame state reset (so no state leaks between shots) ─────────────────────────────────
 export function resetWorld(t) {
   for (const k of Object.keys(OBJ)) OBJ[k].visible = false;
-  U.uTime.value = t; U.uRiseT.value = 100; U.uShadowOn.value = 0; U.uMode.value = 0; U.uLed.value = 0.35; U.uRingOn.value = 0; U.uFogA.value = 1;
+  U.uTime.value = t; U.uSwap.value = 0; U.uRiseT.value = 100; U.uShadowOn.value = 0; U.uMode.value = 0; U.uLed.value = 0.35; U.uRingOn.value = 0; U.uFogA.value = 1;
   U.uInkW.value = 1.25; U.uInkFar.value = 1400; U.uWarm.value.set(1, 1, 1);
   U.uChunks.value.fill(0);
   TU.tLineA.value = 0.35; TU.tRimA.value = 0; TU.tPatch.value = 1; TU.tStep.value = 0.25; TU.tUrbA.value = 1; TU.tWaterLv.value = 0.7;
   OBJ.octa.position.copy(OCTA.pos); OBJ.octa.rotation.set(0, t * 0.12, 0); OBJ.octa.scale.setScalar(1);
   OBJ.octa.userData.mat.uniforms.uSpread.value = 0; OBJ.octa.userData.core.visible = true; OBJ.octa.userData.halo.visible = true; OBJ.octa.userData.haloInk.visible = true;
   OBJ.unit.position.set(0, 0, 0); OBJ.unit.rotation.set(0, 0, 0);
-  UNIT.arms[0].rotation.set(0, 0, 0); UNIT.arms[1].rotation.set(0, 0, 0); UNIT.eyeMat.uniforms.uEmis.value = 0; UNIT.fan.rotation.z = t * 5;
+  UNIT.arms[0].rotation.set(0, 0, 0); UNIT.arms[1].rotation.set(0, 0, 0); UNIT.elbows[0].rotation.set(0, 0, 0); UNIT.elbows[1].rotation.set(0, 0, 0); UNIT.eyeMat.uniforms.uEmis.value = 0; UNIT.fan.rotation.z = t * 5; UNIT.fan.visible = true;
   OBJ.cage.position.set(0, 0, 0);
   OBJ.lance.position.set(0, 0, 0); OBJ.lance.rotation.set(0, 0, 0);
   OBJ.trailSGD.material.uniforms.uHead.value = 0; OBJ.trailAdam.material.uniforms.uHead.value = 0;
@@ -641,7 +680,7 @@ export const MOODS = {
 };
 
 // ── hard cel shadows: one ortho depth pass from the key light over a chosen box ────────────
-const SHADOW_RES = 2048;
+const SHADOW_RES = 1024;
 const shadowRT = new THREE.WebGLRenderTarget(SHADOW_RES, SHADOW_RES, { depthBuffer: true });
 shadowRT.depthTexture = new THREE.DepthTexture(SHADOW_RES, SHADOW_RES); shadowRT.depthTexture.type = THREE.UnsignedIntType;
 const shadowCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 4000);
@@ -656,12 +695,27 @@ export function shadows(center, size) {
   U.uShadowMat.value.multiplyMatrices(shadowCam.projectionMatrix, shadowCam.matrixWorldInverse);
   const vis = {}; for (const k of ['geo', 'trailSGD', 'trailAdam']) { vis[k] = OBJ[k].visible; OBJ[k].visible = false; }
   const oct = OBJ.octa.userData; const hv = oct.halo.visible; oct.halo.visible = false; oct.haloInk.visible = false;
+  const pa = performance.now();
   scene.overrideMaterial = depthMat; renderer.setRenderTarget(shadowRT); renderer.setClearColor(0, 1); renderer.clear();
   renderer.render(scene, shadowCam);
   renderer.setRenderTarget(null); scene.overrideMaterial = null; renderer.setClearColor(0, 0);
   for (const k in vis) OBJ[k].visible = vis[k]; oct.halo.visible = hv; oct.haloInk.visible = hv;
   U.uShadowMap.value = shadowRT.depthTexture; U.uShadowOn.value = 1;
+  if (window.PROFILE) syncGL(renderer.getContext()); PROF.shadow += performance.now() - pa;
 }
 export function project(p) { const v = new THREE.Vector3(p[0], p[1], p[2]).project(camera); return [(v.x * 0.5 + 0.5) * W, (-v.y * 0.5 + 0.5) * H, v.z]; }
-export function render() { renderer.render(scene, camera); return renderer.domElement; }
+export const PROF = { shadow: 0, main: 0 };
+// depth pre-pass: lay down depth with a trivial shader, then the heavy cel/ink shaders only run on visible fragments
+const preMat = new THREE.ShaderMaterial({ uniforms: { uRiseT: U.uRiseT }, colorWrite: false, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 2,
+  vertexShader: `attribute vec4 aux; uniform float uRiseT;
+  void main(){ vec3 p = position; if (aux.y > 0.0) { float k = smoothstep(aux.x, aux.x + 2.4, uRiseT); p.y -= aux.y * (1.0 - k); }
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`, fragmentShader: `void main(){ gl_FragColor = vec4(0.0); }` });
+export function render() { const a = performance.now();
+  if (OBJ.city.visible || OBJ.terrain.visible || OBJ.geo.visible) {
+    const hide = []; for (const k of ['octa', 'unit', 'lance', 'trailSGD', 'trailAdam', 'cage']) if (OBJ[k].visible) { hide.push(k); OBJ[k].visible = false; }
+    const gv = OBJ.geo.visible; if (gv) OBJ.geo.children[0].visible = false;   // dome is back-faced; skip it in the pre-pass
+    renderer.autoClear = true; scene.overrideMaterial = preMat; renderer.render(scene, camera); scene.overrideMaterial = null;
+    if (gv) OBJ.geo.children[0].visible = true; for (const k of hide) OBJ[k].visible = true;
+    renderer.autoClear = false; renderer.render(scene, camera); renderer.autoClear = true;
+  } else renderer.render(scene, camera); if (window.PROFILE) syncGL(renderer.getContext()); PROF.main += performance.now() - a; return renderer.domElement; }
 export { THREE };

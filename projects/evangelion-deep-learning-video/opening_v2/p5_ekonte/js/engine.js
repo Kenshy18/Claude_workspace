@@ -25,17 +25,18 @@ const PS = L.panel.w / 1440;                          // panel units (1440x1080)
 
 // ── canvases ─────────────────────────────────────────────────────────────────
 const OUT = document.getElementById('out');
-const octx = OUT.getContext('2d');
+const CTX_OPT = { willReadFrequently: true };   // CPU raster: far faster than SwiftShader GL for full-frame composites
+const octx = OUT.getContext('2d', CTX_OPT);
 function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
-const PC = mkCanvas(W, H), pctx = PC.getContext('2d');     // pencil layer
-const MK = mkCanvas(W, H), mctx = MK.getContext('2d');     // marker layer
+const PC = mkCanvas(W, H), pctx = PC.getContext('2d', CTX_OPT);     // pencil layer
+const MK = mkCanvas(W, H), mctx = MK.getContext('2d', CTX_OPT);     // marker layer
 let SHEET = null, TOOTH = null, GRAIN = [], VIGN = null;
 
 // ── paper, tooth, printed form ───────────────────────────────────────────────
 function buildPaper() {
   const w = W + 80, h = H + 80;
   SHEET = mkCanvas(w, h);
-  const g = SHEET.getContext('2d');
+  const g = SHEET.getContext('2d', CTX_OPT);
   g.fillStyle = COL.paper; g.fillRect(0, 0, w, h);
   // low-frequency tone (very subtle): large soft blotches
   const rng = mulberry32(11);
@@ -69,7 +70,7 @@ function buildPaper() {
   drawForm(g);
   // tooth mask for pencil grain (alpha specks), paper-locked
   TOOTH = mkCanvas(w, h);
-  const t = TOOTH.getContext('2d');
+  const t = TOOTH.getContext('2d', CTX_OPT);
   const tid = t.createImageData(w, h), td = tid.data;
   const r3 = mulberry32(99);
   for (let i = 0; i < td.length; i += 4) {
@@ -80,14 +81,14 @@ function buildPaper() {
   t.putImageData(tid, 0, 0);
   // film grain variants (screen space)
   for (let k = 0; k < 4; k++) {
-    const c = mkCanvas(W / 2, H / 2), cg = c.getContext('2d');
+    const c = mkCanvas(W / 2, H / 2), cg = c.getContext('2d', CTX_OPT);
     const gid = cg.createImageData(W / 2, H / 2), gd = gid.data, rr = mulberry32(300 + k);
     for (let i = 0; i < gd.length; i += 4) { const v = rr() * 255; gd[i] = gd[i + 1] = gd[i + 2] = v; gd[i + 3] = 255; }
     cg.putImageData(gid, 0, 0);
     GRAIN.push(c);
   }
   VIGN = mkCanvas(W, H);
-  const vg = VIGN.getContext('2d');
+  const vg = VIGN.getContext('2d', CTX_OPT);
   const rg = vg.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 1.15);
   rg.addColorStop(0, 'rgba(40,30,20,0)'); rg.addColorStop(1, 'rgba(40,30,20,0.22)');
   vg.fillStyle = rg; vg.fillRect(0, 0, W, H);
@@ -543,6 +544,7 @@ function drawMath(ctx, it, p) {
     idx++;
     ctx.globalAlpha = it.alpha * (0.3 + 0.7 * vis);
     if (e.t === 'r') {
+      ctx.setTransform(base);
       const [rx, ry, rw, rh] = e.r;
       const X = x0 + (rx - vb[0]) * k, Y = it.y + (ry + rh / 2) * k;
       if (!e.r.st) e.r.st = buildStroke([[X, Y + jy * k * 0.3], [X + rw * k, Y - jy * k * 0.3]], { seed: it.seed + idx, w: Math.max(1.5, rh * k * 1.1), wob: 0.5, passes: 1, over: 3 });

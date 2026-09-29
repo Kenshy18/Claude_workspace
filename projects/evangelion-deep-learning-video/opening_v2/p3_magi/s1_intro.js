@@ -194,6 +194,10 @@ shot(7.3, 10.4, 'cayley_engraving', (ctx, lt, t, fx) => {
   roundel(ctx, 1210 + 50 * u, 850 - 30 * u, 170, '#d6e8ff', 'PARS IGNOTA · LXX CENTESIMAE', `${fmtInt(RUN.nval)}`);
   text(ctx, 'TABVLA ADDITIONIS · MODVLO XCVII', W / 2, 92, { size: 44, family: '"Cinzel"', weight: 700, color: '#e4efff', align: 'center', ls: 6 });
   ctx.restore();
+  // plate caption: the whole task in one line
+  boxFill(ctx, 450, 930, 540, 110, '#0a2466');
+  boxStroke(ctx, 450, 930, 540, 110, '#d6e8ff', 2); boxStroke(ctx, 458, 938, 524, 94, '#d6e8ff', 1);
+  formula(ctx, 'task', 720, 953, 64, '#e4efff', { align: 'center' });
   // the small light at the centre of the plate
   const g = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, 60);
   g.addColorStop(0, 'rgba(240,248,255,0.95)'); g.addColorStop(0.25, 'rgba(160,210,255,0.5)'); g.addColorStop(1, 'rgba(60,120,255,0)');

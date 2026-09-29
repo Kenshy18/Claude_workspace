@@ -17,10 +17,11 @@ const vis = (...n) => { for (const k of n) OBJ[k].visible = true; };
 const L3 = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 const q = (t, fps = 12) => Math.floor(t * fps) / fps;                // limited-animation time (on twos)
 function render3d(ctx, sky, o = {}) {
+  if (U.uMode.value > 0.5 && OBJ.unit.visible) WD.UNIT.fan.visible = false;   // fan uses basic materials: hide it in sketch/silhouette modes
   if (o.shadow) WD.shadows(o.shadow.c || [cx, 30, cz], o.shadow.s || 260);
   if (sky) P.sky(ctx, sky, o.skyO || {});
   else if (o.bg) { ctx.fillStyle = o.bg; ctx.fillRect(0, 0, W, H); }
-  ctx.drawImage(WD.render(), 0, 0);
+  ctx.imageSmoothingQuality = 'low'; ctx.drawImage(WD.render(), 0, 0, W, H);
 }
 function fill(ctx, c) { ctx.fillStyle = c; ctx.fillRect(0, 0, W, H); }
 function shake(t, amp, rate = 30) { const h = (n) => { const x = Math.sin(n * 91.7 + 3.1) * 43758.5; return x - Math.floor(x) - 0.5; }; const f = Math.floor(t * rate); return [h(f) * amp, h(f + 57) * amp]; }
@@ -95,9 +96,10 @@ function unitPose(o = {}) {
   vis('unit'); OBJ.unit.position.set(o.x || 0, o.y || 0, o.z || 0); OBJ.unit.rotation.y = o.ry || 0;
   WD.UNIT.arms[0].rotation.z = -(o.spread || 0); WD.UNIT.arms[1].rotation.z = o.spread || 0;
   WD.UNIT.arms[0].rotation.x = o.reach || 0;
+  WD.UNIT.elbows[0].rotation.z = o.bend || 0; WD.UNIT.elbows[1].rotation.z = -(o.bend || 0);   // positive bend = forearms droop back down
   WD.UNIT.eyeMat.uniforms.uEmis.value = o.eyes ?? 1;
 }
-const UNIT_CITY = [cx + 40, 0, cz + 30];   // where Unit-01 stands in the city (chorus)
+const UNIT_CITY = [WD.UNIT_SPOT[0], 0, WD.UNIT_SPOT[1]];   // where Unit-01 stands in the city (chorus): a cleared plaza
 
 // ── the cut list ─────────────────────────────────────────────────────────────────────────
 const S = [];
@@ -305,7 +307,7 @@ add(62.2, 64.03, 'unit_close_b', (ctx, lt, t, fx) => {
   vbars(ctx, t); render3d(ctx, null);
 });
 add(64.03, 66.75, 'wings', (ctx, lt, t, fx) => {
-  WD.mood('cage'); const sp = ease.out(clamp(lt / 0.5)) * 1.35; unitPose({ eyes: 1, spread: sp }); WD.U.uL.value.set(0, 0.4, 0.9).normalize();
+  WD.mood('cage'); const sp = ease.out(clamp(lt / 0.5)); unitPose({ eyes: 1, spread: 0.25 + sp * 0.95, bend: sp * 0.4 }); WD.U.uL.value.set(0, 0.4, 0.9).normalize();
   WD.setCam([0, 38, 150 - lt * 8], [0, 40, 0], 38);
   vbars(ctx, t, { top: '#b8281a', bot: '#f07a24' });
   const c = WD.project([0, 52, -4]);
@@ -427,12 +429,12 @@ add(82.63, 83.7, 'director', (ctx, lt, t, fx) => {
   const s = seg(t, 83.6, 83.72); if (s > 0) { ctx.save(); ctx.fillStyle = '#41ff5a'; ctx.beginPath(); const x = lerp(-600, W + 200, s); ctx.moveTo(x - 1400, 700); ctx.lineTo(x, 520); ctx.lineTo(x, 640); ctx.lineTo(x - 1400, 820); ctx.fill(); ctx.restore(); }
 });
 add(83.7, 84.4, 'c_arms_close', (ctx, lt, t, fx) => {
-  WD.mood('cage'); const tq = q(lt, 8); unitPose({ eyes: 1, spread: 0.3 + tq * 1.2 }); WD.U.uL.value.set(0, 0.5, 0.8).normalize();
+  WD.mood('cage'); const tq = q(lt, 8); unitPose({ eyes: 1, spread: 0.3 + tq * 1.2, bend: tq * 0.55 }); WD.U.uL.value.set(0, 0.5, 0.8).normalize();
   WD.setCam([0, 52, 38 + tq * 20], [0, 50, 0], 44); vbars(ctx, t, { drift: 80 }); render3d(ctx, null);
   if (lt < 0.1) { ctx.save(); ctx.fillStyle = '#41ff5a'; ctx.beginPath(); ctx.moveTo(0, 700); ctx.lineTo(W, 560); ctx.lineTo(W, 700); ctx.lineTo(0, 840); ctx.fill(); ctx.restore(); }
 });
 add(84.4, 86.1, 'c_arms_full', (ctx, lt, t, fx) => {
-  WD.mood('cage'); unitPose({ eyes: 1, spread: 1.3 }); WD.U.uL.value.set(0, 0.4, 0.9).normalize();
+  WD.mood('cage'); unitPose({ eyes: 1, spread: 1.2, bend: 0.4 }); WD.U.uL.value.set(0, 0.4, 0.9).normalize();
   WD.setCam([0, 38, 150 - lt * 10], [0, 40, 0], 38); vbars(ctx, t, { drift: 60 }); render3d(ctx, null);
   if (lt > 0.8) { const a = 0.35 * seg(lt, 0.8, 1.2); ctx.save(); ctx.globalAlpha = a; A.l1Emblem(ctx, 960, 470, 260, 1, t); ctx.restore(); }
 });

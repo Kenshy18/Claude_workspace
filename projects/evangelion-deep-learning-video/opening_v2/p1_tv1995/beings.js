@@ -215,12 +215,12 @@ function cardBoxes(o = {}) {
       g.fillRect(w * 0.3, h * 0.505, w * 0.4, h * 0.012);
       fan(g, w / 2, h * 0.33, w * 0.36, o.fanRot || 0); fan(g, w / 2, h * 0.68, w * 0.36, (o.fanRot || 0) + 0.4);
       // the eyes: two slanted LED slits under the bracket
-      const ec = eyes > 0.5 ? '#fffbe6' : '#6a5a2a';
+      const ec = eyes > 0.5 ? '#fffbe6' : (P.eyeOff || '#6a5a2a');
       g.fillStyle = ec;
       g.beginPath(); g.moveTo(w * 0.2, h * 0.055); g.lineTo(w * 0.42, h * 0.075); g.lineTo(w * 0.4, h * 0.09); g.lineTo(w * 0.22, h * 0.078); g.fill();
       g.beginPath(); g.moveTo(w * 0.8, h * 0.055); g.lineTo(w * 0.58, h * 0.075); g.lineTo(w * 0.6, h * 0.09); g.lineTo(w * 0.78, h * 0.078); g.fill();
       g.fillStyle = '#ff9c3a'; g.fillRect(w * 0.46, h * 0.045, w * 0.08, h * 0.05);
-      g.fillStyle = '#e8e2f6'; g.font = `700 ${w * 0.075}px ${COND}`; g.textAlign = 'center'; g.fillText('TYPE-01', w / 2, h * 0.955);
+      g.fillStyle = '#e8e2f6'; g.font = `700 ${w * 0.075}px ${COND}`; g.textAlign = 'center'; g.fillText(o.label || 'TYPE-01', w / 2, h * 0.955);
     },
     side: o.silhouette ? null : (g, d, h) => { g.fillStyle = '#26232f'; g.fillRect(d * 0.1, h * 0.04, d * 0.8, h * 0.92); g.strokeStyle = '#4c4860'; g.lineWidth = 3; for (let y = h * 0.06; y < h * 0.95; y += 14) { g.beginPath(); g.moveTo(d * 0.12, y); g.lineTo(d * 0.88, y); g.stroke(); } } });
   B.push({ c: [0, -436, 0], s: [330, 34, 60], col: P.silver });                       // bracket (the "shoulders")

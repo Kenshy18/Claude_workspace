@@ -36,4 +36,5 @@ window.SHOT_INITS = [];
 window.FORMULA_LIST = [
   ['task', '#cfe4ff'], ['cosadd', '#2a0400'], ['cosadd', '#39f07a'], ['omega', '#1b1a1d'], ['adamw', '#cfe4ff'],
   ['logits', '#39f07a'], ['power', '#ffae1a'], ['cosadd', '#1b1a1d'],
+  ['adamw', '#ff8a1c'], ['power', '#c01a12'], ['task', '#e4efff'],
 ];

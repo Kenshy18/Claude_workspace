@@ -47,6 +47,9 @@ function freqFile(ctx, k, bg, t) {
   condText(ctx, `POWER ${pct(pw)}`, tx0, 600, 64, '#101014', { sx: 0.84 });
   condText(ctx, `RANK ${rank} / 48`, tx0, 690, 64, '#101014', { sx: 0.84 });
   monoText(ctx, 'STEP 30,000', tx0, 770, 34, '#101014', { family: '"Liberation Mono"' });
+  const key = RUN.key.includes(k);
+  boxFill(ctx, tx0, 810, key ? 250 : 330, 56, '#101014');
+  condText(ctx, key ? 'KEY-5' : 'LATE ARRIVAL', tx0 + 14, 853, 44, bg, { sx: 0.84 });
 }
 function pencilPaper(ctx, seed) {
   fill(ctx, '#efece3');
@@ -77,7 +80,7 @@ SHOT_INITS.push(() => {
 shot(66.8, 67.37, 'grok_valacc', (ctx, lt, t, fx) => {
   const step = stepAt(t);
   crt(fx, { curve: 0.05, bloom: 0.7, thr: 0.5 });
-  if (lt < 1 / 30) { fx.flash = 0.85; fx.flashCol = [0.9, 1, 0.92]; }
+  if (lt < 0.02) { fx.flash = 1; fx.flashCol = [0.96, 1, 0.97]; }      // one white frame on the downbeat
   fill(ctx, '#020603');
   const G = '#3cff78', GD = '#0f5a26';
   const px = 100, py = 250, pw = 800, ph = 640;
@@ -110,10 +113,11 @@ shot(67.37, 68.12, 'grok_scope', (ctx, lt, t, fx) => {
   const step = stepAt(t);
   crt(fx, { curve: 0.05, bloom: 0.8, thr: 0.45 });
   fill(ctx, '#020603');
-  if (lt < 0.07) { fx.flash = 1 - lt * 6; fx.flashCol = [1, 1, 1]; }
   const e = embAt(step);
   const cx = 720, cy = 520, R = 400;
-  scope(ctx, cx, cy, R, e, '#3cff78', '#0f5a26', { starP: clamp(0.25 + lt * 1.6), starAlpha: 0.55, rot: -lt * 0.3, dot: 8 });
+  const hot = lt < 0.07;                 // the eyes-flash frames of the original: the 97 points burn white, the tube stays dark
+  if (hot) { fx.bloom = 1.6; fx.thr = 0.3; }
+  scope(ctx, cx, cy, R, e, hot ? '#f4fff6' : '#3cff78', '#0f5a26', { starP: clamp(0.25 + lt * 1.6), starAlpha: hot ? 0.8 : 0.55, rot: -lt * 0.3, dot: hot ? 11 : 8 });
   monoText(ctx, `EMBEDDING ON FOURIER PLANE k=${e.k}   r-CV ${e.cv.toFixed(3)}   STEP ${fmtInt(step)}`, cx, 1030, 26, '#3cff78', { align: 'center' });
   if (lt > 0.23) monoText(ctx, `n → n+1 : THE NUMBER LINE WINDS ${e.k}× AROUND  {97/${e.k}}`, cx, 70, 28, '#3cff78', { align: 'center' });
 });
@@ -175,7 +179,7 @@ shot(70.12, 70.33, 'card_atf', (ctx) => {
 });
 shot(70.33, 70.5, 'red_formula', (ctx) => {
   fill(ctx, '#d0120a');
-  formula(ctx, 'cosadd', 720, 470, 90, '#2a0400', { align: 'center' });
+  formula(ctx, 'cosadd', 720, 500, 60, '#2a0400', { align: 'center' });
 });
 shot(70.5, 71.25, 'moon', (ctx, lt, t, fx) => {
   fill(ctx, '#0c2448'); fx.bloom = 0.15; fx.thr = 0.9;
@@ -210,7 +214,7 @@ shot(72.25, 72.37, 'emblem', (ctx) => {
   boxFill(ctx, 720 - 26, 470 - 170, 52, 340, '#e0140c'); boxFill(ctx, 720 - 170, 470 - 26, 340, 52, '#e0140c');
   text(ctx, 'MOD XCVII', 720, 930, { size: 96, family: '"Cinzel"', weight: 700, color: '#e0140c', align: 'center', ls: 8 });
 });
-// mugshots: the seven frequencies that end up carrying 92.7% of the embedding's power
+// mugshots: the five key frequencies (top-5 at step 14k), then the two late arrivals k=3, k=28
 shot(72.37, 72.62, 'file_12', (ctx, lt, t) => freqFile(ctx, 12, '#3a9a92', t));
 shot(72.62, 72.75, 'fmap', (ctx, lt, t, fx) => {
   fill(ctx, '#000'); fx.bloom = 0.4; fx.thr = 0.7;
@@ -297,7 +301,9 @@ shot(77.25, 77.37, 'mug_keyshare', (ctx) => {
   fill(ctx, '#f2b4c4');
   ctx.save(); ctx.strokeStyle = '#3a0a1a'; ctx.lineWidth = 10; ctx.beginPath();
   RUN.key_share.forEach((v, i) => { const x = 100 + (i / LAST) * 1240, y = 940 - v * 800; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke(); ctx.restore();
-  text(ctx, `KEY-7 POWER SHARE ${pct(RUN.key_share[0])} → ${pct(RUN.key_share[LAST])}`, 110, 1030, { size: 60, family: COND, weight: 700, color: '#3a0a1a', sx: 0.84 });
+  for (const st of [10000, 14000]) { const i = st / 250, x = 100 + (i / LAST) * 1240, y = 940 - RUN.key_share[i] * 800; dot(ctx, x, y, 14, '#3a0a1a');
+    text(ctx, `${fmtInt(st)}: ${pct(RUN.key_share[i], 0)}`, x + 24, y + 44, { size: 44, family: COND, weight: 700, color: '#3a0a1a', sx: 0.84 }); }
+  text(ctx, `k = 1·12·20·34·38  POWER SHARE ${pct(RUN.key_share[0])} → ${pct(RUN.key_share[LAST])}`, 110, 1030, { size: 58, family: COND, weight: 700, color: '#3a0a1a', sx: 0.84 });
 });
 shot(77.37, 77.62, 'mug_cv', (ctx) => {
   fill(ctx, '#c8a0e0');
@@ -331,7 +337,7 @@ shot(78.62, 78.87, 'berserk_dark', (ctx, lt, t, fx) => {
   dot(ctx, 600, 470, 10, '#9aff6a'); dot(ctx, 840, 470, 10, '#9aff6a');
 });
 shot(78.87, 79.25, 'commander_young', (ctx, lt, t, fx) => {
-  fill(ctx, '#e8e0d0'); fx.bloom = 0.8; fx.thr = 0.5;
+  fill(ctx, '#e8e0d0'); fx.bloom = 0;
   sil(ctx, 'gendo', 720 - 300 * 1.6, 100, 1.6, '#1a1612'); sil(ctx, 'gendoHands', 720 - 300 * 1.6, 100, 1.6, '#1a1612');
   const gx = 720, gy = 100 + 1.6 * 150;
   ctx.fillStyle = '#ff2a14'; ctx.fillRect(gx - 1.6 * 58, gy - 12, 1.6 * 46, 20); ctx.fillRect(gx + 1.6 * 12, gy - 12, 1.6 * 46, 20);
@@ -346,21 +352,22 @@ shot(79.25, 79.5, 'pencil_memo', (ctx) => {
   text(ctx, '丸暗記…', 700, 330, { size: 64, family: '"Klee One"', weight: 600, color: '#4a4a52' });
   text(ctx, 'val = 0 %', 900, 800, { size: 48, family: '"Klee One"', weight: 600, color: '#4a4a52' });
 });
-shot(79.5, 79.75, 'card_second', (ctx) => card(ctx, [{ s: 'SECOND', y: 470, size: 230, col: '#ff1e1e' }, { s: 'DESCENT', y: 760, size: 230, col: '#ff1e1e' }]));
+shot(79.5, 79.75, 'card_second', (ctx) => card(ctx, [{ s: 'SECOND', y: 470, size: 240, col: '#ff1e1e' }, { s: 'IMPACT', y: 770, size: 240, col: '#ff1e1e' }]));
 shot(79.75, 80.12, 'white_descent', (ctx, lt, t, fx) => {
   fill(ctx, '#000'); fx.bloom = 0.9; fx.thr = 0.5;
   const M = plotMap(80, 160, 1280, 800, { x0: 0, x1: 16000, y0: 0, y1: 23 });
   plotMetric(ctx, M, 'val_loss', 0, 16000, '#f4f4f0', 16);
 });
 shot(80.12, 80.37, 'crater', (ctx, lt, t, fx) => {
+  // satellite view of the impact: the embedding at val acc 50% (step ≈ G50), seen from orbit
   fill(ctx, '#140a2a'); fx.bloom = 0.9; fx.thr = 0.45;
   ctx.save(); ctx.translate(720, 600); ctx.scale(1.35, 0.42); ctx.rotate(lt * 0.2);
   const g = ctx.createRadialGradient(0, 0, 40, 0, 0, 520); g.addColorStop(0, '#ffe0a0'); g.addColorStop(0.3, '#ff5a1a'); g.addColorStop(0.75, '#c0102a'); g.addColorStop(1, 'rgba(60,10,60,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 520, 0, 7); ctx.fill();
-  drawEmb(ctx, 0, 0, 420, 0, { emb: embSnap(RUN.VPEAK[0]), color: '#ffd0a0', dot: 8, star: false });
+  drawEmb(ctx, 0, 0, 420, 0, { emb: embSnap(RUN.G50), color: '#ffd0a0', dot: 8, star: false });
   ctx.restore();
-  boxFill(ctx, 60, 60, 330, 70, '#e0140c'); monoText(ctx, `STEP ${fmtInt(RUN.VPEAK[0])}`, 75, 110, 40, '#fff', { weight: 700, family: '"Liberation Mono"' });
-  boxFill(ctx, 900, 950, 480, 70, '#e0140c'); monoText(ctx, `L_val ${RUN.VPEAK[1].toFixed(2)} nats`, 915, 1000, 40, '#fff', { weight: 700, family: '"Liberation Mono"' });
+  boxFill(ctx, 60, 60, 360, 70, '#e0140c'); monoText(ctx, `STEP ${fmtInt(RUN.G0)}`, 75, 110, 40, '#fff', { weight: 700, family: '"Liberation Mono"' });
+  boxFill(ctx, 820, 950, 560, 70, '#e0140c'); monoText(ctx, `+${fmtInt(RUN.G50 - RUN.G0)} STEPS  VAL 50%`, 835, 1000, 40, '#fff', { weight: 700, family: '"Liberation Mono"' });
 });
 shot(80.37, 80.5, 'blue_void', (ctx, lt, t, fx) => {
   fill(ctx, '#04102e'); fx.bloom = 0.8; fx.thr = 0.5;
@@ -445,9 +452,15 @@ shot(83.7, 86.1, 'light_bars', (ctx, lt, t, fx) => {
     ctx.fillRect(x - 5 - 4 * v, 0, 10 + 8 * v, H);
   }
   ctx.restore();
+  // the "+" of the task, standing in the light like the unit with its arms spread (unit-01 purple, green trim)
   const sp = E.outCubic(seg(t, 83.7, 84.8));
-  ctx.save(); ctx.translate(720, lerp(760, 520, sp)); ctx.scale(lerp(2.6, 1, sp), lerp(2.6, 1, sp)); ctx.fillStyle = '#1e0604';
-  ctx.fillRect(-560, -46, 1120, 92); ctx.fillRect(-46, -380, 92, 900); ctx.restore();
+  ctx.save(); ctx.translate(720, lerp(760, 520, sp)); ctx.scale(lerp(2.6, 1, sp), lerp(2.6, 1, sp));
+  const arm = (x, y, w, h) => { ctx.fillStyle = '#07030c'; ctx.fillRect(x - 6, y - 6, w + 12, h + 12); ctx.fillStyle = '#2a1242'; ctx.fillRect(x, y, w, h); };
+  arm(-560, -46, 1120, 92); arm(-46, -380, 92, 900);
+  ctx.fillStyle = '#0d0616'; ctx.fillRect(-52, -52, 104, 104);
+  ctx.fillStyle = '#6cff3a';
+  for (const s_ of [-1, 1]) { ctx.fillRect(-540, s_ * 22 - 3, 480, 6); ctx.fillRect(60, s_ * 22 - 3, 480, 6); ctx.fillRect(s_ * 22 - 3, -360, 6, 300); ctx.fillRect(s_ * 22 - 3, 60, 6, 440); }
+  ctx.restore();
   const da = seg(t, 85.1, 85.7);
   if (da > 0) { ctx.save(); ctx.globalAlpha = da * 0.85; drawEmb(ctx, 720, 520, 380, 0, { emb: embAt(step), color: '#eaf6ff', dot: 7, star: true, starAlpha: 0.55, starColor: '#cfe8ff' }); ctx.restore(); }
 });
@@ -468,7 +481,7 @@ shot(86.1, 87.6, 'converged', (ctx, lt, t, fx) => {
   jpText(ctx, '学習完了', 90, 150, 80, bl, { weight: 900 });
   monoText(ctx, 'CONVERGED  RUN-01  (a+b) mod 97', 470, 140, 30, bl);
   const rows = [['STEP', '30,000'], ['TRAIN ACC', pct(RUN.train_acc[NLOG - 1])], ['VAL ACC', pct(RUN.val_acc[NLOG - 1])], ['‖W‖', RUN.wnorm[NLOG - 1].toFixed(1)],
-    ['KEY FREQS', RUN.key.join(' ')], ['KEY SHARE', pct(RUN.key_share[LAST])], ['r-CV', RUN.cv[LAST].toFixed(3)]];
+    ['KEY FREQS k', RUN.key.join(' ')], ['KEY-5 POWER', pct(RUN.key_share[LAST])], ['EMB r-CV', RUN.cv[LAST].toFixed(3)]];
   rows.forEach(([k, v], i) => { monoText(ctx, k, 110, 290 + i * 100, 48, bl, { alpha: 0.85 }); monoText(ctx, v, 1330, 290 + i * 100, 64, '#ffffff', { align: 'right' }); });
   ctx.restore();
 });

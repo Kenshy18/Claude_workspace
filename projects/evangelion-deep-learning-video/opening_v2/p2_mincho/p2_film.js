@@ -27,6 +27,7 @@
     // Keter..Malkuth positions (unit: tree height 1, centre x 0)
     n: [[0, 0.06], [0.29, 0.2], [-0.29, 0.2], [0.29, 0.44], [-0.29, 0.44], [0, 0.55], [0.29, 0.68], [-0.29, 0.68], [0, 0.8], [0, 0.95]],
     lab: ['INPVT', 'QVERY', 'CLAVIS', 'VALOR', 'SOFTMAX', 'ATTENTIO', 'RESIDVVM', 'NORMA', 'MLP', 'LOGITS'],
+    sym: ['x', 'Q', 'K', 'V', 'σ', 'α', '+', 'γ', 'φ', 'z'],
     e: [[0, 1], [0, 2], [0, 5], [1, 2], [1, 3], [1, 5], [2, 4], [2, 5], [3, 4], [3, 5], [3, 6], [4, 5], [4, 7], [5, 6], [5, 7], [5, 8], [6, 7], [6, 8], [6, 9], [7, 8], [7, 9], [8, 9]],
   };
   function tree(ctx, cx, top, hgt, col, lw, p = 1, o = {}) {
@@ -48,9 +49,13 @@
       if (q <= 0) return;
       ctx.beginPath(); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + q * Math.PI * 2); ctx.stroke();
       if (o.labels && q >= 1) {
-        ctx.save(); ctx.font = `700 ${Math.round(r * 0.4)}px ${FC}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.letterSpacing = '1px'; ctx.fillText(TREE.lab[i], x, y); ctx.restore();
-        ctx.beginPath(); ctx.arc(x, y, r * 0.8, 0, Math.PI * 2); ctx.lineWidth = lw * 0.5; ctx.stroke(); ctx.lineWidth = lw;
+        // engraved medallion: inner ring, the Latin name running round the top, the symbol in the middle
+        ctx.beginPath(); ctx.arc(x, y, r * 0.64, 0, Math.PI * 2); ctx.lineWidth = lw * 0.45; ctx.stroke(); ctx.lineWidth = lw;
+        const lab = TREE.lab[i], fsz = Math.round(r * 0.28);
+        ctx.save(); ctx.font = `700 ${fsz}px ${FC}`; ctx.letterSpacing = '0px';
+        const span = (ctx.measureText(lab).width + lab.length) / (r * 0.82); ctx.restore();
+        arcText(ctx, lab, x, y, r * 0.8, -Math.PI / 2 - span / 2, fsz, col, FC, '', 700);
+        lat(ctx, TREE.sym[i], x, y + r * 0.22, { size: r * 0.62, family: FE, style: 'italic', weight: 500, align: 'center', color: col });
       }
     });
     ctx.restore();
@@ -175,7 +180,7 @@
     ['Gradientia', 'g', 0], ['Regula Catenæ', '∂', 1], ['Entropia Crucis', 'H', 2], ['Attentio', 'Q·K', 3], ['Residuum', '+', 4], ['Momentum', 'β', 5],
     ['Descensus', '∇', 6], ['Normalisatio', 'σ', 7], ['Initium', 'θ₀', 8], ['Epocha', 'τ', 9], ['Stochastica', 'ξ', 10], ['Functio Damni', 'ℒ', 11],
   ];
-  function engraving(ctx, lt, col, cx, cy) {
+  function engraving(ctx, lt, col, cx, cy, fillA = 1) {
     ctx.save();
     ctx.strokeStyle = col; ctx.fillStyle = col;
     // rays
@@ -193,7 +198,7 @@
       const a = (i / 12) * Math.PI * 2 - Math.PI / 2 + 0.26;
       const rr = 470 + 90 * (i % 2);
       const mx = cx + Math.cos(a) * rr, my = cy + Math.sin(a) * rr, mr = 74 + 10 * (i % 3);
-      ctx.save(); ctx.fillStyle = K.blueDeep; ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.globalAlpha *= fillA; ctx.fillStyle = K.blueDeep; ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fill(); ctx.restore();
       ring(ctx, mx, my, mr, col, 2); ring(ctx, mx, my, mr - 26, col, 1);
       arcText(ctx, lab.toUpperCase(), mx, my, mr - 13, -Math.PI / 2 - (lab.length * 0.045), 15, col, FC, '', 400);
       lat(ctx, sym, mx, my + 14, { size: 40, family: FE, style: 'italic', weight: 500, align: 'center', color: col });
@@ -212,7 +217,7 @@
     ctx.save();
     ctx.translate(W / 2, H / 2); ctx.rotate(lerp(-0.08, 0.22, p)); ctx.scale(s, s);
     ctx.translate(-lerp(720, 980, p), -lerp(560, 360, p));
-    engraving(ctx, lt, k < 0.5 ? '#b7d4ff' : '#cfe2ff', 720, 560);
+    withAlpha(ctx, 0.35 + 0.65 * k, () => engraving(ctx, lt, '#cfe2ff', 720, 560, k));
     ctx.restore();
   });
   S(10.4, (ctx, lt, dur, t) => {
@@ -248,7 +253,7 @@
   });
   // rapid cuts of the operator: × turning into + (multiply, then accumulate)
   const XCUTS = [
-    [14.267, (c, t) => crossBars(c, 900, 520, 2000, 64, lerp(0.62, 0.72, seg(t, 14.267, 14.433)), '#27272a')],
+    [14.267, (c, t) => crossBars(c, 900, 520, 3200, 64, lerp(0.62, 0.72, seg(t, 14.267, 14.433)), '#27272a')],
     [14.433, (c, t) => { c.save(); c.translate(720, 540); c.rotate(-0.95); c.fillStyle = '#1c1c1f'; c.fillRect(-1400, -95, 2800, 190); c.restore(); }],
     [14.567, (c, t) => crossBars(c, 610, 470, 620, 26, lerp(0.8, 0.62, seg(t, 14.567, 14.733)), '#3a3a3e')],
     [14.733, (c) => { withAlpha(c, 0.18, () => bg(c, '#9a9a9a')); }],
@@ -330,7 +335,7 @@
     // x slides in from the right (26.3), y from the left (30.2): figures standing in the sky
     const ys = E1(seg(t, 26.3, 27.3)), xs = E1(seg(t, 30.2, 31.2));
     if (ys > 0) fml(ctx, 'y', lerp(1760, 1250, ys) - drift * 25, 1010, 1300, K.ink, { align: 'center' });
-    if (xs > 0) fml(ctx, 'x', lerp(-420, 140, xs) + drift * 18, 1235, 1350, K.ink, { align: 'center' });
+    if (xs > 0) fml(ctx, 'x', lerp(-420, 150, xs) + drift * 18, 1150, 1250, K.ink, { align: 'center' });
   });
   CR(23.4, 26.15, (ctx, t) => {
     const a = dissolve(t, 23.4, 26.15, 0.05, 0.25);
@@ -386,23 +391,26 @@
   S(39.3, (ctx, lt, dur, t) => {
     sunset(ctx, t);
     ctx.save(); ctx.translate(930, 330); ctx.rotate(-0.42); fml(ctx, 'partial', 0, 520, 1500, K.ink, { align: 'center' }); ctx.restore();
-    // zoom stepped on the detected cuts (the original animates this push on 5s)
+    // push stepped on the detected cuts (the original animates this push on 5s)
     let step = 0; for (const c of TREECUTS) if (t >= c) step++;
-    const z = 1 + step * 0.055 + seg(t, 39.3, 41.6) * 0.02;
+    const z = 1 + step * 0.028 + seg(t, 39.3, 41.6) * 0.012;
     const pdraw = E1(seg(t, 39.3, 40.4));
-    ctx.save(); pushAt(ctx, z, 720, 470);
+    ctx.save(); pushAt(ctx, z, 720, 300);
     const G = K.green;
-    // heading engraving
+    // plate heading, set like Kircher's SYSTEMA SEPHIROTICVM · X DIVINORVM NOMINVM
     withAlpha(ctx, seg(t, 39.3, 39.6), () => {
-      ctx.save(); ctx.fillStyle = G; ctx.beginPath(); ctx.arc(720, 128, 44, Math.PI, 0); ctx.fill(); ctx.restore();
-      lat(ctx, 'HORIZON', 650, 150, { size: 40, family: FC, weight: 400, color: G, align: 'right', ls: 2 });
-      lat(ctx, 'CONTEXTVS', 790, 150, { size: 40, family: FC, weight: 400, color: G, align: 'left', ls: 2 });
-      lat(ctx, 'SYSTEMA', 440, 300, { size: 46, family: FC, weight: 400, color: G, align: 'right', ls: 3 });
-      lat(ctx, 'ATTENTIONIS', 1000, 300, { size: 46, family: FC, weight: 400, color: G, align: 'left', ls: 3 });
-      lat(ctx, 'X STRATORVM', 440, 354, { size: 34, family: FC, weight: 400, color: G, align: 'right', ls: 2 });
-      lat(ctx, 'NOMINA', 1000, 354, { size: 34, family: FC, weight: 400, color: G, align: 'left', ls: 2 });
+      const hd = { size: 40, family: FC, weight: 400, color: G, ls: 4 };
+      lat(ctx, 'SYSTEMA', 640, 96, { ...hd, align: 'right' });
+      lat(ctx, 'ATTENTIONIS', 800, 96, { ...hd, align: 'left' });
+      lat(ctx, 'X TENSORVM', 610, 146, { ...hd, size: 30, align: 'right', ls: 3 });
+      lat(ctx, 'NOMINVM', 830, 146, { ...hd, size: 30, align: 'left', ls: 3 });
+      line(ctx, 250, 166, 600, 166, G, 1.5); line(ctx, 840, 166, 1190, 166, G, 1.5);
+      // side legends, like the engraved notes beside the tree
+      const nt = { size: 22, family: FE, style: 'italic', weight: 500, color: G };
+      lat(ctx, 'Vaswani et al.', 150, 430, { ...nt }); lat(ctx, 'MMXVII', 150, 460, { ...nt, family: FC, style: '', weight: 400, ls: 2 });
+      lat(ctx, 'Via Residui', 1290, 430, { ...nt, align: 'right' }); lat(ctx, 'semper aperta', 1290, 460, { ...nt, align: 'right' });
     });
-    tree(ctx, 720, 170, 860, G, 3.4, pdraw, { labels: true, double: true, r: 0.064 });
+    tree(ctx, 720, 180, 880, G, 3.2, pdraw, { labels: true, double: true, r: 0.066 });
     ctx.restore();
   });
   S(41.6, (ctx, lt, dur, t) => {
@@ -412,7 +420,7 @@
     const a = 0.34 * seg(t, 41.6, 42.4) * (1 - seg(t, 44.75, 45.05));
     const drift = seg(t, 41.6, 48.4);
     fml(ctx, 'argmin', 110 - drift * 40, 640, 150, K.white, { alpha: a });
-    fml(ctx, 'L', lerp(1250, 1330, E2(seg(t, 44.6, 45.2))), 1180, 1250, '#1a0c05', { align: 'center' });
+    fml(ctx, 'L', lerp(1250, 1440, E2(seg(t, 44.6, 45.2))), 1180, 1250, '#1a0c05', { align: 'center' });
   });
   CR(42.3, 44.9, (ctx, t) => {
     const a = dissolve(t, 42.3, 44.9, 0.25, 0.15);
@@ -431,7 +439,7 @@
     jp(ctx, '「', c2 - fw / 2 - 4, 334, { size: 54, weight: 900, sx: 0.84, color: K.white, alpha: a, align: 'right' });
     lat(ctx, 'FLY ME TO THE MINIMUM', c2, 332, { size: 50, family: FR, weight: 700, sx: 0.8, align: 'center', color: K.white, alpha: a });
     jp(ctx, '」', c2 + fw / 2 + 4, 334, { size: 54, weight: 900, sx: 0.84, color: K.white, alpha: a });
-    const rows = [['作詞', '順伝播', 'Steepest Descent'], ['作曲', '逆伝播', 'Momentum'], ['編曲', '最適化器', 'Cosine Annealing'], ['歌', '損失関数', 'SOFTMAX']];
+    const rows = [['作詞', '順伝播', 'Steepest Descent'], ['作曲', '逆伝播', 'Heavy Ball'], ['編曲', '最適化器', 'Cosine Annealing'], ['歌', '損失関数', 'LION']];
     rows.forEach(([r, j, e], i) => {
       const y = 452 + i * 93;
       role(ctx, r, 162, y, a, { size: 44, align: 'center' });
@@ -536,20 +544,19 @@
     fml(ctx, 'chain', -1180, 700, 330, '#16202a', { sw: 12 });
   });
   function angledBars(ctx, t, col, bgc, labels) {
+    // the attention map seen edge-on: slanted bars in perspective, thicker toward the camera
     bg(ctx, bgc);
-    ctx.save(); ctx.fillStyle = col;
     const off = (t * 900) % 240;
     for (let i = -2; i < 9; i++) {
-      const y = i * 160 + off * 0.5;
-      poly(ctx, [[-100, y], [1100, y - 260], [1100, y - 150], [-100, y + 110]], { fill: col });
+      const y = i * 170 + off * 0.5;
+      poly(ctx, [[-100, y], [1090, y - 250], [1090, y - 170], [-100, y + 120]], { fill: col });
     }
-    for (let i = 0; i < 6; i++) poly(ctx, [[1150 + i * 60, 0], [1180 + i * 60, 0], [1120 + i * 60, 1080], [1090 + i * 60, 1080]], { fill: col });
-    ctx.restore();
-    line(ctx, 0, 820, W, 700, col, 3);
-    labels.forEach(([s, x, y]) => lat(ctx, s, x, y, { size: 46, family: FH, weight: 700, style: 'italic', color: col === '#050505' ? '#fff' : col, sx: 0.9 }));
+    for (let i = 0; i < 3; i++) poly(ctx, [[1120 + i * 56, 0], [1146 + i * 56, 0], [1098 + i * 56, 1080], [1072 + i * 56, 1080]], { fill: col });
+    line(ctx, 0, 820, 1260, 694, col, 3);
+    labels.forEach(([s, x, y]) => { lat(ctx, s, x, y, { size: 44, family: FH, weight: 700, style: 'italic', color: col, sx: 0.9 }); line(ctx, x - 6, y + 12, x + 120, y + 12, col, 2); });
   }
-  S(52.4, (ctx, lt, dur, t) => angledBars(ctx, t, '#ff2a1a', '#140204', [['L06', 1250, 250], ['H08', 1130, 830]]));
-  S(52.767, (ctx, lt, dur, t) => angledBars(ctx, t, '#3fe07a', '#021408', [['L06', 1250, 250], ['H08', 1130, 830]]));
+  S(52.4, (ctx, lt, dur, t) => angledBars(ctx, t, '#ff2a1a', '#140204', [['L05', 1300, 250], ['H03', 1300, 700]]));
+  S(52.767, (ctx, lt, dur, t) => angledBars(ctx, t, '#3fe07a', '#021408', [['L05', 1300, 250], ['H03', 1300, 700]]));
   S(52.9, (ctx, lt, dur, t) => {
     // the block in its cage: orange, black restraint bars, the forward pass stacked like a body
     bg(ctx, '#e8561a');
@@ -621,10 +628,10 @@
     if (t < 58.633) { poly(ctx, [[468, 352], [690, 330], [684, 348], [462, 370]], { fill: '#e8161f' }); poly(ctx, [[752, 330], [974, 308], [968, 326], [746, 348]], { fill: '#e8161f' }); }
   });
   S(58.8, (ctx) => nameCard(ctx, '学習率', 'LEARNING RATE', '#b9b3c9', K.ink));
-  S(59.1, (ctx) => bg(ctx, K.black));
-  S(59.2, (ctx, lt) => nameCard(ctx, '正則化', null, K.black, '#2a1616'));
-  S(59.533, (ctx) => nameCard(ctx, '正則化', 'REGULARIZATION', '#e3ecf2', K.ink));
-  S(59.7, (ctx) => nameCard(ctx, '乱数種', 'SEED', '#c9c6bf', K.ink));
+  S(59.1, (ctx) => { bg(ctx, K.black); jp(ctx, '学習率', 720, 600, { size: 230, weight: 900, sx: 0.88, color: '#1c1a22', align: 'center' }); });
+  S(59.2, (ctx) => nameCard(ctx, '正則化', 'REGULARIZATION', '#e3ecf2', K.ink));
+  S(59.533, (ctx) => nameCard(ctx, '乱数種', 'SEED', '#c9c6bf', K.ink));
+  S(59.7, (ctx, lt, dur, t) => nameCard(ctx, '乱数種', 'SEED = 42', t < 59.95 ? '#c9c6bf' : '#8f8c86', K.ink));
   S(60.033, (ctx, lt, dur, t) => {
     // the far future: the scaling law, in Unit-01 purple on hot orange, shot in close-ups
     bg(ctx, K.orangeHot);
@@ -641,10 +648,10 @@
       fml(ctx, 'chinA', -3000 + px, 800, 520, T, { sw: 10 });
       rect(ctx, 0, 90, 1440, 22, { fill: K.eva });
     } else {
-      const k = E1(seg(t, 63.0, 63.6));
-      fml(ctx, 'chinA', 720, lerp(1160, 948, k), 84, P, { align: 'center', sw: 8 });
-      fml(ctx, 'chinB', 720, lerp(1240, 1030, k), 40, P, { align: 'center', sw: 5 });
-      rect(ctx, 0, lerp(1100, 826, k), 1440, 10, { fill: K.eva });
+      const k = E1(seg(t, 63.0, 63.6)), dy = lerp(260, 0, k);
+      rect(ctx, 0, 832 + dy, 1440, 10, { fill: K.eva });
+      fml(ctx, 'chinA', 720, 932 + dy, 74, P, { align: 'center', sw: 8 });
+      fml(ctx, 'chinB', 720, 1044 + dy, 34, P, { align: 'center', sw: 4 });
     }
   });
   CR(60.2, 62.0, (ctx, t) => {
@@ -677,8 +684,8 @@
       }
       ctx.restore();
     }
-    fml(ctx, 'one', 720, 930, 680, '#1a0a14', { align: 'center', sw: 20 });
-    fml(ctx, 'resgrad', 720, 1012, 46, '#1a0a14', { align: 'center', sw: 7, alpha: seg(t, 64.8, 65.2) });
+    fml(ctx, 'one', 720, 890, 660, '#1a0a14', { align: 'center', sw: 20 });
+    fml(ctx, 'resgrad', 720, 1016, 40, '#1a0a14', { align: 'center', sw: 6, alpha: seg(t, 64.8, 65.2) });
   });
   CR(64.0, 66.72, (ctx, t) => {
     const a = dissolve(t, 64.0, 66.72, 0.12, 0.05);
