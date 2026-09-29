@@ -11,13 +11,12 @@ from chapters.ch06.helpers import (BOT_FILL, CHIP_FILL, GOAL, KL, NEG, PANEL_FIL
                                    USER_FILL, WORLD, V_STAR, bubble, check_mark, cross_mark, doc_stack,
                                    gae_example, gae_tokens, gae_value, grpo_advantages, loop_arrow,
                                    math_chip, mc_td_targets, mini_net, node_box, person_icon,
-                                   play_title_card_fit, ppo_ratio_epochs, reinforce_crash, section_tag,
-                                   sigmoid, token_chip)
+                                   ppo_ratio_epochs, reinforce_crash, section_tag, sigmoid, token_chip)
 from common import style
-from common.mobjects import ACTION_VEC, GridView, ProbBars, Robot, value_color
+from common.mobjects import ACTION_VEC, GridView, ProbBars, Robot, glow_dot, value_color
 from common.rl import ACTIONS, DOWN as A_DOWN, LEFT as A_LEFT, RIGHT as A_RIGHT, UP as A_UP
 from common.style import jt, mt
-from common.titles import play_end_card
+from common.titles import play_end_card, play_title_card
 from common.voice_scene import VoiceScene
 
 CHAPTER_TITLE = "第6章 言語モデルを強化学習で鍛える"
@@ -100,14 +99,17 @@ class Hook(VoiceScene):
 
         with self.voice("対話型のAIは、大量の文章を読んで、次の単語を予測する練習をしたあと、"
                         "{A}最後の仕上げに、強化学習で鍛えられています。") as v:
+            self.sfx("pop", offset=0.3)
             self.play(FadeIn(frame), FadeIn(user), FadeIn(q, shift=0.2 * LEFT), run_time=0.9)
-            self.play(FadeIn(bot), FadeIn(ans_box), run_time=0.5)
+            self.play(FadeIn(bot), FadeIn(ans_box), bot.animate.look(RIGHT), run_time=0.5)
             for t in toks:
                 self.play(FadeIn(t, shift=0.08 * RIGHT), run_time=0.22)
+            self.play(bot.blink(), run_time=0.25)
             self.play(GrowFromEdge(pre, LEFT), FadeIn(pre_lab), run_time=max(0.6, v.until("A") - 0.1))
             self.wait_to(v, "A")
+            self.sfx("sparkle")
             self.play(GrowFromEdge(rl, LEFT), FadeIn(rl_lab, shift=0.1 * UP), run_time=0.8)
-            self.play(Indicate(rl, color=style.POLICY, scale_factor=1.15), run_time=0.8)
+            self.play(Indicate(rl, color=style.POLICY, scale_factor=1.15), bot.change("happy"), run_time=0.8)
 
         # 言語モデル = 方策、状態 = ここまでのテキスト、行動 = 次のトークン
         pi_lab = VGroup(jt("方策", size=30, color=style.POLICY), mt(r"\pi_\theta", size=40, color=style.POLICY))
@@ -126,17 +128,20 @@ class Hook(VoiceScene):
         def act_box(k):
             return SurroundingRectangle(toks[k], color=style.ACTION, buff=0.1, corner_radius=0.08, stroke_width=5)
 
-        with self.voice("第1章で見たように、{A}言語モデルは、それ自体が方策です。{S}状態は、ここまでのテキスト、"
+        with self.voice("第1章で見たように、{A}言語モデルは、それ自体が《方策》です。{S}状態は、ここまでのテキスト、"
                         "{T}行動は、次のトークン。{B}一つの回答は、一本の軌跡です。") as v:
-            self.play(FadeOut(VGroup(pre, rl, pre_lab, rl_lab)), run_time=0.6)
+            self.play(FadeOut(VGroup(pre, rl, pre_lab, rl_lab)), bot.change("normal"), run_time=0.6)
             self.wait_to(v, "A")
+            self.sfx("hit")
             self.play(FadeIn(pi_lab, shift=0.1 * UP), Indicate(bot, color=style.POLICY), run_time=0.9)
             self.wait_to(v, "S")
             sb = state_boxes(2)
             for t in toks[2:]:
                 t.set_opacity(0.25)
+            self.sfx("pop")
             self.play(Create(sb), FadeIn(s_lab), run_time=0.8)
             self.wait_to(v, "T")
+            self.sfx("pop")
             ab = act_box(2)
             self.play(Create(ab), toks[2].animate.set_opacity(1), FadeIn(a_lab), run_time=0.7)
             self.play(Transform(sb, state_boxes(3)), Transform(ab, act_box(3)),
@@ -163,6 +168,7 @@ class Hook(VoiceScene):
                                   lag_ratio=0.08), FadeIn(seq[-1]), run_time=1.0)
             self.wait_to(v, "B")
             self.play(*[FadeIn(under[k][0]) for k in range(4)], run_time=0.3)
+            self.sfx("whoosh")
             self.play(*[TransformFromCopy(toks[k], under[k][1]) for k in range(4)], run_time=0.8)
             tau = VGroup(jt("一つの回答 ＝ 一本の軌跡", size=32, color=GREY_A), mt(r"\tau", size=48))
             tau.arrange(RIGHT, buff=0.3).move_to(DOWN * 3.3)
@@ -188,7 +194,10 @@ class Hook(VoiceScene):
                       run_time=min(2.4, max(1.0, v.until("A") - 0.2)))
             self.wait_to(v, "A")
             self.play(GrowArrow(arrow), run_time=0.6)
-            self.play(LaggedStart(*[FadeIn(c, scale=0.8) for c in goal], lag_ratio=0.2), run_time=1.2)
+            self.sfx("sparkle")
+            srcs = [row2[1], row1[3], row2[3], row2[2]]  # 方策勾配→PPO, TD→GAE, AC→RLHF, ベースライン→GRPO
+            self.play(LaggedStart(*[TransformFromCopy(sc, c) for sc, c in zip(srcs, goal)], lag_ratio=0.2),
+                      run_time=1.4)
         self.play(FadeOut(VGroup(rows, arrow, goal)), run_time=0.9)
 
 
@@ -197,7 +206,7 @@ class Hook(VoiceScene):
 # ---------------------------------------------------------------------------
 class Title(VoiceScene):
     def construct(self):
-        play_title_card_fit(self, 6, "言語モデルを強化学習で鍛える", subtitle="PPO・RLHF・GRPO")
+        play_title_card(self, 6, "言語モデルを強化学習で鍛える", subtitle="PPO・RLHF・GRPO")
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +252,7 @@ class StepSize(VoiceScene):
             self.play(Write(upd), Create(ax), FadeIn(xt), FadeIn(yt), FadeIn(xl), FadeIn(yl), run_time=1.2)
             self.play(Create(line1), run_time=max(0.8, v.until("A") - 0.2), rate_func=linear)
             self.wait_to(v, "A")
+            self.sfx("hit")
             self.play(GrowFromCenter(br), FadeIn(br_lab), Indicate(upd[4], color=style.GAMMA), run_time=0.9)
 
         # 右：目的関数の地形と接線
@@ -259,7 +269,7 @@ class StepSize(VoiceScene):
                    stroke_color=style.THETA, stroke_width=3)
         near = Rectangle(width=lax.x_axis.unit_size * 0.8, height=3.4, stroke_width=0, fill_color=style.THETA,
                          fill_opacity=0.12).move_to([lax.c2p(x0, 0)[0], lax.get_center()[1], 0])
-        with self.voice("勾配は、今の方策の、すぐ近くでだけ正しい方向を教えてくれます。{A}大きく動きすぎると、方策が壊れてしまう。"
+        with self.voice("勾配は、今の方策の、すぐ近くでだけ正しい方向を教えてくれます。{A}大きく動きすぎると、方策が《壊れて》しまう。"
                         "しかも強化学習では、{B}壊れた方策で集めたデータで、次の学習をすることになります。"
                         "教師あり学習のように、データセットが守ってくれないんです。") as v:
             self.play(FadeOut(br), FadeOut(br_lab), Create(lax), FadeIn(l_xl), FadeIn(l_yl), Create(land),
@@ -273,7 +283,9 @@ class StepSize(VoiceScene):
             self.wait_to(v, "A")
             # 大きすぎる一歩：接線の上では上がるはずが、実際は崖の下
             x2 = 4.8
+            self.sfx("whoosh")
             self.play(dot.animate.move_to(lax.c2p(3.0, landscape(x0) + k * (3.0 - x0))), run_time=0.6)
+            self.sfx("fall")
             fall = DashedLine(lax.c2p(3.0, landscape(x0) + k * (3.0 - x0)), lax.c2p(x2, landscape(x2)),
                               color=RED, stroke_width=3)
             self.play(Create(fall), dot.animate.move_to(lax.c2p(x2, landscape(x2))).set_color(RED),
@@ -300,7 +312,10 @@ class StepSize(VoiceScene):
             self.play(Indicate(vals[0], color=style.POLICY, scale_factor=1.3), run_time=0.8)
             self.play(FadeOut(vals), pb.animate.set_probs(list(after)), run_time=1.0)
             vals = big_vals(after).set_color(RED)
-            self.play(FadeIn(vals), Indicate(pb.bars[3], color=RED, scale_factor=1.1), run_time=0.7)
+            self.sfx("thud")
+            drop = robot.sweat()
+            self.play(FadeIn(vals), Indicate(pb.bars[3], color=RED, scale_factor=1.1), robot.change("worried"),
+                      FadeIn(drop, shift=0.05 * DOWN), run_time=0.7)
 
             # 壊れた方策で集めたデータ（実際のロールアウト）
             self.wait_to(v, "B")
@@ -322,6 +337,7 @@ class StepSize(VoiceScene):
             data_lab = jt("集めたデータ", size=28, color=GREY_B).next_to(rows, UP, buff=0.18).align_to(rows, LEFT)
             self.play(FadeIn(data_lab), run_time=0.4)
             t0 = trajs[0]
+            self.play(FadeOut(drop), run_time=0.2)
             for i, (s, a, r, n) in enumerate(t0[:9]):
                 anims = [FadeIn(rows[0][0][i], shift=0.05 * RIGHT)]
                 if n == s:
@@ -331,6 +347,7 @@ class StepSize(VoiceScene):
                 self.play(*anims, run_time=0.28)
             self.play(FadeIn(rows[0][1:]), LaggedStart(*[FadeIn(r) for r in rows[1:]], lag_ratio=0.4),
                       Create(line3), run_time=1.6)
+        self.sfx("whoosh")
         self.play(FadeOut(VGroup(upd, plot, line1, line2, line3, g, robot, focus, link, pb, vals, rows, data_lab)),
                   run_time=0.8)
 
@@ -356,9 +373,12 @@ class StepSize(VoiceScene):
             self.play(FadeIn(lm), FadeIn(counter), run_time=0.8)
             per = max(0.4, (v.until("A") - 0.2) / len(chips))
             for i, c in enumerate(chips):
+                self.sfx("tick")
                 self.play(Indicate(net, color=style.POLICY, scale_factor=1.05), FadeIn(c, shift=0.2 * RIGHT),
                           cnt.animate.set_value(i + 1), run_time=per)
             self.wait_to(v, "A")
+            for k in range(4):
+                self.sfx("tick", offset=0.5 * k)
             self.play(FadeIn(dots_chip), ChangeDecimalToValue(cnt, 312), run_time=2.2, rate_func=linear)
             self.wait_to(v, "B")
             answer = VGroup(chips, dots_chip)
@@ -369,6 +389,7 @@ class StepSize(VoiceScene):
             data = VGroup(stack, stack_lab).move_to(RIGHT * 3.2 + DOWN * 1.2)
             loop = loop_arrow(radius=1.25, color=style.REWARD, width=5).move_to(data)
             reuse = jt("何度か使い回したい", size=30, color=style.REWARD).next_to(loop, DOWN, buff=0.2)
+            self.sfx("pop")
             self.play(ReplacementTransform(answer, stack), FadeIn(stack_lab), FadeOut(counter), run_time=1.0)
             self.play(Create(loop), FadeIn(reuse), run_time=1.0)
 
@@ -393,6 +414,7 @@ class StepSize(VoiceScene):
             self.wait_to(v, "A")
             a1 = Arrow(small_ax.get_right(), ppo.get_left(), buff=0.3, color=GREY_B, stroke_width=4)
             a2 = Arrow(loop.get_left(), ppo.get_right(), buff=0.3, color=GREY_B, stroke_width=4)
+            self.sfx("sparkle")
             self.play(GrowArrow(a1), GrowArrow(a2), FadeIn(ppo, scale=0.8), run_time=1.0)
             self.play(FadeIn(ppo_sub, shift=0.1 * UP), run_time=0.6)
         fade_all(self)
@@ -477,14 +499,17 @@ class Ratio(VoiceScene):
                         "その確率の比を、{B}[rₜ|アールティー]とします。") as v:
             self.play(FadeIn(head), Create(bars.baseline), FadeIn(bars.labels), run_time=1.0)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(LaggedStart(*[GrowFromEdge(b, DOWN) for b in bars.old], lag_ratio=0.1), FadeIn(leg_old),
                       run_time=1.0)
             self.wait_to(v, "C")
+            self.sfx("pop")
             self.play(LaggedStart(*[GrowFromEdge(b, DOWN) for b in bars.new], lag_ratio=0.1), FadeIn(leg_new),
                       run_time=1.0)
             self.wait_to(v, "B")
             pick = SurroundingRectangle(VGroup(bars.old[i_pick], bars.new[i_pick], bars.labels[i_pick]),
                                         color=style.ACTION, buff=0.12, corner_radius=0.08)
+            self.sfx("hit")
             self.play(Create(pick), Write(rdef), run_time=1.0)
             self.play(FadeIn(rnum, shift=0.1 * UP), run_time=0.7)
 
@@ -511,6 +536,7 @@ class Ratio(VoiceScene):
                 h = p * bars.h
                 targets.append(c.animate.stretch_to_fit_height(h).move_to(b.get_bottom() + UP * h / 2)
                                .set_fill(style.POLICY, 0.9))
+            self.sfx("sparkle")
             self.play(*targets, run_time=1.4)
             self.play(FadeOut(copies), Write(is_eq), run_time=1.0)
             self.wait_to(v, "B")
@@ -543,7 +569,9 @@ class Ratio(VoiceScene):
             self.play(FadeIn(same, shift=0.1 * DOWN), run_time=0.8)
             self.wait_to(v, "B")
             self.play(Write(grad), run_time=1.4)
-            self.play(FadeIn(pg), Create(pg_box), FadeIn(pg_lab), run_time=1.0)
+            self.sfx("hit")
+            self.play(TransformFromCopy(grad[4], pg[3]), FadeIn(VGroup(pg[:3], pg[4:])), Create(pg_box),
+                      FadeIn(pg_lab), run_time=1.1)
 
         # 離れすぎると補正が当てにならない
         chart2 = VGroup(bars, legend, head)
@@ -554,7 +582,7 @@ class Ratio(VoiceScene):
         counts = rng.multinomial(20, P_OLD)
         while counts[-1] != 0:  # 念のため（シード固定なので実際は1回）
             counts = rng.multinomial(20, P_OLD)
-        with self.voice("ただし、{A}比が1から大きく離れると、この補正は、とたんに当てにならなくなります。"
+        with self.voice("ただし、{A}比が1から大きく離れると、この補正は、とたんに《当てにならなく》なります。"
                         "{B}新しい方策が、古いデータの外側へ、どんどん出て行ってしまうからです。") as v:
             self.play(FadeOut(VGroup(L, same, grad, pg, pg_box, pg_lab, rdef)), run_time=0.5)
             self.play(FadeIn(chart2), run_time=0.5)
@@ -576,6 +604,7 @@ class Ratio(VoiceScene):
             self.play(LaggedStart(*[FadeIn(d, shift=0.1 * UP) for d in dots], lag_ratio=0.1), FadeIn(dlab),
                       run_time=1.2)
             qm = jt("？", size=56, color=RED).next_to(bars.labels[4], DOWN, buff=0.25)
+            self.sfx("thud")
             self.play(FadeIn(qm, scale=0.6), Indicate(bars.new[4], color=RED), Indicate(rl2[4], color=RED),
                       run_time=1.0)
         fade_all(self)
@@ -649,12 +678,14 @@ class Clip(VoiceScene):
         rt = ValueTracker(1.0)
         r_static = Dot(nl.n2p(1.0), radius=0.13, color=WHITE)
         r_name = mt("r", size=48).set_color(WHITE).next_to(r_static, UP, buff=0.25)
-        with self.voice("そこで、PPOは、{A}比に、はさみを入れます。比が、{B}[1−ε|イチマイナス、イプシロン]から、"
+        with self.voice("そこで、PPOは、{A}比に、《はさみ》を入れます。比が、{B}[1−ε|イチマイナス、イプシロン]から、"
                         "[1+ε|イチプラス、イプシロン]の範囲を出たら、{C}切り落とすんです。{D}イプシロンは、よく0.2が使われます。") as v:
             self.play(Create(nl), FadeIn(nums), FadeIn(r_static, scale=0.5), FadeIn(r_name), run_time=1.2)
             self.wait_to(v, "A")
             cuts = VGroup(*[Line(nl.n2p(x) + DOWN * 0.45, nl.n2p(x) + UP * 0.45, stroke_color=RED, stroke_width=6)
                             for x in (1 - EPS, 1 + EPS)])
+            self.sfx("hit")
+            self.sfx("hit", offset=0.35)
             self.play(LaggedStart(*[Create(c) for c in cuts], lag_ratio=0.4), run_time=0.8)
             self.play(*[Flash(c.get_center(), color=RED, flash_radius=0.4, line_length=0.2) for c in cuts],
                       run_time=0.6)
@@ -711,6 +742,7 @@ class Clip(VoiceScene):
                         "それ以上上げても、得をしない。") as v:
             self.play(Write(L), run_time=1.3)
             self.wait_to(v, "A")
+            self.sfx("pop")
             self.play(FadeIn(left), FadeIn(tL), run_time=0.8)
             self.play(Create(uL), run_time=0.8)
             self.wait_to(v, "C")
@@ -724,6 +756,7 @@ class Clip(VoiceScene):
 
         with self.voice("{A}アドバンテージがマイナス、つまり、悪かった行動の場合は、逆です。{C}確率を下げると得をしますが、"
                         "{B}0.8倍を下回ったところで、平らになります。") as v:
+            self.sfx("pop")
             self.play(FadeIn(right), FadeIn(tR), run_time=0.8)
             self.play(Create(uR), run_time=0.8)
             self.wait_to(v, "C")
@@ -738,18 +771,25 @@ class Clip(VoiceScene):
         # 平らなところは勾配 0
         z1 = mt(r"\nabla = 0", size=40, color=RED).next_to(axL.c2p(1.6, 1 + EPS), UP, buff=0.35)
         z2 = mt(r"\nabla = 0", size=40, color=RED).next_to(axR.c2p(0.4, -(1 - EPS)), DOWN, buff=0.35)
-        gL = Arrow(axL.c2p(0.35, 0.35), axL.c2p(0.8, 0.8), buff=0, color=POS, stroke_width=6,
-                   max_tip_length_to_length_ratio=0.3)
+        gL = Arrow(axL.c2p(0.45, 0.45), axL.c2p(0.95, 0.95), buff=0, color=POS, stroke_width=6,
+                   max_tip_length_to_length_ratio=0.3).shift(0.22 * (LEFT + UP))
         gR = Arrow(axR.c2p(1.75, -1.75), axR.c2p(1.3, -1.3), buff=0, color=NEG, stroke_width=6,
-                   max_tip_length_to_length_ratio=0.3)
+                   max_tip_length_to_length_ratio=0.3).shift(0.22 * (RIGHT + UP))
         with self.voice("平らなところでは、{A}勾配が0なので、それ以上、方策は動きません。"
                         "{B}一回のデータで、確率を大きく変えすぎないように、自然とブレーキがかかるわけです。") as v:
-            self.play(GrowArrow(gL), GrowArrow(gR), run_time=0.8)
+            # カメラを「平らになる点」に寄せ、ボールが坂を登って平らな所で止まるのを見せる
+            self.sfx("whoosh")
+            self.play(self.focus_on(axL.c2p(1.15, 0.95), height=4.3), ball.animate.move_to(axL.c2p(0.3, 0.3)),
+                      run_time=1.0)
+            self.play(GrowArrow(gL), run_time=0.5)
             self.wait_to(v, "A")
-            self.play(FadeIn(z1, shift=0.1 * DOWN), FadeIn(z2, shift=0.1 * UP),
-                      fL.animate.set_color(RED), fR.animate.set_color(RED), run_time=0.8)
-            self.play(ball.animate(rate_func=there_and_back).shift(0.25 * RIGHT),
-                      ball2.animate(rate_func=there_and_back).shift(0.25 * LEFT), run_time=0.8)
+            self.play(ball.animate.move_to(axL.c2p(1 + EPS, 1 + EPS)), run_time=0.8, rate_func=rate_functions.ease_in_sine)
+            self.play(ball.animate.move_to(axL.c2p(1.45, 1 + EPS)), run_time=0.7, rate_func=rate_functions.ease_out_cubic)
+            self.sfx("hit")
+            self.play(FadeIn(z1, shift=0.1 * DOWN), fL.animate.set_color(RED),
+                      Flash(ball.get_center(), color=RED, flash_radius=0.3, line_length=0.15), run_time=0.6)
+            self.play(self.reset_frame(), run_time=0.9)
+            self.play(GrowArrow(gR), FadeIn(z2, shift=0.1 * UP), fR.animate.set_color(RED), run_time=0.7)
             self.wait_to(v, "B")
             self.play(left[0].animate.set_fill(style.POLICY, 0.25), right[0].animate.set_fill(style.POLICY, 0.25),
                       run_time=0.8)
@@ -762,7 +802,7 @@ class Clip(VoiceScene):
                       fill_color=RED, fill_opacity=0.3)
         lowL = jt("低い方を採用", size=28, color=RED).next_to(axL.c2p(0.4, 0.8), UP, buff=0.12)
         lowR = jt("低い方を採用", size=28, color=RED).next_to(axR.c2p(1.6, -1.2), UP, buff=0.12)
-        with self.voice("マックスではなく、{A}ミニマムを取っているのもポイントです。{B}目的関数が得をする方向の変化だけを、切り落とす。"
+        with self.voice("マックスではなく、{A}《ミニマム》を取っているのもポイントです。{B}目的関数が得をする方向の変化だけを、切り落とす。"
                         "{C}悲観的に見積もることで、安全側に倒しているんです。") as v:
             self.play(FadeOut(VGroup(gL, gR)), run_time=0.4)
             self.wait_to(v, "A")
@@ -772,6 +812,7 @@ class Clip(VoiceScene):
             self.play(Indicate(fL, color=RED, scale_factor=1.05), Indicate(fR, color=RED, scale_factor=1.05),
                       Indicate(z1), Indicate(z2), run_time=1.2)
             self.wait_to(v, "C")
+            self.sfx("sparkle")
             self.play(FadeIn(shL), FadeIn(shR), FadeIn(lowL), FadeIn(lowR), run_time=1.0)
 
         plots = VGroup(left, right, uL, cL, sL, fL, uR, cR, sR, fR, tL, tR, ball, ball2, z1, z2, shL, shR, lowL, lowR)
@@ -811,11 +852,14 @@ class Clip(VoiceScene):
                       FadeIn(lab_clip), FadeIn(ep), FadeIn(d_free), FadeIn(d_clip), run_time=0.9)
             per = max(0.22, (v.until("A") - 0.2) / E)
             for e in range(1, E + 1):
+                if e % 2 == 1:
+                    self.sfx("tick")
                 self.play(Transform(d_free, dots_at(h_free, e, ys["free"], GREY_B)),
                           Transform(d_clip, dots_at(h_clip, e, ys["clip"], style.POLICY)),
                           ep_num.animate.set_value(e), run_time=per)
             self.wait_to(v, "A")
             near = jt("古い方策の近く", size=34, color=style.POLICY).move_to([4.4, ys["clip"], 0])
+            self.sfx("sparkle")
             self.play(Indicate(d_clip, color=style.POLICY, scale_factor=1.05), FadeIn(near, shift=0.1 * DOWN),
                       run_time=1.0)
             self.wait_to(v, "B")

@@ -7,11 +7,9 @@ from __future__ import annotations
 import numpy as np
 from manim import *
 
-from common import config as rconf
 from common import style
 from common.rl import ACTIONS, main_world
 from common.style import jt, mt
-from common.titles import SERIES_TITLE
 
 WORLD = main_world()
 V_STAR = WORLD.value_iteration()[-1]
@@ -25,36 +23,6 @@ CHIP_FILL = "#16161A"
 PANEL_FILL = "#131317"
 USER_FILL = "#23324A"
 BOT_FILL = "#1C1C22"
-
-
-# ---------------------------------------------------------------------------
-# タイトル（章題が長いので幅に収める。中身は common.titles.play_title_card と同じ）
-# ---------------------------------------------------------------------------
-def play_title_card_fit(scene, number: int, title: str, subtitle: str | None = None,
-                        hold: float = 2.6, max_width: float = 12.4):
-    series = jt(f"{SERIES_TITLE}　第{number}章", size=34, color=GREY_B)
-    main = jt(title, size=76, color=WHITE, weight="MEDIUM")
-    if main.width > max_width:
-        main.scale_to_fit_width(max_width)
-    group = VGroup(series, main).arrange(DOWN, buff=0.45)
-    line = Line(LEFT, RIGHT, stroke_color=GREY_D, stroke_width=2)
-    line.set_width(min(main.width + 1.2, 13.4)).next_to(main, DOWN, buff=0.35)
-    items = [series, main, line]
-    if subtitle:
-        items.append(jt(subtitle, size=28, color=GREY_C).next_to(line, DOWN, buff=0.35))
-    VGroup(*items).move_to(0.2 * UP)
-    scene.play(FadeIn(series, shift=0.15 * DOWN), run_time=0.8)
-    scene.play(Write(main), Create(line), run_time=1.6)
-    if subtitle:
-        scene.play(FadeIn(items[-1]), run_time=0.6)
-    scene.wait(hold)
-    scene.play(*[FadeOut(m) for m in items], run_time=0.9)
-
-
-def play_end_card_plain(scene, hold: float = 3.0):
-    """次回予告なしのクレジット（common.titles.play_end_card と同じ見た目）。"""
-    from common.titles import play_end_card
-    play_end_card(scene, next_title=None, hold=hold)
 
 
 # ---------------------------------------------------------------------------

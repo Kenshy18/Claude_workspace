@@ -641,7 +641,7 @@ class Loss(VoiceScene):
             self.play(GrowArrow(grad), FadeIn(glab), run_time=0.7)
             self.wait_to(v, "B")
             # 小さな数直線: ラベル側まで微分すると、目標のほうが予測に寄ってきてしまう
-            nl = NumberLine(x_range=[0, 1, 0.25], length=6.0, include_ticks=False, color=GREY_C).move_to(UP * 2.45 + RIGHT * 1.2)
+            nl = NumberLine(x_range=[0, 1, 0.25], length=6.0, include_ticks=False, color=GREY_C).move_to(UP * 2.9 + RIGHT * 1.2)
             pd = Dot(nl.n2p(0.1), radius=0.14, color=style.VALUE)
             td = Dot(nl.n2p(0.9), radius=0.14, color=style.REWARD)
             pl = jt("予測", size=32, color=style.VALUE).next_to(pd, DOWN, buff=0.2)
