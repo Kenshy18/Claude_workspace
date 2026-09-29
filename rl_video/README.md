@@ -1,29 +1,47 @@
 # 強化学習の本質 — 3Blue1Brown スタイルの解説動画シリーズ（日本語）
 
-強化学習をゼロから、ステップごとに理解するための解説動画シリーズ。
-Manim Community でアニメーションを作り、ナレーションは VOICEVOX で合成している。
+強化学習をゼロから、ステップごとに理解するための解説動画シリーズ（全6章）。
+対象は、教師あり学習（NLP / CV）には慣れているが、強化学習は初めての ML エンジニア。
+Manim Community でアニメーションを作り、ナレーションは VOICEVOX、BGM と効果音は numpy で自作している。
+画面に出る数値（価値、学習曲線、ヒストグラム、シミュレーション結果）はすべて実際に計算したもの。
 
-- シリーズ構成・制作ルール: [SERIES_PLAN.md](SERIES_PLAN.md)
-- 各章の台本: `chapters/chNN/script.md`（`tools/transcript.py` で生成）
+| 章 | タイトル | 主な内容と「なるほど」の場面 |
+|---|---|---|
+| 1 | 報酬から学ぶ | 教師あり学習との3つの違い、お手本を超える（アルファ碁ゼロ）、MDP、方策、リターン、**割引率＝生き残る確率**（100台のロボットで検証）、微分できない環境、**報酬ハッキング**（ボートレース） |
+| 2 | 価値という考え方 | 価値の3D地形、ベルマン方程式とバックアップ、**縮小写像**（どこから始めても同じ答えへ）、方策反復、価値反復の波、**穴の下で「下」を向く矢印** |
+| 3 | 経験から学ぶ | モンテカルロ＝回帰、TD とブートストラップ、**TD誤差とドーパミン神経**、バイアスとバリアンス、SARSA と Q学習、探索（スロット）、崖歩き、経験だけで最適方策へ |
+| 4 | 価値をニューラルネットで近似する（DQN） | 画素の状態数、汎化、動く標的とターゲットネット、経験リプレイ、**max による過大評価**とダブルDQN、死の三つ組 |
+| 5 | 方策を直接動かす（方策勾配法） | 対数微分トリック、**環境の項が消える瞬間**、REINFORCE＝重み付き最尤、ベースラインで分散 1/277、アクター・クリティック |
+| 6 | 言語モデルを強化学習で鍛える | PPO のクリップ、GAE、RLHF と報酬モデル、KL と報酬ハッキング、DPO、**GRPO と検証可能な報酬**、シリーズの地図 |
+
+- シリーズ構成: [SERIES_PLAN.md](SERIES_PLAN.md) ／ 各章の台本と演出プラン: `chapters/chNN/PLAN.md`
+- 各章のナレーション全文: `chapters/chNN/script.md`（`tools/transcript.py` で生成）
+- 制作ルールと Manim の落とし穴: [PRODUCTION_GUIDE.md](PRODUCTION_GUIDE.md)
+- 字幕: `output/chNN_1080p60.srt`（動画にも字幕トラックとして入っている）
+
+完成動画（mp4）はサイズが大きいのでリポジトリには入れていない。下のコマンドで再生成できる。
 
 ## ビルド
 
 ```bash
 ./setup.sh                          # 依存関係と VOICEVOX の取得（初回のみ）
-python3 tools/build.py ch01         # 480p の下書き
-python3 tools/build.py ch01 -q h    # 1080p60 の本番 → output/ch01_1080p60.mp4
+python3 tools/build.py ch01         # 480p の下書き（数分）
+python3 tools/build.py ch01 -q h    # 1080p60 の本番 → output/ch01_1080p60.mp4（30MB 未満に収める）
 ```
+
+声を変えるときは `RLV_VOICE=<スタイルID> python3 tools/build.py ...`（`common/config.py` 参照）。
 
 ## ディレクトリ
 
 | パス | 中身 |
 |---|---|
-| `common/` | 共通部品（色・文字、VOICEVOX 合成、ナレーション同期 Scene、グリッドワールド、RL アルゴリズム） |
-| `chapters/chNN/scenes.py` | 各章のシーン。ナレーション文もここに書く（台本の正本） |
-| `tools/` | ビルド、台本書き出し、読みチェック、コマ一覧画像 |
-| `output/` | 完成した動画と字幕（.srt） |
+| `common/` | 共通部品（色・文字、VOICEVOX 合成、ナレーション同期 Scene、ロボット、グリッドワールド、RL アルゴリズム、BGM・効果音の合成） |
+| `chapters/chNN/` | 各章のシーン（`scenes.py`）、章専用の部品（`helpers.py`）、台本 |
+| `tools/` | ビルド、BGM のミックス、台本書き出し、読みチェック、コマ一覧画像 |
+| `output/` | 完成した動画と字幕 |
 
 ## クレジット
 
 - ナレーション: VOICEVOX:青山龍星
 - アニメーション: [Manim Community](https://www.manim.community/)
+- BGM・効果音: 自作（`common/audio.py`）
