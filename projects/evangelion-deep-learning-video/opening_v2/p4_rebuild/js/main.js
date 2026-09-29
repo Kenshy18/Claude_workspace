@@ -3,6 +3,7 @@ import * as WD from './world.js';
 import { PostFX } from './post.js';
 import { initPaint } from './paint.js';
 import { initArt } from './art.js';
+import * as A from './art.js';
 import { SHOTS, TOTAL, overlayCredits } from './shots.js';
 
 const W = 1920, H = 1080, FPS = 30;
@@ -21,6 +22,7 @@ function renderAt(t) {
   const fx = { time: t, bloom: 0, thr: 0.8, grain: 0.05, vig: 0.28, soft: 0.22, ca: 0.12, flash: 0, flashCol: [1, 1, 1], sat: 1, contrast: 1, lift: 0, tint: [1, 1, 1],
     weave: [(hw(fr) - 0.5) * 1.6, (hw(fr + 101) - 0.5) * 1.2] };
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
+  ctx.shadowBlur = 0; ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; ctx.setLineDash([]); ctx.lineCap = 'butt'; ctx.lineJoin = 'miter'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
   WD.PROF.shadow = 0; WD.PROF.main = 0;
   const T0 = performance.now();
@@ -62,6 +64,7 @@ async function registerFonts() {
   WD.buildWorld();
   await initPaint();
   initArt();
+  WD.buildEngraving(A.engravingMask());
   post = new PostFX(out, W, H);
   WD.warmup(); for (const f of [0, 360, 1500]) renderAt(f / FPS);   // shader + canvas warm-up (frames stay pure functions of t)
   window.renderFrame = (f) => renderAt(f / FPS);

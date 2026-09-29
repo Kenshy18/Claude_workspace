@@ -1,8 +1,8 @@
 // p3_magi — frame entry points for tools/render.mjs. Every frame is a pure function of t.
 const sceneCanvas = document.getElementById('scene');
-const sctx = sceneCanvas.getContext('2d', { willReadFrequently: false });
+const sctx = sceneCanvas.getContext('2d', { willReadFrequently: true });
 const ovlCanvas = document.getElementById('ovl');
-const octx = ovlCanvas.getContext('2d');
+const octx = ovlCanvas.getContext('2d', { willReadFrequently: true });
 const post = new PostFX(document.getElementById('out'), W, H);
 const TOTAL = 90.5;
 
@@ -18,11 +18,6 @@ function renderAt(t) {
   for (const c of [sctx, octx]) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.filter = 'none'; }
   octx.clearRect(0, 0, W, H);
   drawFrame(sctx, octx, t, fx);
-  // Force both 2D canvases to rasterize before the WebGL upload. Without this, Chromium can hand texImage2D a
-  // stale snapshot when a frame's whole draw collapses to opaque full-canvas fills (seen: the black 監督 card
-  // uploading the previous ADAM frame). A 1-px readback is a cheap, deterministic flush.
-  sctx.getImageData(0, 0, 1, 1);
-  if (fx.useOvl) octx.getImageData(0, 0, 1, 1);
   post.render(sceneCanvas, ovlCanvas, fx);
   return fx.shot || '';
 }

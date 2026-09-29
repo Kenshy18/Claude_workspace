@@ -88,7 +88,7 @@ const OFF = {};
 function off(key, w, h) {
   let c = OFF[key];
   if (!c || c.width !== w || c.height !== h) { c = document.createElement('canvas'); c.width = w; c.height = h; OFF[key] = c; }
-  const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  const g = c.getContext('2d', { willReadFrequently: true }); g.setTransform(1, 0, 0, 1, 0, 0);   // CPU-backed: no stale GPU snapshots g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   return [c, g];
 }
 

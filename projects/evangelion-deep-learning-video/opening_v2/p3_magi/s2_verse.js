@@ -28,7 +28,7 @@ function mainScreen(g, step, t) {
   for (let k = 1; k <= 5; k++) monoText(g, String(k * 100), M.X(k * 100), py + ph + 36, 28, bl, { align: 'center', alpha: 0.75 });
   const ch = 1 / RUN.p;
   dashed(g, px, M.Y(ch), px + pw, M.Y(ch), or, 2.5, [14, 9]);
-  monoText(g, 'CHANCE 1/97', M.X(500), M.Y(ch) + 38, 28, or, { align: 'right' });
+  monoText(g, 'CHANCE 1/97', M.X(495), M.Y(ch) - 14, 28, or, { align: 'right' });   // above the line, clear of the tick row and of the standing figures
   const s1 = Math.min(step, 600);
   if (s1 > 0) {
     plotMetric(g, M, 'val_acc', 0, s1, or, 5);

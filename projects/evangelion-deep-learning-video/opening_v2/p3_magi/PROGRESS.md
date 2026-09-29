@@ -21,6 +21,9 @@
 - [x] chorus boundaries SNAPPED to op_cuts_detected.txt (all 66.8–88.2); new beats: lying 79.333, pencil_trio 82.367, grok_scope hot until 67.433 + close-up at 67.667, cu_bars cut 69.333; prototype/production block reordered like the original (proto scope+stats blue → PROTOTYPE → red scope+stats → PRODUCTION)
 - [x] pre-chorus cuts: timer reframe at 52.267, greenbars→cage at 52.767; 14.1 flash holds white through 14.27; verse-A profile opacity 0.66
 - [x] compare A (0.5–19.5), B (21–48.5), C (49.5–66.5) reviewed → cmp_A/B/C.jpg
-- [ ] compare D/E/F (chorus + outro)
-- [ ] perf check (≤0.6 s/frame) — blocked earlier by others' renders (p2 video); NOTE pgrep pattern must be "^node tools/render.mjs"
+- [x] compare D–H (chorus + outro, 80 timestamps) reviewed → cmp_D..H.jpg; fixes: cards GROKKING/MLP-01/FOURIER/MOD-97/CKPT/SECOND IMPACT/ADAM enlarged to fill frame like the original; ATF card bigger; red formula split in 2 lines (new TeX cosadd1/cosadd2 in build_formulas.mjs → formulas.js, preload list in shots.js); 監督 name 392px sx0.8; green slash continues across the 83.7 cut; director head-raise at 82.0; warmer light bars
+- [x] **BUG FIXED (determinism)**: stale frame — 83.0 rendered after 81.05 showed the ADAM scene under the 監督 overlay (Chromium reused a stale GPU snapshot of the 2D canvas in texImage2D). Fix: scene/overlay/offscreen 2D contexts are CPU-backed (willReadFrequently: true) in main.js + lib.js off(). Verified with the exact reproducing sequence.
+- [x] post.js: bloom textures sampled only when bloom>0; canvases uploaded without UNPACK_FLIP_Y (flip in shader) → cheaper; pixel-equivalent except the sign of the ±1px vertical weave
+- [x] perf (idle machine, before post optimization): typical 200–400 ms/frame, worst first-frame spikes 596 (39.0) / 635 ms (8.0). Re-measure when idle (load was 22–27 from others' video renders).
+- [ ] final perf number on idle machine
 

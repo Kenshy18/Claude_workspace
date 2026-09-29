@@ -82,6 +82,11 @@ Everything is computed from `opening_v2/shared/data/grokking.json` by `build_dat
 ## Credits (all concepts, papers, libraries — no living people in roles)
 企画・原作 Power et al. (paper) · 解析 Nanda et al. / 掲載 ICLR 2023 · キャラクターデザイン 埋め込み 97×128 · メカニックデザイン MLP 256×256, ReLU · 副監督 AdamW β 0.9·0.98 · 美術監督 フーリエ基底 · 色彩設定 蛍光体 P1・P3 · 撮影監督 フーリエ平面射影 · 音響監督 交差エントロピー · 音響制作 log-softmax · 音楽 三角関数 · 音楽協力 NumPy · 作画 順伝播 / 逆伝播 · 演出 全バッチ勾配降下 · 広報 arXiv:2201.02177 / arXiv:2301.05217 · アニメーション制作 Canvas 2D / WebGL · プロデューサー 勾配降下法 · **監督 荷重減衰** · 製作 grokking.py / NumPy.
 
+## Technical notes
+- **Determinism fix (relevant to the shared engine too):** with GPU-backed 2D canvases, Chromium/SwiftShader sometimes handed `texImage2D(canvas)` a *stale* snapshot. Reproducibly, rendering 83.0 after 81.05 (in a longer still sequence) produced the ADAM card under the 監督 overlay; a frame whose whole draw is opaque full-canvas fills seems to trigger it. The scene, overlay, and all offscreen 2D contexts are now created with `{ willReadFrequently: true }` (CPU-backed), which fixed it at equal or lower cost. `src/main.js` + `src/fx.js` use the same GPU-canvas → texImage2D path, so other films rendered with them may contain the odd stale frame.
+- Post (`post.js`): CRT curvature and phosphor bloom only on screen shots, gate weave ±1 px (re-drawn every 2 frames), grain, mild softness, vignette; bloom textures are sampled only when bloom > 0; canvases are uploaded without UNPACK_FLIP_Y (the flip happens in the shader).
+- Everything is a pure function of t: the film-time→step curve, interpolation of the log, and hash-seeded noise; no state carries between frames.
+
 ## Known weaknesses
 - No drawn characters: faces are flat black silhouettes and the emotional beats (Shinji's face, Rei, the smile) are carried by data metaphors (the circle as the smile). Warmer than a HUD, colder than the original.
 - The unit is abstracted into the task's "+" (plus_smoke, plus_explosion, light_bars); it reads as a symbol rather than a character.

@@ -847,4 +847,18 @@ export function warmup() {
   renderer.compile(scene, camera); setCam([0, 60, 200], [0, 40, 0], 40); render(); shadows([0, 30, 0], 200);
   for (const k of Object.keys(OBJ)) OBJ[k].visible = vis[k];
 }
+// engraved plate: the terrain relief textured with the pre-painted engraving mask (bg/ink mixed in the shader)
+const ENGR_FS = `uniform sampler2D uMask; uniform vec3 uBg, uInkC; varying vec2 vUv; void main(){ float m = texture2D(uMask, vUv).r; gl_FragColor = vec4(mix(uBg, uInkC, m), 1.0); }`;
+export function buildEngraving(maskCanvas) {
+  const tex = new THREE.CanvasTexture(maskCanvas); tex.colorSpace = THREE.NoColorSpace; tex.anisotropy = 4;
+  tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = true;
+  const m = new THREE.ShaderMaterial({ uniforms: { uMask: { value: tex }, uBg: { value: new THREE.Vector3() }, uInkC: { value: new THREE.Vector3() } },
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`, fragmentShader: ENGR_FS });
+  OBJ.engr = new THREE.Mesh(OBJ.terrain.geometry, m); OBJ.engr.visible = false; scene.add(OBJ.engr);
+}
+export function engraved(bg, ink) {
+  const c = new THREE.Color(bg); const k = ink.split(',').map((v) => +v / 255);
+  OBJ.engr.material.uniforms.uBg.value.set(c.r, c.g, c.b); OBJ.engr.material.uniforms.uInkC.value.set(k[0], k[1], k[2]);
+  OBJ.engr.visible = true;
+}
 export { THREE };

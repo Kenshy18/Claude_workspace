@@ -12,7 +12,7 @@ class PostFX {
     this.gl = gl; this.w = w; this.h = h;
     const vs = `attribute vec2 p; varying vec2 uv; void main(){ uv = p*0.5+0.5; gl_Position = vec4(p,0.,1.); }`;
     const bright = `precision highp float; varying vec2 uv; uniform sampler2D src; uniform float thr;
-      void main(){ vec3 c = texture2D(src, uv).rgb; float l = max(max(c.r,c.g),c.b);
+      void main(){ vec3 c = texture2D(src, vec2(uv.x, 1.0-uv.y)).rgb; float l = max(max(c.r,c.g),c.b);
         float k = smoothstep(thr, thr+0.22, l); gl_FragColor = vec4(c*k,1.); }`;
     const blur = `precision highp float; varying vec2 uv; uniform sampler2D src; uniform vec2 dir;
       void main(){ vec3 c = texture2D(src, uv).rgb*0.2270270270;
@@ -24,6 +24,7 @@ class PostFX {
       uniform float bloom, ca, grain, vig, frame, flash, sat, contrast, curve, roll, rollPos, soft, useOvl, lift;
       uniform vec3 flashCol; uniform vec2 res, weave;
       float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+      vec2 F(vec2 a){ return vec2(a.x, 1.0-a.y); }   // 2D canvases are uploaded without UNPACK_FLIP_Y
       vec2 warp(vec2 u){ vec2 c = u*2.0-1.0; float r2 = dot(c*vec2(1.0,0.86),c*vec2(1.0,0.86)); c *= (1.0 + curve*r2)/(1.0 + curve*0.55); return c*0.5+0.5; }
       vec3 tap(sampler2D t, vec2 w, vec2 px){
         vec3 c = texture2D(t, w).rgb;
@@ -35,14 +36,13 @@ class PostFX {
         vec2 w = u; float inside = 1.0;
         if (curve > 0.0) { w = warp(u);
           vec2 e = smoothstep(vec2(0.0), vec2(0.007), w) * smoothstep(vec2(0.0), vec2(0.007), 1.0-w); inside = e.x*e.y; }
-        vec3 c = tap(src, w, px);
-        if (ca > 0.0) { vec2 d = w-0.5; vec2 off = d*ca*0.006; c.r = texture2D(src, w+off).r*0.5 + c.r*0.5; c.b = texture2D(src, w-off).b*0.5 + c.b*0.5; }
-        vec3 bl = texture2D(b1, w).rgb*0.9 + texture2D(b2, w).rgb*1.1;
-        c += bl*bloom;
+        vec3 c = tap(src, F(w), px);
+        if (ca > 0.0) { vec2 d = w-0.5; vec2 off = d*ca*0.006; c.r = texture2D(src, F(w+off)).r*0.5 + c.r*0.5; c.b = texture2D(src, F(w-off)).b*0.5 + c.b*0.5; }
+        if (bloom > 0.0) { vec3 bl = texture2D(b1, w).rgb*0.9 + texture2D(b2, w).rgb*1.1; c += bl*bloom; }
         if (roll > 0.0) { float d = fract(w.y - rollPos + 2.0); float band = smoothstep(0.0, 0.05, d) * (1.0 - smoothstep(0.05, 0.16, d));
           c *= 1.0 + roll*0.22*band; c += roll*0.025*band; }
         c *= inside;
-        if (useOvl > 0.5) { vec4 o = texture2D(ovl, u); if (soft > 0.0) { o = o*(1.0-soft*0.8) + soft*0.2*(texture2D(ovl,u+vec2(px.x,0.)) + texture2D(ovl,u-vec2(px.x,0.)) + texture2D(ovl,u+vec2(0.,px.y)) + texture2D(ovl,u-vec2(0.,px.y))); }
+        if (useOvl > 0.5) { vec2 v = F(u); vec4 o = texture2D(ovl, v); if (soft > 0.0) { o = o*(1.0-soft*0.8) + soft*0.2*(texture2D(ovl,v+vec2(px.x,0.)) + texture2D(ovl,v-vec2(px.x,0.)) + texture2D(ovl,v+vec2(0.,px.y)) + texture2D(ovl,v-vec2(0.,px.y))); }
           c = mix(c, o.rgb/max(o.a,0.001), clamp(o.a,0.0,1.0)); }
         float l = dot(c, vec3(0.299,0.587,0.114));
         c = mix(vec3(l), c, sat);
@@ -118,7 +118,7 @@ class PostFX {
   }
   render(srcCanvas, ovlCanvas, fx) {
     const gl = this.gl;
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.bindTexture(gl.TEXTURE_2D, this.srcTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, srcCanvas);
     if (fx.useOvl) { gl.bindTexture(gl.TEXTURE_2D, this.ovlTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ovlCanvas); }

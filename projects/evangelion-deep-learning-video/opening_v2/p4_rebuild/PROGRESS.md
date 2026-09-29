@@ -39,3 +39,8 @@
 - 22:35 compare C reviewed (cage/silhouette/63 s head/wings/eyes match well; cut timings verified vs 8 fps sheet).
   Code-only while queue busy: Lance thicker (w 2.0, bigger fork), EVAL-02 guard pose, production card larger,
   engraving contours at quarter levels (tiered weights). Compare D running, then E, then bench.
+- 22:55 Compare D+E reviewed (all sections now matched; 78 timestamps total incl. A–C). Fixed: 監督 card 178/360 px,
+  Lance enters on screen, EVAL-02 framing. PERF FIX: engraving was 1–2.5 s/frame (Skia rasterising ~70k line points);
+  now painted ONCE into a 4096² mask (A.engravingMask) and draped on the terrain relief (WD.buildEngraving/engraved)
+  → one textured mesh per frame. main.js resets all 2D state per frame (shadow, dash, caps, align).
+- NEXT: full bench, representative stills in out/opening_v2/p4_rebuild/final/, final report.

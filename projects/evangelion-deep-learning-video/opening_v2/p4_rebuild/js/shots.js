@@ -141,7 +141,7 @@ add(7.3, 10.4, 'engraving', (ctx, lt, t, fx) => {
   const k = ease.io(tq / 3.1);
   const cam = L3([220, 1500, 950], [-60, 520, 260], k);
   WD.setCam(cam, [lerp(60, -30, k), 60, lerp(-160, -60, k)], 40, 0.25 - k * 0.35);
-  A.engraving(ctx, tq, { reveal: 1 });
+  A.engraving(ctx, tq); render3d(ctx, null, { bg: '#061a4a' });
   fx.vig = 0.6; if (lt < 0.2) { fx.flash = 1 - lt / 0.2; fx.flashCol = [0.7, 0.05, 0.08]; }
 });
 add(10.4, 14.1, 'blue_core', (ctx, lt, t, fx) => {
@@ -196,14 +196,14 @@ add(23.4, 26.93, 'sky_tilt', (ctx, lt, t, fx) => {   // tilt down from open sky 
   WD.mood('day'); vis('terrain', 'city', 'octa'); U.uRiseT.value = -1; OBJ.octa.position.set(cx - 250, 300, cz - 380);
   const k = 0.12 * (lt / 2.2) * (lt < 2.2) + (lt >= 2.2) * (0.12 + 0.88 * ease.io(seg(lt, 2.2, 2.95))); const pos = [cx + 40, 0, cz + 300]; pos[1] = G(pos[0], pos[2]) + 26;
   WD.setCam(pos, [cx + lerp(-60, 30, k), lerp(900, 40, k), cz - 150], 36);
-  render3d(ctx, 'day', { shadow: { s: 300 } });
+  render3d(ctx, 'day');   // distant basin: no shadow pass
 });
 add(26.93, 29.9, 'emergence', (ctx, lt, t, fx) => {   // towers rise on the warmup ramp; seen from the basin's southern rim
   WD.mood('day'); vis('terrain', 'city', 'octa'); U.uRiseT.value = lt * 1.7 - 0.1;
   const [sx, sy] = shake(t, lt < 2.4 ? 1.2 : 0.3, 20);
   const p = [cx + 70 + sx, 0, cz + 250]; p[1] = G(p[0], p[2]) + 6 + sy;
   WD.setCam(p, [cx - 20, 50, cz - 60], 34);
-  render3d(ctx, 'day', { shadow: { s: 300 } });
+  render3d(ctx, 'day');   // distant basin: no shadow pass
 });
 add(29.9, 33.9, 'attention', (ctx, lt, t, fx) => {   // long lens from the south: tower tops + softmax beams against the sky
   WD.mood('day'); vis('terrain', 'city', 'octa');
@@ -248,7 +248,7 @@ add(41.6, 48.4, 'race', (ctx, lt, t, fx) => {
   ctx.font = '400 26px "Share Tech Mono"';
   ctx.fillStyle = '#fff4e0'; ctx.fillText(`ADAM  lr=0.08  step ${String(si).padStart(3, '0')}  f=${M.TRAJ.adam.L[si].toExponential(2)}`, 1150, 1000);
   ctx.fillStyle = '#ff8a6a'; ctx.fillText(`SGD+MOMENTUM μ=0.9  step ${String(si).padStart(3, '0')}  f=${M.TRAJ.sgd.L[si].toExponential(2)}`, 1150, 1036);
-  fx.bloom = 0.35; fx.thr = 0.85;
+  fx.bloom = 0;                                                     // head glows are painted; no bloom pass
 });
 add(48.4, 50.0, 'descent', (ctx, lt, t, fx) => {
   WD.mood('geo'); vis('geo'); U.uLed.value = 1;
@@ -378,7 +378,7 @@ const rankShot = (r) => (ctx, lt, t, fx) => {   // the eight ranks as quick "mug
   ctx.font = '400 28px "Share Tech Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(`owns reduced chunk ${(r + 1) % 8} · 8/8 contributions in every cell`, 116, 1036);
 };
 add(72.37, 72.6, 'c_rank0', rankShot(0));
-add(72.6, 72.73, 'c_map', (ctx, lt) => { WD.setCam([150, 2600, 10], [150, 0, 0], 30); A.engraving(ctx, 0, { bg: '#1c2a3a', ink: '220,230,240' }); });
+add(72.6, 72.73, 'c_map', (ctx, lt) => { WD.setCam([150, 2600, 10], [150, 0, 0], 30); A.engraving(ctx, 0, { bg: '#1c2a3a', ink: '220,230,240' }); render3d(ctx, null, { bg: '#1c2a3a' }); });
 add(72.73, 73.0, 'c_rank1', rankShot(1));
 add(73.0, 73.27, 'c_rank2', rankShot(2));
 add(73.27, 73.53, 'c_rank3', rankShot(3));
