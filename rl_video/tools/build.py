@@ -71,6 +71,7 @@ def main():
     ap.add_argument("-j", "--jobs", type=int, default=3)
     ap.add_argument("--scenes", default=None, help="再レンダリングするシーン（カンマ区切り）")
     ap.add_argument("--no-render", action="store_true", help="レンダリングせず結合だけ")
+    ap.add_argument("--max-mb", type=float, default=29.0, help="本番出力のサイズ上限（MiB）")
     a = ap.parse_args()
 
     path, mod = load_chapter(a.chapter)
@@ -122,9 +123,10 @@ def main():
     alist = work / "audio.txt"
     alist.write_text("".join(f"file '{p}'\n" for p in audio_parts))
     audio = work / "audio.m4a"
+    # ナレーションだけなのでモノラル 80kbps で十分（共有しやすいサイズに収める）
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(alist),
-                    "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", "-c:a", "aac", "-b:a", "160k",
-                    str(audio)], check=True)
+                    "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", "-ac", "1", "-c:a", "aac",
+                    "-b:a", "80k", str(audio)], check=True)
     for i, sub in enumerate(subs, 1):
         sub.index = i
     out_dir = ROOT / "output"
@@ -134,12 +136,26 @@ def main():
     srt_out.write_text(srt.compose(subs))
     title = getattr(mod, "CHAPTER_TITLE", a.chapter)
     final = out_dir / f"{name}.mp4"
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(video), "-i", str(audio), "-i", str(srt_out),
-                    "-map", "0:v", "-map", "1:a", "-map", "2:s", "-c:v", "copy", "-c:a", "copy",
-                    "-c:s", "mov_text", "-metadata:s:s:0", "language=jpn",
-                    "-metadata", f"title={title}", "-movflags", "+faststart", "-shortest",
-                    str(final)], check=True)
-    print(f"{final}  {offset/60:.1f} min")
+
+    def mux(video_args):
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(video), "-i", str(audio), "-i", str(srt_out),
+                        "-map", "0:v", "-map", "1:a", "-map", "2:s", *video_args, "-c:a", "copy",
+                        "-c:s", "mov_text", "-metadata:s:s:0", "language=jpn",
+                        "-metadata", f"title={title}", "-movflags", "+faststart", "-shortest",
+                        str(final)], check=True)
+
+    if a.quality in ("l", "m"):
+        mux(["-c:v", "copy"])
+    else:
+        # 本番はアニメーション向けの設定で再エンコード。上限を超えたら CRF を上げてやり直す。
+        for crf in (22, 24, 26, 28):
+            mux(["-c:v", "libx264", "-preset", "slow", "-tune", "animation", "-crf", str(crf),
+                 "-pix_fmt", "yuv420p"])
+            size_mb = final.stat().st_size / 2**20
+            if size_mb <= a.max_mb:
+                break
+            print(f"  {size_mb:.1f} MiB > {a.max_mb} MiB at crf {crf}; retrying", flush=True)
+    print(f"{final}  {offset/60:.1f} min  {final.stat().st_size / 2**20:.1f} MiB")
 
 
 if __name__ == "__main__":

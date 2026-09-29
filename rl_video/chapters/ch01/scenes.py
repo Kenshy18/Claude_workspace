@@ -68,11 +68,8 @@ def path_line(g: GridView, states, color=BLUE_B, jitter=0.0, seed=0, width=4, op
     pts = [g.center_of(s) + rng.uniform(-1, 1, 3) * jitter * g.cell * np.array([1, 1, 0])
            for s in states]
     line = VMobject(stroke_color=color, stroke_width=width, stroke_opacity=opacity)
-    if jitter > 0:
-        line.set_points_smoothly(pts)
-    else:
-        line.set_points_as_corners(pts)
-        line.joint_type = LineJointType.ROUND
+    line.set_points_as_corners(pts)
+    line.joint_type = LineJointType.ROUND
     return line
 
 
@@ -162,7 +159,7 @@ class Hook(VoiceScene):
                 t = rec[ep]
                 states = [t[0][0]] + [x[3] for x in t]
                 ok = t[-1][2] > 0
-                line = path_line(g, states, color=style.REWARD if ok else RED, jitter=0.12,
+                line = path_line(g, states, color=style.REWARD if ok else RED, jitter=0.1,
                                  seed=ep, width=3.5, opacity=0.85)
                 anims = [Create(line), num.animate.set_value(ep)]
                 if prev is not None:
@@ -270,8 +267,9 @@ class Supervised(VoiceScene):
         head = jt("教師あり学習", size=56, color=WHITE, weight="MEDIUM")
         tag = section_tag("教師あり学習")
         with self.voice("まずは、よく知っている世界から出発しましょう。{A}教師あり学習です。") as v:
+            self.play(Write(head), run_time=1.2)
             self.wait_to(v, "A")
-            self.play(Write(head), run_time=1.0)
+            self.play(Indicate(head, color=WHITE, scale_factor=1.05))
         self.play(ReplacementTransform(head, tag), run_time=0.8)
 
         img = digit_image(2.7).move_to(LEFT * 5.0 + 0.3 * DOWN)
@@ -605,7 +603,7 @@ class MDP(VoiceScene):
         g = GridView(WORLD, cell=1.3).move_to(LEFT * 3.3 + 0.35 * UP)
         s0 = (2, 0)
         robot = Robot(height=0.62).move_to(g.center_of(s0))
-        px = 1.3  # 右側パネルの左端
+        px = 1.0  # 右側パネルの左端
 
         def row(name, color, tex, note=None):
             parts = [jt(name, size=38, color=color), mt(tex, size=50)]
@@ -617,7 +615,7 @@ class MDP(VoiceScene):
             self.play(FadeIn(g), FadeIn(robot), run_time=1.2)
 
         s_row = row("状態", style.STATE, r"s \in \mathcal{S}", "（17個）")
-        a_row = row("行動", style.ACTION, r"a \in \mathcal{A}", "（上・下・左・右）")
+        a_row = row("行動", style.ACTION, r"a \in \mathcal{A}", "（上下左右）")
         p_row = VGroup(jt("遷移確率", size=38, color=WHITE),
                        mt("P(", "s'", r"\mid", "s", ",", "a", ")", size=50)).arrange(RIGHT, buff=0.3)
         r_row = row("報酬", style.REWARD, r"r", "（+1, −1, 0）")
@@ -829,10 +827,16 @@ class Policy(VoiceScene):
         self.play(FadeOut(VGroup(g, arrows, det, bars, vals, formula)), run_time=0.8)
 
         # 言語モデル = 方策
+        lm_box = VGroup(RoundedRectangle(width=4.2, height=1.5, corner_radius=0.2, stroke_color=GREY_B,
+                                         stroke_width=2.5), jt("言語モデル", size=48, color=WHITE))
+        lm_box[1].move_to(lm_box[0])
         with self.voice("ここでも、言語モデルとのつながりを見ておきましょう。実は、{A}言語モデルは、それ自体が方策です。") as v:
-            self.play(head.animate.move_to(UP * 3.1), run_time=0.8)
+            self.play(head.animate.move_to(RIGHT * 2.2 + UP * 0.2), FadeIn(lm_box.move_to(LEFT * 2.6 + UP * 0.2)),
+                      run_time=1.0)
+            eq = mt("=", size=64).move_to(UP * 0.2 + LEFT * 0.1)
             self.wait_to(v, "A")
-            self.play(Indicate(head, color=style.POLICY))
+            self.play(Write(eq), Indicate(head, color=style.POLICY))
+        self.play(FadeOut(VGroup(lm_box, eq)), head.animate.move_to(UP * 3.1), run_time=0.8)
         ctx = VGroup(*[token_chip(t, size=42) for t in ["強化", "学習", "は"]]).arrange(RIGHT, buff=0.12)
         ctx.move_to(LEFT * 4.3 + UP * 0.9)
         cands = ["面白い", "難しい", "、", "報酬"]
@@ -854,7 +858,8 @@ class Policy(VoiceScene):
             pick = SurroundingRectangle(lm.labels[0], color=WHITE, buff=0.1)
             self.play(Create(pick))
             new = token_chip("面白い", size=42, color=style.ACTION, stroke=style.ACTION).next_to(ctx, RIGHT, buff=0.12)
-            self.play(TransformFromCopy(lm.labels[0], new[1]), FadeIn(new[0]),
+            self.play(FadeIn(new[0]), run_time=0.3)
+            self.play(TransformFromCopy(lm.labels[0], new[1]),
                       arr.animate.put_start_and_end_on(new.get_right() + 0.2 * RIGHT, lm.get_left() + 1.0 * UP),
                       run_time=0.9)
 
@@ -1013,11 +1018,11 @@ class Discount(VoiceScene):
         with self.voice("逆に、{A}1に近づけると、ずっと先の報酬まで大事にする、辛抱強いエージェントになります。") as v:
             self.wait_to(v, "A")
             self.play(gamma.animate.set_value(0.99), run_time=2.5)
-        marker = always_redraw(horizon_marker)
         with self.voice("目安として、エージェントは、{A}だいたい、[1/(1−γ)|イチマイナスガンマぶんのいち][歩|ほ]くらい先までを、見ている、と考えるとよいでしょう。"
                         "{B}ガンマが0.9なら10歩、{C}0.99なら100歩です。") as v:
             self.wait_to(v, "A")
             self.play(gamma.animate.set_value(0.9), run_time=1.0)
+            marker = always_redraw(horizon_marker)
             self.add(marker)
             self.wait_to(v, "B")
             self.play(Flash(marker[1].get_center(), color=WHITE, flash_radius=0.7))
@@ -1103,8 +1108,8 @@ class Objective(VoiceScene):
                 if len(t) <= 14 and ((kind == "goal" and end == GOAL) or (kind == "pit" and end == PIT)):
                     runs.append(t)
                     break
-        grids = VGroup(*[GridView(WORLD, cell=0.62, show_terminal_labels=False) for _ in range(6)])
-        grids.arrange_in_grid(2, 3, buff=(0.8, 1.0)).move_to(UP * 0.55)
+        grids = VGroup(*[GridView(WORLD, cell=0.56, show_terminal_labels=False) for _ in range(6)])
+        grids.arrange_in_grid(2, 3, buff=(0.9, 0.95)).move_to(UP * 0.85)
         robots = [Robot(height=0.32).move_to(gr.center_of(WORLD.start)) for gr in grids]
         with self.voice("さて、同じ方策でロボットを走らせても、毎回同じ結果になるとは限りません。"
                         "床が滑りますし、方策そのものが確率的なこともあるからです。") as v:
@@ -1144,7 +1149,7 @@ class Objective(VoiceScene):
         J = mt("J(", r"\pi", ")", "=", r"\mathbb{E}_{\tau \sim \pi}", r"\left[", "G_0", r"\right]", size=60)
         J_lab = jt("期待リターン", size=34, color=GREY_B)
         avg = mt(r"\approx", f"{np.mean(rets):.2f}", size=52, color=GREY_A)
-        VGroup(J_lab, J, avg).arrange(RIGHT, buff=0.35).move_to(DOWN * 3.1)
+        VGroup(J_lab, J, avg).arrange(RIGHT, buff=0.35).move_to(DOWN * 3.3)
         with self.voice("だから、方策の良さは、{A}リターンの期待値で測ります。方策パイに従って動いたときに、平均して、どれだけのリターンが得られるか。") as v:
             self.wait_to(v, "A")
             self.play(Write(J), FadeIn(J_lab), run_time=1.3)
@@ -1182,9 +1187,9 @@ class Objective(VoiceScene):
 
         with self.voice("機械学習エンジニアなら、ここで自然に、こう考えるはずです。"
                         "{A}方策をニューラルネットで表して、[J|ジェー]を勾配法で最大化すればいい、と。") as v:
-            self.wait_to(v, "A")
             self.play(LaggedStart(*[FadeIn(m) for m in [n_theta, fwd[0], n_pi, fwd[1], n_a]], lag_ratio=0.25),
                       FadeIn(nn_lab), run_time=1.5)
+            self.wait_to(v, "A")
             self.play(LaggedStart(*[FadeIn(m) for m in [fwd[2], n_env, fwd[3], n_r, fwd[4], n_J]], lag_ratio=0.2),
                       run_time=1.5)
 
